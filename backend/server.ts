@@ -12,16 +12,20 @@ const app = express();
 const httpServer = createServer(app);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
-const CORS_ORIGINS = (process.env.CORS_ORIGIN || 'http://localhost:5173')
+const CORS_LIST = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
+// '*' libera qualquer origem; caso contrário, casa exatamente com a lista.
+// (a lib de CORS, ao receber um array, faz comparação exata — '*' dentro de
+//  array NÃO funciona como curinga, por isso o tratamento explícito abaixo)
+const CORS_ORIGIN: '*' | string[] = CORS_LIST.includes('*') ? '*' : CORS_LIST;
 
-app.use(cors({ origin: CORS_ORIGINS }));
+app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
 
 // --- Tempo real (Socket.io) ---
-const io = new SocketServer(httpServer, { cors: { origin: CORS_ORIGINS } });
+const io = new SocketServer(httpServer, { cors: { origin: CORS_ORIGIN } });
 function notificarMudanca() {
   io.emit('eleitores:changed');
 }
