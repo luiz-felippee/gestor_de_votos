@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { useEffect, useState, useCallback } from 'react'
+import { api } from '../lib/api'
 import type { CaboEleitoral } from '../lib/types'
 
 export function useCabos() {
@@ -8,28 +7,27 @@ export function useCabos() {
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
 
-  useEffect(() => {
-    const q = query(collection(db, 'cabos'), orderBy('nome', 'asc'))
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const lista: CaboEleitoral[] = []
-      snapshot.forEach((doc) => {
-        lista.push({ id: doc.id, ...doc.data() } as CaboEleitoral)
-      })
-      setCabos(lista)
-      setLoading(false)
+  const recarregar = useCallback(async () => {
+    try {
+      const data = await api.getCabos()
+      setCabos(data)
       setErro(null)
-    }, (error) => {
-      console.error(error)
-      setErro("Erro ao carregar cabos eleitorais.")
+    } catch (err: any) {
+      setErro(err.message)
+      console.error(err)
+    } finally {
       setLoading(false)
-    })
-
-    return () => unsubscribe()
+    }
   }, [])
 
-  // Dummy recarregar function to keep compatibility
-  const recarregar = async () => {}
+  useEffect(() => {
+    recarregar()
+    // Como tiramos os websockets do supabase,
+    // podemos usar polling se for necessário tempo real,
+    // ou apenas recarregar quando voltar à janela
+    const interval = setInterval(recarregar, 10000)
+    return () => clearInterval(interval)
+  }, [recarregar])
 
   return { cabos, loading, erro, recarregar }
 }

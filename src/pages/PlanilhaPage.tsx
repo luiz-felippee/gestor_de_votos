@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
-import { doc, updateDoc, deleteDoc } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { api } from '../lib/api'
 import { useEleitores } from '../hooks/useEleitores'
 import { CIDADES, STATUS_OPTIONS, STATUS_STYLES } from '../lib/constants'
 import { formatDataHora, maskTelefone } from '../lib/format'
@@ -24,7 +23,7 @@ interface Ordenacao {
 }
 
 export function PlanilhaPage() {
-  const { eleitores, loading, erro } = useEleitores()
+  const { eleitores, loading, erro, recarregar } = useEleitores()
 
   const [busca, setBusca] = useState('')
   const [filtroCidade, setFiltroCidade] = useState('')
@@ -78,7 +77,7 @@ export function PlanilhaPage() {
   async function salvarEdicao() {
     if (!editId) return
     try {
-      await updateDoc(doc(db, 'eleitores', editId), {
+      await api.updateEleitor(editId, {
         nome: editForm.nome,
         telefone: editForm.telefone,
         local_votacao: editForm.local_votacao,
@@ -89,6 +88,7 @@ export function PlanilhaPage() {
         status: editForm.status as StatusEleitor,
         observacoes: editForm.observacoes,
       })
+      recarregar()
     } catch (err) {
       alert(`Erro ao salvar: ${(err as Error).message}`)
       return
@@ -100,7 +100,8 @@ export function PlanilhaPage() {
   async function excluir(e: EleitorComCabo) {
     if (!confirm(`Excluir o cadastro de "${e.nome}"?`)) return
     try {
-      await deleteDoc(doc(db, 'eleitores', e.id))
+      await api.deleteEleitor(e.id)
+      recarregar()
     } catch (err) {
       alert(`Erro ao excluir: ${(err as Error).message}`)
     }

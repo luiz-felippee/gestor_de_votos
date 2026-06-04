@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PerfilAcesso {
+  admin
+  coordenador
+  cabo
+  visualizador
+}
+
+enum StatusEleitor {
+  ativo
+  inativo
+  pendente
+}
+
+model CaboEleitoral {
+  id             String    @id @default(uuid())
+  nome           String
+  telefone       String
+  bairro_atuacao String?
+  cidade         String?
+  meta_eleitores Int       @default(0)
+  created_at     DateTime  @default(now())
+  eleitores      Eleitor[]
+  usuarios       Usuario[]
+
+  @@map("cabos")
+}
+
+model Eleitor {
+  id            String         @id @default(uuid())
+  nome          String
+  telefone      String
+  local_votacao String
+  zona          Int
+  secao         Int
+  bairro        String
+  cidade        String
+  cabo_id       String?
+  status        StatusEleitor  @default(ativo)
+  observacoes   String?
+  created_at    DateTime       @default(now())
+  // Normalizado (minúsculo, sem espaços nas pontas) p/ impedir duplicados
+  nome_busca    String
+  cabo          CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
+
+  @@unique([nome_busca, zona, secao])
+  @@map("eleitores")
+}
+
+model Usuario {
+  id         String         @id @default(uuid())
+  nome       String
+  email      String         @unique
+  senha_hash String
+  role       PerfilAcesso   @default(visualizador)
+  cabo_id    String?
+  created_at DateTime       @default(now())
+  cabo       CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
+
+  @@map("usuarios")
+}

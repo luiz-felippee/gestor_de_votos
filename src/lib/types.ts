@@ -10,6 +10,17 @@ export interface Usuario {
   cabo_id: string | null
 }
 
+/** Usuário completo, usado na tela de gestão de acessos (admin). */
+export interface UsuarioAdmin {
+  id: string
+  nome: string
+  email: string
+  role: PerfilAcesso
+  cabo_id: string | null
+  created_at: string
+  cabo: { id: string; nome: string } | null
+}
+
 export interface Eleitor {
   id: string
   nome: string

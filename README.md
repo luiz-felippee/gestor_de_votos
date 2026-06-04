@@ -22,7 +22,7 @@ Navegador (React)  ──►  API (Node/Express)  ──►  PostgreSQL
 | Front-end    | React + TypeScript + Vite + TailwindCSS + React Router  |
 | Gráficos     | Recharts                                                |
 | Exportação   | SheetJS (`xlsx`) — Excel e CSV                          |
-| Back-end     | Node.js + Express                                       |
+| Back-end     | Node.js + Express + Prisma (TypeScript)                 |
 | Autenticação | JWT + bcrypt (senhas criptografadas)                    |
 | Tempo real   | Socket.io                                               |
 | Banco        | PostgreSQL                                              |
@@ -49,18 +49,21 @@ Isso sobe um PostgreSQL em `localhost:5432` (usuário `gestor`, senha `gestor`,
 banco `gestor_votos`). Os dados ficam salvos no volume `pgdata`.
 
 > Não tem Docker? Instale o PostgreSQL nativo e ajuste `DATABASE_URL` em
-> `server/.env`.
+> `backend/.env`.
 
-### 2. Backend (API)
+### 2. Backend (API — Express + Prisma)
 
 ```bash
-cd server
+cd backend
 npm install
-cp .env.example .env       # ajuste JWT_SECRET em produção
-npm run migrate            # cria as tabelas
-npm run seed -- "Seu Nome" voce@email.com suaSenha admin   # cria o 1º admin
-npm run dev                # API em http://localhost:3001
+# o .env já aponta para o Postgres do Docker; defina ADMIN_EMAIL/ADMIN_PASSWORD nele
+npx prisma generate        # gera o Prisma Client
+npx prisma db push         # cria as tabelas no Postgres
+npm run dev                # API em http://localhost:3000
 ```
+
+> O admin é criado/atualizado automaticamente a partir de `ADMIN_EMAIL` e
+> `ADMIN_PASSWORD` no `backend/.env` quando a API sobe.
 
 ### 3. Front-end
 
@@ -71,7 +74,8 @@ npm install
 npm run dev                # app em http://localhost:5173
 ```
 
-Abra http://localhost:5173, clique em **Entrar** e use o e-mail/senha do seed.
+Abra http://localhost:5173, clique em **Entrar** e use o e-mail/senha definidos
+em `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
 
 ## Perfis de acesso
 
@@ -113,25 +117,23 @@ registro em `cabos_eleitorais`).
 ## Estrutura
 
 ```
-src/                 Front-end (React)
-  auth/              AuthContext, ProtectedRoute
-  hooks/             useEleitores (Socket.io), useCabos
-  lib/               api (fetch+JWT), socket, types, constants, format, export
-  pages/             Dashboard, Planilha, Cabos, Cadastro, Login, Privacidade
-server/              Back-end (Node/Express)
-  src/index.js       API + rotas + Socket.io
-  src/auth.js        JWT e middlewares de permissão
-  src/migrate.js     aplica o schema.sql
-  src/seed.js        cria usuários
-  schema.sql         tabelas (usuarios, cabos_eleitorais, eleitores)
-docker-compose.yml   PostgreSQL
+src/                  Front-end (React)
+  auth/               AuthContext, ProtectedRoute
+  hooks/              useEleitores (Socket.io), useCabos
+  lib/                api (fetch+JWT), socket, types, constants, format, export
+  pages/              Dashboard, Planilha, Cabos, Cadastro, Login, Privacidade
+backend/              Back-end (Express + Prisma)
+  server.ts           API + rotas + JWT + Socket.io
+  prisma/schema.prisma  modelos (Usuario, CaboEleitoral, Eleitor)
+docker-compose.yml    PostgreSQL
 ```
 
 ## Scripts
 
 Front-end (raiz): `npm run dev`, `npm run build`, `npm run preview`, `npm run lint`.
 
-Backend (`server/`): `npm run dev`, `npm run migrate`, `npm run seed`, `npm start`.
+Backend (`backend/`): `npm run dev` (API), `npx prisma db push` (cria/atualiza
+tabelas), `npx prisma studio` (UI do banco).
 
 ## Pendências
 

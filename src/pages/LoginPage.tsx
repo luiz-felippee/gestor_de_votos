@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { AlertCircle } from 'lucide-react'
 
 export function LoginPage() {
-  const { signIn } = useAuth()
+  const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const destino =
@@ -12,14 +13,17 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erro, setErro] = useState<string | null>(null)
-  const [entrando, setEntrando] = useState(false)
+  const [msgSucesso, setMsgSucesso] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  async function entrar(e: FormEvent) {
+  async function handleLogin(e: FormEvent) {
     e.preventDefault()
     setErro(null)
-    setEntrando(true)
+    setMsgSucesso(null)
+    setLoading(true)
+
     const { error } = await signIn(email, senha)
-    setEntrando(false)
+    setLoading(false)
     if (error) {
       setErro(error)
       return
@@ -27,10 +31,28 @@ export function LoginPage() {
     navigate(destino, { replace: true })
   }
 
+  async function handleSignup() {
+    if (!email || !senha) {
+      setErro("Preencha e-mail e senha para criar a conta.")
+      return
+    }
+    setErro(null)
+    setMsgSucesso(null)
+    setLoading(true)
+
+    const { error, message } = await signUp(email, senha)
+    if (error) {
+      setErro(error)
+    } else {
+      setMsgSucesso(message || "Conta criada com sucesso!")
+    }
+    setLoading(false)
+  }
+
   return (
     <div className="relative flex min-h-screen items-center justify-center p-4">
       <form
-        onSubmit={entrar}
+        onSubmit={handleLogin}
         className="relative w-full max-w-[420px] rounded-xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-800 dark:bg-slate-900"
       >
         <div className="mb-10 text-center">
@@ -76,18 +98,35 @@ export function LoginPage() {
         </div>
 
         {erro && (
-          <div className="mt-6 rounded-xl bg-red-50/80 px-4 py-3 text-sm font-bold text-red-700 border border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900/50">
-            {erro}
+          <div className="mt-6 rounded-lg bg-red-500/10 p-4 border border-red-500/20 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <p className="text-sm text-red-500 font-medium">{erro}</p>
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={entrando}
-          className="mt-8 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-700 disabled:opacity-70"
-        >
-          {entrando ? 'Entrando...' : 'Entrar'}
-        </button>
+        {msgSucesso && (
+          <div className="mt-6 rounded-lg bg-emerald-500/10 p-4 border border-emerald-500/20 flex items-center gap-3">
+            <p className="text-sm text-emerald-500 font-medium">{msgSucesso}</p>
+          </div>
+        )}
+
+        <div className="mt-8 flex flex-col gap-3">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-700 disabled:opacity-70"
+          >
+            {loading ? 'Entrando...' : 'Entrar'}
+          </button>
+          <button
+            type="button"
+            onClick={handleSignup}
+            disabled={loading}
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-70 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            Criar Conta
+          </button>
+        </div>
       </form>
     </div>
   )

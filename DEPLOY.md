@@ -48,14 +48,14 @@ Netlify e Render publicam a partir de um repositório Git.
 1. Crie conta em [render.com](https://render.com) e conecte seu GitHub.
 2. **New +** → **Blueprint** → selecione o repositório (ele lê o `render.yaml`).
    - Se preferir manual: **New +** → **Web Service** → repo → **Root Directory** =
-     `server`, **Build** = `npm install`, **Start** = `npm start`.
+     `backend`, **Build** = `npm install && npx prisma generate && npx prisma db push`,
+     **Start** = `npm start`.
 3. Em **Environment**, defina as variáveis:
 
    | Variável         | Valor                                                          |
    | ---------------- | -------------------------------------------------------------- |
    | `DATABASE_URL`   | a connection string do Neon (Passo 1)                          |
    | `JWT_SECRET`     | gerado automaticamente (ou um texto aleatório longo)           |
-   | `AUTO_MIGRATE`   | `true`  (cria as tabelas no 1º deploy)                         |
    | `ADMIN_NAME`     | seu nome                                                       |
    | `ADMIN_EMAIL`    | seu e-mail (será o login admin)                                |
    | `ADMIN_PASSWORD` | uma senha forte                                                |
@@ -65,7 +65,7 @@ Netlify e Render publicam a partir de um repositório Git.
    `https://gestor-votos-api.onrender.com`).
 5. Teste: abra `SUA_URL/api/health` → deve mostrar `{"ok":true}`.
 
-> O `AUTO_MIGRATE=true` cria as tabelas e o `ADMIN_*` cria seu login admin
+> O `prisma db push` (no build) cria as tabelas e o `ADMIN_*` cria seu login admin
 > automaticamente — sem precisar de terminal no servidor.
 
 ---

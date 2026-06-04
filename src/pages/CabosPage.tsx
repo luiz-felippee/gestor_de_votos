@@ -1,6 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { collection, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { useEleitores } from '../hooks/useEleitores'
 import { CIDADES } from '../lib/constants'
@@ -81,13 +80,11 @@ export function CabosPage() {
 
     try {
       if (editId) {
-        await updateDoc(doc(db, 'cabos', editId), payload)
+        await api.updateCabo(editId, payload)
       } else {
-        await addDoc(collection(db, 'cabos'), {
-          ...payload,
-          created_at: new Date().toISOString()
-        })
+        await api.createCabo(payload)
       }
+      recarregar()
     } catch (err) {
       setSalvando(false)
       setErro(`Erro ao salvar: ${(err as Error).message}`)
@@ -105,7 +102,8 @@ export function CabosPage() {
     )
       return
     try {
-      await deleteDoc(doc(db, 'cabos', c.id))
+      await api.deleteCabo(c.id)
+      recarregar()
     } catch (err) {
       alert(`Erro ao excluir: ${(err as Error).message}`)
     }

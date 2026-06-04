@@ -1,7 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { collection, addDoc } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido } from '../lib/format'
@@ -76,7 +75,7 @@ export function CadastroPage() {
 
     setEnviando(true)
     try {
-      await addDoc(collection(db, 'eleitores'), {
+      await api.createEleitor({
         nome: form.nome.trim(),
         telefone: form.telefone,
         local_votacao: form.local_votacao.trim(),
@@ -86,8 +85,7 @@ export function CadastroPage() {
         cidade: form.cidade,
         cabo_id: form.cabo_id || null,
         observacoes: form.observacoes.trim() || null,
-        status: 'ativo',
-        created_at: new Date().toISOString()
+        status: 'ativo'
       })
     } catch (err) {
       setEnviando(false)

@@ -6,6 +6,7 @@ import { CadastroPage } from './pages/CadastroPage'
 import { PlanilhaPage } from './pages/PlanilhaPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CabosPage } from './pages/CabosPage'
+import { UsuariosPage } from './pages/UsuariosPage'
 import { LoginPage } from './pages/LoginPage'
 import { PrivacidadePage } from './pages/PrivacidadePage'
 
@@ -50,6 +51,14 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/usuarios"
+                element={
+                  <ProtectedRoute roles={['admin']}>
+                    <UsuariosPage />
+                  </ProtectedRoute>
+                }
+              />
 
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
@@ -82,9 +91,10 @@ function Header() {
             <nav className="hidden gap-1.5 md:flex">
               <Item to="/">Painel Geral</Item>
               <Item to="/planilha">Eleitores</Item>
-              {role === 'admin' && (
+              {(role === 'admin' || role === 'coordenador') && (
                 <Item to="/cabos">Gestão de Cabos</Item>
               )}
+              {role === 'admin' && <Item to="/usuarios">Usuários</Item>}
               <Item to="/cadastro">Novo Cadastro</Item>
             </nav>
             <div className="flex items-center gap-3 border-l border-slate-200 pl-5 dark:border-slate-700">

@@ -5,8 +5,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { signInWithEmailAndPassword, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth'
-import { auth } from '../lib/firebase'
+import { api, getToken, setToken, clearToken } from '../lib/api'
 import type { PerfilAcesso, Usuario } from '../lib/types'
 
 interface AuthState {
@@ -14,6 +13,10 @@ interface AuthState {
   loading: boolean
   role: PerfilAcesso | null
   signIn: (email: string, senha: string) => Promise<{ error: string | null }>
+  signUp: (
+    email: string,
+    senha: string,
+  ) => Promise<{ error: string | null; message?: string }>
   signOut: () => void
 }
 
@@ -23,43 +26,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Firebase observer para manter a sessão
+  // Ao abrir, valida o token salvo buscando o usuário atual.
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // Em um sistema real, buscaríamos o perfil real do Firestore.
-        // Aqui assumimos admin para manter a simplicidade da migração.
-        setUsuario({
-          id: user.uid,
-          nome: user.email || 'Usuário',
-          role: 'admin',
-          cabo_id: null
-        })
-      } else {
-        setUsuario(null)
-      }
+    if (!getToken()) {
       setLoading(false)
-    })
-    return () => unsubscribe()
+      return
+    }
+    let ativo = true
+    api
+      .me()
+      .then(({ usuario }) => ativo && setUsuario(usuario))
+      .catch(() => {
+        clearToken()
+        if (ativo) setUsuario(null)
+      })
+      .finally(() => ativo && setLoading(false))
+    return () => {
+      ativo = false
+    }
   }, [])
 
   async function signIn(email: string, senha: string) {
     try {
-      await signInWithEmailAndPassword(auth, email, senha)
+      const { token, usuario } = await api.login(email, senha)
+      setToken(token)
+      setUsuario(usuario)
       return { error: null }
-    } catch (err: any) {
-      console.error("Erro completo do Firebase:", err)
-      return { error: `Erro Firebase: ${err.message}` }
+    } catch (err) {
+      return { error: (err as Error).message }
+    }
+  }
+
+  // Cadastro público é desativado por segurança (base de eleitores / LGPD).
+  // Novos usuários são criados por um administrador.
+  async function signUp() {
+    return {
+      error:
+        'O cadastro de novos acessos é feito pelo administrador da campanha.',
     }
   }
 
   function signOut() {
-    firebaseSignOut(auth)
+    clearToken()
+    setUsuario(null)
   }
 
   return (
     <AuthCtx.Provider
-      value={{ usuario, loading, role: usuario?.role ?? null, signIn, signOut }}
+      value={{
+        usuario,
+        loading,
+        role: usuario?.role ?? null,
+        signIn,
+        signUp,
+        signOut,
+      }}
     >
       {children}
     </AuthCtx.Provider>
