@@ -1,40 +1,35 @@
-import { useEffect, useState, useCallback } from 'react'
-import { api } from '../lib/api'
-import { getSocket } from '../lib/socket'
+import { useEffect, useState } from 'react'
+import { collection, onSnapshot, query, orderBy } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import type { EleitorComCabo } from '../lib/types'
 
-/**
- * Carrega os eleitores e mantém a lista atualizada em tempo real:
- * o backend emite 'eleitores:changed' via Socket.io a cada mudança.
- */
 export function useEleitores() {
   const [eleitores, setEleitores] = useState<EleitorComCabo[]>([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
 
-  const recarregar = useCallback(async () => {
-    try {
-      const data = await api.get<EleitorComCabo[]>('/eleitores')
-      setEleitores(data)
+  useEffect(() => {
+    const q = query(collection(db, 'eleitores'), orderBy('nome', 'asc'))
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const lista: EleitorComCabo[] = []
+      snapshot.forEach((doc) => {
+        lista.push({ id: doc.id, ...doc.data() } as EleitorComCabo)
+      })
+      setEleitores(lista)
+      setLoading(false)
       setErro(null)
-    } catch (e) {
-      setErro((e as Error).message)
-    }
+    }, (error) => {
+      console.error(error)
+      setErro("Erro ao carregar eleitores.")
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
   }, [])
 
-  useEffect(() => {
-    let ativo = true
-    recarregar().finally(() => ativo && setLoading(false))
-
-    const socket = getSocket()
-    const handler = () => recarregar()
-    socket.on('eleitores:changed', handler)
-
-    return () => {
-      ativo = false
-      socket.off('eleitores:changed', handler)
-    }
-  }, [recarregar])
+  // Dummy recarregar function to keep compatibility with existing components
+  const recarregar = async () => {}
 
   return { eleitores, loading, erro, recarregar }
 }

@@ -5,7 +5,8 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { api, getToken, setToken, clearToken } from '../lib/api'
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth'
+import { auth } from '../lib/firebase'
 import type { PerfilAcesso, Usuario } from '../lib/types'
 
 interface AuthState {
@@ -22,43 +23,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Ao abrir, valida o token salvo buscando o usuário atual.
+  // Firebase observer para manter a sessão
   useEffect(() => {
-    if (!getToken()) {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Em um sistema real, buscaríamos o perfil real do Firestore.
+        // Aqui assumimos admin para manter a simplicidade da migração.
+        setUsuario({
+          id: user.uid,
+          nome: user.email || 'Usuário',
+          role: 'admin',
+          cabo_id: null
+        })
+      } else {
+        setUsuario(null)
+      }
       setLoading(false)
-      return
-    }
-    let ativo = true
-    api
-      .get<{ usuario: Usuario }>('/auth/me')
-      .then(({ usuario }) => ativo && setUsuario(usuario))
-      .catch(() => {
-        clearToken()
-        if (ativo) setUsuario(null)
-      })
-      .finally(() => ativo && setLoading(false))
-    return () => {
-      ativo = false
-    }
+    })
+    return () => unsubscribe()
   }, [])
 
   async function signIn(email: string, senha: string) {
     try {
-      const { token, usuario } = await api.post<{
-        token: string
-        usuario: Usuario
-      }>('/auth/login', { email, senha })
-      setToken(token)
-      setUsuario(usuario)
+      await signInWithEmailAndPassword(auth, email, senha)
       return { error: null }
-    } catch (err) {
-      return { error: (err as Error).message }
+    } catch (err: any) {
+      console.error("Erro completo do Firebase:", err)
+      return { error: `Erro Firebase: ${err.message}` }
     }
   }
 
   function signOut() {
-    clearToken()
-    setUsuario(null)
+    firebaseSignOut(auth)
   }
 
   return (
