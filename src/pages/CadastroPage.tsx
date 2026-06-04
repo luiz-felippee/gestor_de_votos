@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { CheckCircle2, UserPlus } from 'lucide-react'
 import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
@@ -44,6 +45,7 @@ export function CadastroPage() {
     () => cabos.find((c) => c.id === caboDoLink)?.nome ?? null,
     [cabos, caboDoLink],
   )
+  const caboTravado = Boolean(caboDoLink && nomeCaboDoLink)
 
   function atualizar<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((f) => ({ ...f, [campo]: valor }))
@@ -58,7 +60,7 @@ export function CadastroPage() {
     if (!form.secao.trim()) return 'Informe a seção eleitoral.'
     if (!form.bairro.trim()) return 'Informe o bairro.'
     if (!form.cidade) return 'Selecione a cidade.'
-    if (!form.cabo_id) return 'Selecione o cabo eleitoral responsável.'
+    if (!form.cabo_id) return 'Selecione quem indicou o eleitor.'
     if (!consentimento)
       return 'É necessário aceitar o uso dos dados para concluir o cadastro.'
     return null
@@ -68,10 +70,7 @@ export function CadastroPage() {
     e.preventDefault()
     setErro(null)
     const problema = validar()
-    if (problema) {
-      setErro(problema)
-      return
-    }
+    if (problema) return setErro(problema)
 
     setEnviando(true)
     try {
@@ -85,13 +84,14 @@ export function CadastroPage() {
         cidade: form.cidade,
         cabo_id: form.cabo_id || null,
         observacoes: form.observacoes.trim() || null,
-        status: 'ativo'
+        status: 'ativo',
       })
     } catch (err) {
       setEnviando(false)
-      setErro('Erro ao cadastrar eleitor: ' + (err as Error).message)
+      setErro('Erro ao cadastrar: ' + (err as Error).message)
       return
     }
+    setEnviando(false)
     setSucesso(true)
   }
 
@@ -101,187 +101,219 @@ export function CadastroPage() {
     setSucesso(false)
   }
 
-  if (sucesso) {
-    return (
-      <div className="mx-auto my-12 max-w-md rounded-xl border border-green-200 bg-white p-8 text-center shadow-lg dark:border-green-900/30 dark:bg-slate-900">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-3xl text-green-600 dark:bg-green-900/30 dark:text-green-400">
-          ✓
-        </div>
-        <h2 className="mb-2 text-2xl font-bold text-slate-800 dark:text-white">
-          Cadastro realizado!
-        </h2>
-        <p className="mb-8 text-sm font-medium text-slate-500 dark:text-slate-400">
-          O eleitor foi registrado com sucesso.
-        </p>
-        <button
-          onClick={novoCadastro}
-          className="w-full rounded-lg bg-brand-600 px-5 py-3.5 font-bold text-white shadow-sm transition hover:bg-brand-700"
-        >
-          Cadastrar outro eleitor
-        </button>
-      </div>
-    )
-  }
-
   return (
-    <div className="flex min-h-[calc(100vh-80px)] items-center justify-center p-4">
-      <div className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-md sm:p-10 dark:border-slate-800 dark:bg-slate-900">
-        <h1 className="mb-2 text-center text-3xl font-extrabold tracking-tight text-slate-800 dark:text-white">
-          Cadastro de Eleitor
-        </h1>
-        <p className="mt-1 mb-8 text-center text-sm text-slate-500 dark:text-slate-400">
-          {nomeCaboDoLink
-            ? `Indicação por ${nomeCaboDoLink}.`
-            : 'Preencha os dados do eleitor abaixo.'}
-        </p>
-
-        <form onSubmit={enviar} className="space-y-6">
-          <Campo label="Nome completo" obrigatorio>
-            <input
-              type="text"
-              value={form.nome}
-              onChange={(e) => atualizar('nome', e.target.value)}
-              className={inputClass}
-              placeholder="Ex.: José da Silva"
-            />
-          </Campo>
-
-          <Campo label="Telefone / WhatsApp" obrigatorio>
-            <input
-              type="tel"
-              inputMode="numeric"
-              value={form.telefone}
-              onChange={(e) => atualizar('telefone', maskTelefone(e.target.value))}
-              className={inputClass}
-              placeholder="(11) 91234-5678"
-            />
-          </Campo>
-
-          <Campo label="Local de votação" obrigatorio>
-            <input
-              type="text"
-              value={form.local_votacao}
-              onChange={(e) => atualizar('local_votacao', e.target.value)}
-              className={inputClass}
-              placeholder="Ex.: EMEF João XXIII"
-            />
-          </Campo>
-
-          <div className="grid grid-cols-2 gap-4">
-            <Campo label="Zona" obrigatorio>
-              <input
-                type="number"
-                min={1}
-                value={form.zona}
-                onChange={(e) => atualizar('zona', e.target.value)}
-                className={inputClass}
-              />
-            </Campo>
-            <Campo label="Seção" obrigatorio>
-              <input
-                type="number"
-                min={1}
-                value={form.secao}
-                onChange={(e) => atualizar('secao', e.target.value)}
-                className={inputClass}
-              />
-            </Campo>
+    // Fundo estilo "modal": backdrop com gradiente e o card centralizado
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-600 via-brand-700 to-slate-900 p-4">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
+        {/* Cabeçalho do modal */}
+        <div className="flex items-center gap-3 border-b border-slate-100 bg-white px-6 py-5 dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-500/30">
+            {sucesso ? <CheckCircle2 className="h-6 w-6" /> : <UserPlus className="h-6 w-6" />}
           </div>
+          <div>
+            <h1 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+              {sucesso ? 'Cadastro realizado!' : 'Cadastro de Eleitor'}
+            </h1>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              {sucesso
+                ? 'Os dados foram registrados com sucesso.'
+                : nomeCaboDoLink
+                  ? `Indicação de ${nomeCaboDoLink}`
+                  : 'Preencha os dados abaixo'}
+            </p>
+          </div>
+        </div>
 
-          <Campo label="Bairro" obrigatorio>
-            <input
-              type="text"
-              value={form.bairro}
-              onChange={(e) => atualizar('bairro', e.target.value)}
-              className={inputClass}
-              placeholder="Ex.: Centro"
-            />
-          </Campo>
-
-          <Campo label="Cidade" obrigatorio>
-            <select
-              value={form.cidade}
-              onChange={(e) => atualizar('cidade', e.target.value)}
-              className={inputClass}
+        {sucesso ? (
+          <div className="px-6 py-10 text-center">
+            <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
+              Obrigado! O eleitor foi adicionado à base da campanha.
+            </p>
+            <button
+              onClick={novoCadastro}
+              className="w-full rounded-lg bg-brand-600 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-brand-700"
             >
-              <option value="">Selecione...</option>
-              {CIDADES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </Campo>
-
-          <Campo label="Cabo eleitoral responsável" obrigatorio>
-            <select
-              value={form.cabo_id}
-              onChange={(e) => atualizar('cabo_id', e.target.value)}
-              className={inputClass}
-              disabled={Boolean(caboDoLink && nomeCaboDoLink)}
-            >
-              <option value="">Selecione...</option>
-              {cabos.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-          </Campo>
-
-          <Campo label="Observações">
-            <textarea
-              value={form.observacoes}
-              onChange={(e) => atualizar('observacoes', e.target.value)}
-              className={inputClass}
-              rows={3}
-              placeholder="Notas adicionais (opcional)"
-            />
-          </Campo>
-
-          <label className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-            <input
-              type="checkbox"
-              checked={consentimento}
-              onChange={(e) => setConsentimento(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-            />
-            <span>
-              Autorizo o uso dos meus dados para fins da campanha eleitoral,
-              conforme a{' '}
-              <a
-                href="/privacidade"
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium text-brand-600 underline"
-              >
-                Política de Privacidade (LGPD)
-              </a>
-              .
-            </span>
-          </label>
-
-          {erro && (
-            <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
-              {erro}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={enviando}
-            className="w-full rounded-lg bg-brand-600 px-5 py-3.5 font-bold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60"
+              Cadastrar outro eleitor
+            </button>
+          </div>
+        ) : (
+          <form
+            onSubmit={enviar}
+            className="max-h-[calc(100vh-9rem)] space-y-6 overflow-y-auto px-6 py-6"
           >
-            {enviando ? 'Salvando...' : 'Cadastrar eleitor'}
-          </button>
-        </form>
+            {/* Seção: dados pessoais */}
+            <Secao titulo="Dados do eleitor">
+              <Campo label="Nome completo" obrigatorio>
+                <input
+                  type="text"
+                  value={form.nome}
+                  onChange={(e) => atualizar('nome', e.target.value)}
+                  className={inputClass}
+                  placeholder="Ex.: José da Silva"
+                />
+              </Campo>
+              <Campo label="Telefone / WhatsApp" obrigatorio>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={form.telefone}
+                  onChange={(e) => atualizar('telefone', maskTelefone(e.target.value))}
+                  className={inputClass}
+                  placeholder="(11) 91234-5678"
+                />
+              </Campo>
+            </Secao>
+
+            {/* Seção: local de votação */}
+            <Secao titulo="Local de votação">
+              <Campo label="Local de votação" obrigatorio>
+                <input
+                  type="text"
+                  value={form.local_votacao}
+                  onChange={(e) => atualizar('local_votacao', e.target.value)}
+                  className={inputClass}
+                  placeholder="Ex.: EMEF João XXIII"
+                />
+              </Campo>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Zona" obrigatorio>
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.zona}
+                    onChange={(e) => atualizar('zona', e.target.value)}
+                    className={inputClass}
+                  />
+                </Campo>
+                <Campo label="Seção" obrigatorio>
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.secao}
+                    onChange={(e) => atualizar('secao', e.target.value)}
+                    className={inputClass}
+                  />
+                </Campo>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo label="Bairro" obrigatorio>
+                  <input
+                    type="text"
+                    value={form.bairro}
+                    onChange={(e) => atualizar('bairro', e.target.value)}
+                    className={inputClass}
+                    placeholder="Ex.: Centro"
+                  />
+                </Campo>
+                <Campo label="Cidade" obrigatorio>
+                  <select
+                    value={form.cidade}
+                    onChange={(e) => atualizar('cidade', e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Selecione...</option>
+                    {CIDADES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </Campo>
+              </div>
+            </Secao>
+
+            {/* Seção: indicação (quem trouxe o eleitor) */}
+            <Secao titulo="Indicação">
+              <Campo label="Quem indicou este eleitor?" obrigatorio>
+                <select
+                  value={form.cabo_id}
+                  onChange={(e) => atualizar('cabo_id', e.target.value)}
+                  className={inputClass}
+                  disabled={caboTravado}
+                >
+                  <option value="">Selecione...</option>
+                  {cabos.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </select>
+                {caboTravado && (
+                  <span className="mt-1 block text-xs text-brand-600 dark:text-brand-400">
+                    Indicação preenchida automaticamente pelo link.
+                  </span>
+                )}
+                {!caboTravado && cabos.length === 0 && (
+                  <span className="mt-1 block text-xs text-amber-600">
+                    Nenhum cabo cadastrado ainda — peça ao coordenador para cadastrar.
+                  </span>
+                )}
+              </Campo>
+              <Campo label="Observações">
+                <textarea
+                  value={form.observacoes}
+                  onChange={(e) => atualizar('observacoes', e.target.value)}
+                  className={inputClass}
+                  rows={2}
+                  placeholder="Notas adicionais (opcional)"
+                />
+              </Campo>
+            </Secao>
+
+            <label className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <input
+                type="checkbox"
+                checked={consentimento}
+                onChange={(e) => setConsentimento(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              <span>
+                Autorizo o uso dos meus dados para fins da campanha, conforme a{' '}
+                <a
+                  href="/privacidade"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-brand-600 underline"
+                >
+                  Política de Privacidade (LGPD)
+                </a>
+                .
+              </span>
+            </label>
+
+            {erro && (
+              <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                {erro}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={enviando}
+              className="w-full rounded-lg bg-brand-600 px-5 py-3.5 font-bold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60"
+            >
+              {enviando ? 'Salvando...' : 'Cadastrar eleitor'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )
 }
 
 const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-brand-500/50 disabled:bg-slate-100 disabled:text-slate-500'
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 disabled:bg-slate-100 disabled:text-slate-500 dark:disabled:bg-slate-800'
+
+function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <fieldset className="space-y-3">
+      <legend className="mb-1 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+        {titulo}
+      </legend>
+      {children}
+    </fieldset>
+  )
+}
 
 function Campo({
   label,
@@ -294,7 +326,7 @@ function Campo({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-bold text-slate-700 dark:text-slate-300">
+      <span className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">
         {label}
         {obrigatorio && <span className="text-red-500"> *</span>}
       </span>

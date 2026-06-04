@@ -211,7 +211,7 @@ export function PlanilhaPage() {
               <Th col="cidade" ordem={ordem} onClick={ordenarPor}>
                 Cidade
               </Th>
-              <th className="px-3 py-3">Cabo</th>
+              <th className="px-3 py-3">Indicação</th>
               <Th col="status" ordem={ordem} onClick={ordenarPor}>
                 Status
               </Th>
