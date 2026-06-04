@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased font-sans selection:bg-brand-500 selection:text-white dark:bg-slate-950 dark:text-slate-200 transition-colors duration-300;
+}
+
+/* Variante Dark para o fundo */
+.dark body {
+  background-color: #020617; /* slate-950 */
+}
+
+@layer utilities {
+}

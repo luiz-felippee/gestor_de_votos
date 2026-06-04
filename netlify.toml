@@ -1,0 +1,11 @@
+# Configuração de deploy do front no Netlify.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA: todas as rotas (/cadastro, /planilha, ...) caem no index.html
+# para o React Router resolver no cliente.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
