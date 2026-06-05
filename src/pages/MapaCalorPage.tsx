@@ -1,5 +1,12 @@
-import { useMemo, useState } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  MapContainer,
+  TileLayer,
+  CircleMarker,
+  Tooltip,
+  GeoJSON,
+} from 'react-leaflet'
+import type { LatLngBoundsExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEleitores } from '../hooks/useEleitores'
 import cidadesPE from '../data/pe-cidades.json'
@@ -18,20 +25,53 @@ interface BairroItem {
 function normalizar(s: string) {
   return s
     .normalize('NFD')
-    // eslint-disable-next-line no-control-regex
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .trim()
 }
 
-// Mapa: nome normalizado da cidade -> coordenada
 const COORD_POR_CIDADE = new Map<string, CidadeCoord>(
   (cidadesPE as CidadeCoord[]).map((c) => [normalizar(c.nome), c]),
 )
 
+/* Limites de PE (continente) calculados a partir do GeoJSON */
+function calcularBounds(geo: any): LatLngBoundsExpression {
+  let minLat = 90,
+    maxLat = -90,
+    minLng = 180,
+    maxLng = -180
+  const walk = (c: any) => {
+    if (typeof c[0] === 'number') {
+      const [lng, lat] = c
+      if (lat < minLat) minLat = lat
+      if (lat > maxLat) maxLat = lat
+      if (lng < minLng) minLng = lng
+      if (lng > maxLng) maxLng = lng
+    } else c.forEach(walk)
+  }
+  for (const f of geo.features) walk(f.geometry.coordinates)
+  return [
+    [minLat, minLng],
+    [maxLat, maxLng],
+  ]
+}
+
 export function MapaCalorPage() {
   const { eleitores, loading } = useEleitores()
   const [cidadeSelecionada, setCidadeSelecionada] = useState<string | null>(null)
+  const [geoData, setGeoData] = useState<any>(null)
+  const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
+
+  /* ---------- Carrega o contorno de PE (local, sem Noronha) ---------- */
+  useEffect(() => {
+    fetch('/pe-municipios.geojson')
+      .then((r) => r.json())
+      .then((geo) => {
+        setGeoData(geo)
+        setBounds(calcularBounds(geo))
+      })
+      .catch(() => {})
+  }, [])
 
   /* ---------- Agregações ---------- */
   const { contagemPorCidade, bairrosList, pontos } = useMemo(() => {
@@ -55,7 +95,6 @@ export function MapaCalorPage() {
       for (const [bairro, count] of bm) bairrosList.push({ cidade, bairro, count })
     bairrosList.sort((a, b) => b.count - a.count)
 
-    // Pontos do mapa (cidades que temos coordenada)
     const pontos = [...cidadeMap.entries()]
       .map(([cidade, count]) => {
         const coord = COORD_POR_CIDADE.get(normalizar(cidade))
@@ -68,28 +107,15 @@ export function MapaCalorPage() {
 
   const maxCount = Math.max(1, ...pontos.map((p) => p.count))
   const totalEleitores = eleitores.length
-
   const cidadesComVotos = [...contagemPorCidade.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
-
   const bairrosFiltrados = cidadeSelecionada
     ? bairrosList.filter((b) => b.cidade === cidadeSelecionada)
     : bairrosList
   const maxBairro = bairrosFiltrados.length > 0 ? bairrosFiltrados[0].count : 1
 
-  if (loading) {
-    return (
-      <div className="flex h-[70vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-            Carregando mapa...
-          </p>
-        </div>
-      </div>
-    )
-  }
+  const pronto = !loading && geoData && bounds
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 animate-fade-in">
@@ -98,12 +124,11 @@ export function MapaCalorPage() {
           Mapa de Força — Pernambuco 🗺️
         </h1>
         <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
-          Concentração de eleitores cadastrados por município. Quanto maior e mais
-          vermelho o círculo, mais eleitores.
+          Concentração de eleitores por município. Quanto maior e mais vermelho o
+          círculo, mais eleitores.
         </p>
       </div>
 
-      {/* Stats */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="Total de Eleitores" value={totalEleitores} />
         <StatCard label="Municípios Alcançados" value={contagemPorCidade.size} />
@@ -116,52 +141,69 @@ export function MapaCalorPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Mapa Leaflet */}
         <div className="lg:col-span-2 overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-slate-800">
-          <MapContainer
-            center={[-8.3, -37.9]}
-            zoom={7}
-            scrollWheelZoom
-            style={{ height: '60vh', minHeight: 420, width: '100%' }}
-          >
-            <TileLayer
-              attribution='&copy; OpenStreetMap'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {pontos.map((p) => {
-              const intensidade = p.count / maxCount
-              const raio = 8 + intensidade * 22
-              const cor = `hsl(${Math.round(45 - intensidade * 45)}, 90%, 50%)`
-              return (
-                <CircleMarker
-                  key={p.cidade}
-                  center={[p.lat, p.lng]}
-                  radius={raio}
-                  pathOptions={{
-                    color: '#ffffff',
-                    weight: 1.5,
-                    fillColor: cor,
-                    fillOpacity: 0.75,
-                  }}
-                  eventHandlers={{
-                    click: () =>
-                      setCidadeSelecionada(
-                        cidadeSelecionada === p.cidade ? null : p.cidade,
-                      ),
-                  }}
-                >
-                  <Tooltip direction="top">
-                    <strong>{p.cidade}</strong>
-                    <br />
-                    {p.count} eleitor{p.count !== 1 ? 'es' : ''}
-                  </Tooltip>
-                </CircleMarker>
-              )
-            })}
-          </MapContainer>
+          {pronto ? (
+            <MapContainer
+              bounds={bounds!}
+              maxBounds={bounds!}
+              maxBoundsViscosity={0.9}
+              minZoom={6}
+              scrollWheelZoom
+              style={{ height: '65vh', minHeight: 460, width: '100%' }}
+            >
+              <TileLayer
+                attribution="&copy; OpenStreetMap"
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {/* Contorno dos municípios de PE */}
+              <GeoJSON
+                data={geoData}
+                style={{
+                  color: '#475569',
+                  weight: 1,
+                  fillColor: '#64748b',
+                  fillOpacity: 0.05,
+                }}
+              />
+              {/* Círculos de calor */}
+              {pontos.map((p) => {
+                const intensidade = p.count / maxCount
+                const raio = 8 + intensidade * 22
+                const cor = `hsl(${Math.round(45 - intensidade * 45)}, 90%, 50%)`
+                return (
+                  <CircleMarker
+                    key={p.cidade}
+                    center={[p.lat, p.lng]}
+                    radius={raio}
+                    pathOptions={{
+                      color: '#ffffff',
+                      weight: 1.5,
+                      fillColor: cor,
+                      fillOpacity: 0.8,
+                    }}
+                    eventHandlers={{
+                      click: () =>
+                        setCidadeSelecionada(
+                          cidadeSelecionada === p.cidade ? null : p.cidade,
+                        ),
+                    }}
+                  >
+                    <Tooltip direction="top">
+                      <strong>{p.cidade}</strong>
+                      <br />
+                      {p.count} eleitor{p.count !== 1 ? 'es' : ''}
+                    </Tooltip>
+                  </CircleMarker>
+                )
+              })}
+            </MapContainer>
+          ) : (
+            <div className="flex h-[65vh] min-h-[460px] items-center justify-center bg-slate-50 dark:bg-slate-900">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+            </div>
+          )}
         </div>
 
-        {/* Sidebar */}
         <div className="flex flex-col gap-6">
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <h2 className="mb-3 text-base font-bold text-slate-800 dark:text-slate-100">
