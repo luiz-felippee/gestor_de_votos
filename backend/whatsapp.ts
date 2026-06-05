@@ -50,9 +50,18 @@ export function getWhatsAppStatus() {
   return { status: 'desconectado' };
 }
 
-export async function sendWhatsAppMessage(number: string, text: string) {
+export async function sendWhatsAppMessage(number: string, text: string, tipo: string = 'text', url_midia?: string) {
   if (!sock?.user) throw new Error("WhatsApp não está conectado.");
   
   const jid = `${number}@s.whatsapp.net`;
-  await sock.sendMessage(jid, { text });
+  
+  if (tipo === 'image' && url_midia) {
+    await sock.sendMessage(jid, { image: { url: url_midia }, caption: text });
+  } else if (tipo === 'video' && url_midia) {
+    await sock.sendMessage(jid, { video: { url: url_midia }, caption: text });
+  } else if (tipo === 'audio' && url_midia) {
+    await sock.sendMessage(jid, { audio: { url: url_midia }, mimetype: 'audio/mp4', ptt: true });
+  } else {
+    await sock.sendMessage(jid, { text });
+  }
 }

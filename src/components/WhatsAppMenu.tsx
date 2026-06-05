@@ -8,6 +8,12 @@ interface Props {
 
 export function WhatsAppMenu({ eleitor }: Props) {
   const [open, setOpen] = useState(false)
+  const [mediaModalOpen, setMediaModalOpen] = useState(false)
+  const [mediaType, setMediaType] = useState<'image' | 'video' | 'audio'>('image')
+  const [mediaUrl, setMediaUrl] = useState('')
+  const [mediaText, setMediaText] = useState('')
+  const [sending, setSending] = useState(false)
+  
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Fecha o menu ao clicar fora
@@ -40,29 +46,38 @@ export function WhatsAppMenu({ eleitor }: Props) {
     },
   ]
 
-  const handleSend = async (text: string) => {
+  const handleSend = async (text: string, tipo: string = 'text', url_midia?: string) => {
     setOpen(false)
+    setSending(true)
     
     try {
-      // Tenta enviar via servidor (se tiver robô ativo)
+      // Tenta enviar via servidor
       const res = await fetch(`${api.base}/api/whatsapp/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('gv_token')}`
         },
-        body: JSON.stringify({ numero: phoneString, texto: text })
+        body: JSON.stringify({ numero: phoneString, texto: text, tipo, url_midia })
       })
 
-      if (!res.ok) {
-        // Fallback: se não tiver robô configurado, abre no celular da pessoa
+      if (!res.ok && tipo === 'text') {
+        // Fallback: se não tiver robô e for texto, abre no celular da pessoa
         const url = `https://wa.me/55${phoneString}?text=${encodeURIComponent(text)}`
         window.open(url, '_blank')
+      } else if (!res.ok) {
+         alert("Erro ao enviar mídia. Verifique as configurações do robô.")
       }
     } catch (e) {
-      // Fallback erro de rede
-      const url = `https://wa.me/55${phoneString}?text=${encodeURIComponent(text)}`
-      window.open(url, '_blank')
+      if (tipo === 'text') {
+        const url = `https://wa.me/55${phoneString}?text=${encodeURIComponent(text)}`
+        window.open(url, '_blank')
+      } else {
+        alert("Erro de rede ao enviar mídia.")
+      }
+    } finally {
+      setSending(false)
+      setMediaModalOpen(false)
     }
     
     // Marca no banco de dados
@@ -95,20 +110,31 @@ export function WhatsAppMenu({ eleitor }: Props) {
       </div>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-slate-800 dark:ring-slate-700">
+        <div className="absolute right-0 z-40 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none dark:bg-slate-800 dark:ring-slate-700">
           <div className="py-1">
             <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider dark:text-slate-400">
-              Enviar Mensagem
+              Mensagens Prontas
             </div>
             {templates.map((tpl, i) => (
               <button
                 key={i}
                 onClick={() => handleSend(tpl.text)}
-                className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                disabled={sending}
+                className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
               >
                 {tpl.label}
               </button>
             ))}
+            
+            <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
+              <button
+                onClick={() => { setOpen(false); setMediaModalOpen(true); }}
+                className="w-full text-left px-4 py-2 text-sm text-brand-600 font-medium hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-900/30 transition-colors"
+              >
+                📸 Enviar Foto/Vídeo/Áudio
+              </button>
+            </div>
+
             {eleitor.whatsapp_enviado && (
               <div className="border-t border-slate-100 dark:border-slate-700 mt-1 pt-1">
                 <button
@@ -123,6 +149,51 @@ export function WhatsAppMenu({ eleitor }: Props) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* MODAL DE MÍDIA */}
+      {mediaModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+             <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 dark:text-slate-100">Enviar Mídia para {eleitor.nome.split(' ')[0]}</h3>
+                <button onClick={() => setMediaModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+             </div>
+             <div className="p-5 space-y-4">
+                <div className="flex gap-2">
+                   {['image', 'video', 'audio'].map(t => (
+                     <button 
+                       key={t}
+                       onClick={() => setMediaType(t as any)}
+                       className={`flex-1 py-1.5 text-xs font-bold uppercase rounded-lg border ${mediaType === t ? 'bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400' : 'border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-400'}`}
+                     >
+                       {t === 'image' ? '📸 Foto' : t === 'video' ? '🎥 Vídeo' : '🎤 Áudio'}
+                     </button>
+                   ))}
+                </div>
+
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">URL Pública do Arquivo</span>
+                  <input type="url" value={mediaUrl} onChange={e => setMediaUrl(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" placeholder="https://..." />
+                </label>
+
+                {mediaType !== 'audio' && (
+                  <label className="block">
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Mensagem (Legenda)</span>
+                    <textarea value={mediaText} onChange={e => setMediaText(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white" rows={2} placeholder="Opcional..." />
+                  </label>
+                )}
+
+                <button 
+                  onClick={() => handleSend(mediaText, mediaType, mediaUrl)}
+                  disabled={!mediaUrl || sending}
+                  className="w-full py-2.5 rounded-lg bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 transition disabled:opacity-50"
+                >
+                  {sending ? 'Enviando...' : 'Disparar Mídia Agora'}
+                </button>
+             </div>
+           </div>
         </div>
       )}
     </div>

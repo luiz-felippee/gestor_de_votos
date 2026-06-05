@@ -502,22 +502,42 @@ app.post(
   '/api/whatsapp/send',
   requireAuth,
   wrap(async (req, res) => {
-    const { numero, texto } = req.body;
-    if (!numero || !texto) return res.status(400).json({ error: 'Número e texto são obrigatórios.' });
+    const { numero, texto, tipo = 'text', url_midia } = req.body;
+    if (!numero) return res.status(400).json({ error: 'Número é obrigatório.' });
+    if (tipo === 'text' && !texto) return res.status(400).json({ error: 'Texto é obrigatório.' });
+    if (tipo !== 'text' && !url_midia) return res.status(400).json({ error: 'URL da mídia é obrigatória.' });
 
     const config = await prisma.configuracaoWhatsApp.findUnique({ where: { id: 'singleton' } });
     
     if (config?.modo === 'interno') {
-      await sendWhatsAppMessage(numero, texto);
+      await sendWhatsAppMessage(numero, texto || '', tipo, url_midia);
       return res.json({ success: true });
     } 
     
     if (config?.modo === 'zapi' && config.api_url && config.api_token) {
       // Simulação de envio Z-API
-      const response = await fetch(`${config.api_url}/send-text`, {
+      let endpoint = '/send-text';
+      let body: any = { phone: `55${numero}` };
+      
+      if (tipo === 'image') {
+        endpoint = '/send-image';
+        body.image = url_midia;
+        if (texto) body.caption = texto;
+      } else if (tipo === 'video') {
+        endpoint = '/send-video';
+        body.video = url_midia;
+        if (texto) body.caption = texto;
+      } else if (tipo === 'audio') {
+        endpoint = '/send-audio';
+        body.audio = url_midia;
+      } else {
+        body.message = texto;
+      }
+
+      const response = await fetch(`${config.api_url}${endpoint}`, {
         method: 'POST',
         headers: { 'Client-Token': config.api_token, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: `55${numero}`, message: texto })
+        body: JSON.stringify(body)
       });
       if (!response.ok) throw new Error("Erro na API Externa Z-API");
       return res.json({ success: true });
