@@ -5,8 +5,8 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -153,19 +153,49 @@ export function DashboardPage() {
 
         <Painel titulo="Cadastros por dia">
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={porDia}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Line
+            <AreaChart data={porDia} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" strokeOpacity={0.08} />
+              <XAxis 
+                dataKey="label" 
+                tick={{ fontSize: 12, fill: 'currentColor' }} 
+                tickLine={false}
+                axisLine={false}
+                dy={10}
+                opacity={0.6}
+              />
+              <YAxis 
+                allowDecimals={false} 
+                tick={{ fontSize: 12, fill: 'currentColor' }} 
+                tickLine={false}
+                axisLine={false}
+                opacity={0.6}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                  border: 'none', 
+                  borderRadius: '8px', 
+                  color: '#fff',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                }}
+                itemStyle={{ color: '#38bdf8', fontWeight: 'bold' }}
+              />
+              <Area
                 type="monotone"
                 dataKey="total"
-                stroke="#2563eb"
-                strokeWidth={2}
-                dot={{ r: 3 }}
+                stroke="#3b82f6"
+                strokeWidth={3}
+                fillOpacity={1}
+                fill="url(#colorTotal)"
+                activeDot={{ r: 6, strokeWidth: 0, fill: '#3b82f6' }}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </Painel>
       </div>
