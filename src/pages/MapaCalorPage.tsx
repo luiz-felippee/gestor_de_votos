@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useEleitores } from '../hooks/useEleitores'
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts'
 
@@ -91,7 +91,7 @@ export function MapaCalorPage() {
           
           <div className="flex-1 overflow-y-auto pr-2 space-y-2">
             {bairrosList.length > 0 ? (
-              bairrosList.map((item, i) => {
+              bairrosList.map((item) => {
                 const pct = Math.max(0, Math.min(100, (item.count / maxCount) * 100))
                 // Interpola a opacidade do background baseado na porcentagem para criar o efeito termal (vermelho)
                 const bgOpacity = 0.1 + (pct * 0.9) / 100
@@ -151,7 +151,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 // Custom Content para renderizar o nome dentro dos retângulos
 const CustomizedContent = (props: any) => {
-  const { root, depth, x, y, width, height, index, payload, name } = props
+  const { depth, x, y, width, height, index, name } = props
 
   // Renderiza apenas as "folhas" (bairros), não a raiz
   if (depth !== 1) return null
