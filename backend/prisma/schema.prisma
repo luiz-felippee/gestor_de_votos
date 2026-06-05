@@ -44,9 +44,10 @@ model Eleitor {
   bairro        String
   cidade        String
   cabo_id       String?
-  status        StatusEleitor  @default(ativo)
-  observacoes   String?
-  created_at    DateTime       @default(now())
+  status           StatusEleitor  @default(ativo)
+  observacoes      String?
+  whatsapp_enviado Boolean        @default(false)
+  created_at       DateTime       @default(now())
   // Normalizado (minúsculo, sem espaços nas pontas) p/ impedir duplicados
   nome_busca    String
   cabo          CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
@@ -66,4 +67,16 @@ model Usuario {
   cabo       CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
 
   @@map("usuarios")
+}
+
+model ConfiguracaoWhatsApp {
+  id               String   @id @default("singleton")
+  modo             String   @default("nenhum") // nenhum, interno, zapi, evolution
+  api_url          String?
+  api_token        String?
+  api_instancia_id String?
+  
+  updated_at       DateTime @updatedAt
+
+  @@map("configuracao_whatsapp")
 }

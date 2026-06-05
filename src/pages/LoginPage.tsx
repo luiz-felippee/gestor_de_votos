@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { AlertCircle } from 'lucide-react'
+import { Logo } from '../components/Logo'
 
 export function LoginPage() {
   const { signIn, signUp } = useAuth()
@@ -60,11 +61,9 @@ export function LoginPage() {
         onSubmit={handleLogin}
         className="relative w-full max-w-[420px] rounded-xl border border-slate-200 bg-white p-8 shadow-lg dark:border-slate-800 dark:bg-slate-900"
       >
-        <div className="mb-10 text-center">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-xl shadow-brand-500/30">
-            <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        <div className="mb-10 text-center flex flex-col items-center">
+          <div className="mb-5">
+            <Logo className="h-16 w-auto mx-auto" iconClassName="h-16 w-16" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Bem-vindo de volta</h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">

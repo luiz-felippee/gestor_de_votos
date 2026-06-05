@@ -33,6 +33,7 @@ export interface Eleitor {
   cabo_id: string | null
   status: StatusEleitor
   observacoes: string | null
+  whatsapp_enviado: boolean
   created_at: string
 }
 
@@ -49,4 +50,13 @@ export interface CaboEleitoral {
 /** Eleitor com o nome do cabo já resolvido (join), usado na planilha. */
 export interface EleitorComCabo extends Eleitor {
   cabo: Pick<CaboEleitoral, 'id' | 'nome'> | null
+}
+
+export interface ConfiguracaoWhatsApp {
+  id: string
+  modo: string
+  api_url: string | null
+  api_token: string | null
+  api_instancia_id: string | null
+  updated_at: string
 }

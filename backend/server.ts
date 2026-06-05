@@ -3,7 +3,8 @@ import express, { type Request, type Response, type NextFunction } from 'express
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import rateLimit from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
+import { initWhatsApp, getWhatsAppStatus, sendWhatsAppMessage } from './whatsapp';
 import { createServer } from 'node:http';
 import { Server as SocketServer } from 'socket.io';
 import { PrismaClient, type PerfilAcesso, type StatusEleitor } from '@prisma/client';
@@ -156,7 +157,7 @@ app.put(
   wrap(async (req, res) => {
     const { nome, telefone, bairro_atuacao, cidade, meta_eleitores } = req.body ?? {};
     const cabo = await prisma.caboEleitoral.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: {
         nome,
         telefone,
@@ -174,7 +175,7 @@ app.delete(
   requireAuth,
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
-    await prisma.caboEleitoral.delete({ where: { id: req.params.id } });
+    await prisma.caboEleitoral.delete({ where: { id: String(req.params.id) } });
     res.status(204).send();
   }),
 );
@@ -237,6 +238,21 @@ app.get(
   }),
 );
 
+// Marcar WhatsApp Enviado
+app.patch(
+  '/api/eleitores/:id/whatsapp',
+  requireAuth,
+  wrap(async (req, res) => {
+    const { enviado } = req.body ?? {};
+    const eleitor = await prisma.eleitor.update({
+      where: { id: String(req.params.id) },
+      data: { whatsapp_enviado: Boolean(enviado) }
+    });
+    notificarMudanca();
+    res.json(eleitor);
+  })
+);
+
 // Editar: admin/coordenador
 app.put(
   '/api/eleitores/:id',
@@ -246,7 +262,7 @@ app.put(
     const b = req.body ?? {};
     try {
       const eleitor = await prisma.eleitor.update({
-        where: { id: req.params.id },
+        where: { id: String(req.params.id) },
         data: {
           nome: b.nome,
           nome_busca: b.nome ? normalizar(String(b.nome)) : undefined,
@@ -277,7 +293,7 @@ app.delete(
   requireAuth,
   requireRole('admin'),
   wrap(async (req, res) => {
-    await prisma.eleitor.delete({ where: { id: req.params.id } });
+    await prisma.eleitor.delete({ where: { id: String(req.params.id) } });
     notificarMudanca();
     res.status(204).send();
   }),
@@ -290,7 +306,7 @@ app.post(
   requireRole('admin'),
   wrap(async (req, res) => {
     const eleitor = await prisma.eleitor.update({
-      where: { id: req.params.id },
+      where: { id: String(req.params.id) },
       data: {
         nome: '[anonimizado]',
         nome_busca: `anon-${req.params.id}`,
@@ -386,7 +402,7 @@ app.put(
     }
     try {
       const usuario = await prisma.usuario.update({
-        where: { id: req.params.id },
+        where: { id: String(req.params.id) },
         data: {
           nome,
           email: email ? String(email).toLowerCase().trim() : undefined,
@@ -414,9 +430,101 @@ app.delete(
     if (req.params.id === req.user!.id) {
       return res.status(400).json({ error: 'Você não pode excluir o próprio usuário.' });
     }
-    await prisma.usuario.delete({ where: { id: req.params.id } });
+    await prisma.usuario.delete({ where: { id: String(req.params.id) } });
     res.status(204).send();
   }),
+);
+
+// --- Configurações do WhatsApp ---
+app.get(
+  '/api/config/whatsapp',
+  requireAuth,
+  requireRole('admin'),
+  wrap(async (req, res) => {
+    let config = await prisma.configuracaoWhatsApp.findUnique({ where: { id: 'singleton' } });
+    if (!config) {
+      config = await prisma.configuracaoWhatsApp.create({
+        data: { id: 'singleton', modo: 'nenhum' }
+      });
+    }
+    res.json(config);
+  })
+);
+
+app.put(
+  '/api/config/whatsapp',
+  requireAuth,
+  requireRole('admin'),
+  wrap(async (req, res) => {
+    const b = req.body ?? {};
+    const config = await prisma.configuracaoWhatsApp.upsert({
+      where: { id: 'singleton' },
+      update: {
+        modo: b.modo,
+        api_url: b.api_url,
+        api_token: b.api_token,
+        api_instancia_id: b.api_instancia_id
+      },
+      create: {
+        id: 'singleton',
+        modo: b.modo || 'nenhum',
+        api_url: b.api_url,
+        api_token: b.api_token,
+        api_instancia_id: b.api_instancia_id
+      }
+    });
+    
+    // Se mudou para modo interno, inicializa
+    if (config.modo === 'interno') {
+      initWhatsApp(io).catch(console.error);
+    }
+    
+    res.json(config);
+  })
+);
+
+app.get(
+  '/api/whatsapp/status',
+  requireAuth,
+  wrap(async (req, res) => {
+    const config = await prisma.configuracaoWhatsApp.findUnique({ where: { id: 'singleton' } });
+    if (config?.modo === 'interno') {
+      return res.json(getWhatsAppStatus());
+    }
+    if (config?.modo === 'zapi' || config?.modo === 'evolution') {
+      return res.json({ status: 'conectado', tipo: 'externo' });
+    }
+    res.json({ status: 'desconectado' });
+  })
+);
+
+app.post(
+  '/api/whatsapp/send',
+  requireAuth,
+  wrap(async (req, res) => {
+    const { numero, texto } = req.body;
+    if (!numero || !texto) return res.status(400).json({ error: 'Número e texto são obrigatórios.' });
+
+    const config = await prisma.configuracaoWhatsApp.findUnique({ where: { id: 'singleton' } });
+    
+    if (config?.modo === 'interno') {
+      await sendWhatsAppMessage(numero, texto);
+      return res.json({ success: true });
+    } 
+    
+    if (config?.modo === 'zapi' && config.api_url && config.api_token) {
+      // Simulação de envio Z-API
+      const response = await fetch(`${config.api_url}/send-text`, {
+        method: 'POST',
+        headers: { 'Client-Token': config.api_token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: `55${numero}`, message: texto })
+      });
+      if (!response.ok) throw new Error("Erro na API Externa Z-API");
+      return res.json({ success: true });
+    }
+
+    res.status(400).json({ error: 'Nenhuma configuração de WhatsApp ativa.' });
+  })
 );
 
 // --- Inicialização: cria/atualiza o admin a partir das variáveis de ambiente ---
@@ -442,7 +550,17 @@ async function bootstrap() {
 const PORT = Number(process.env.PORT) || 3000;
 bootstrap()
   .catch((err) => console.error('Falha no bootstrap:', err.message))
-  .finally(() => {
+  .finally(async () => {
+    // Inicia o WhatsApp Interno se estiver configurado
+    try {
+      const config = await prisma.configuracaoWhatsApp.findUnique({ where: { id: 'singleton' } });
+      if (config?.modo === 'interno') {
+        initWhatsApp(io).catch(console.error);
+      }
+    } catch (e) {
+      console.error("Erro ao verificar config do whatsapp na inicialização", e);
+    }
+
     httpServer.listen(PORT, () => {
       console.log(`✓ API do Gestor de Votos rodando na porta ${PORT}`);
     });

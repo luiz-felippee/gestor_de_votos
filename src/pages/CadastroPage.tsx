@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido } from '../lib/format'
+import { LocalVotacaoAutocomplete } from '../components/LocalVotacaoAutocomplete'
 
 interface FormState {
   nome: string
@@ -187,15 +188,20 @@ export function CadastroPage() {
             {/* Seção: local de votação */}
             <Secao titulo="Local de votação">
               <Campo label="Local de votação" obrigatorio>
-                <input
-                  type="text"
+                <LocalVotacaoAutocomplete
                   value={form.local_votacao}
-                  onChange={(e) => atualizar('local_votacao', e.target.value)}
+                  onChangeLocal={(val) => atualizar('local_votacao', val)}
+                  onSelectAddress={(bairro, cidade) => {
+                    setForm(f => ({
+                      ...f,
+                      bairro: bairro || f.bairro,
+                      cidade: cidade || f.cidade
+                    }))
+                  }}
                   className={inputClass}
-                  placeholder="Ex.: EMEF João XXIII"
                 />
               </Campo>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Campo label="Zona" obrigatorio>
                   <input
                     type="number"
@@ -215,7 +221,7 @@ export function CadastroPage() {
                   />
                 </Campo>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Campo label="Bairro" obrigatorio>
                   <input
                     type="text"

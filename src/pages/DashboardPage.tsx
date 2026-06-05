@@ -32,7 +32,14 @@ export function DashboardPage() {
 
   const porCidade = useMemo(() => agrupar(lista, (e) => e.cidade), [lista])
   const porBairro = useMemo(
-    () => agrupar(lista, (e) => e.bairro).slice(0, 10),
+    () => agrupar(lista, (e) => {
+      if (!e.bairro) return '—'
+      // Normaliza para Capitalizar as palavras e evitar que "centro" e "Centro" separem
+      return e.bairro
+        .trim()
+        .toLowerCase()
+        .replace(/(?:^|\s)\S/g, (a) => a.toUpperCase())
+    }).slice(0, 10),
     [lista],
   )
   const porZona = useMemo(

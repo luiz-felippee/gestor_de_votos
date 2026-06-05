@@ -113,7 +113,7 @@ export function CabosPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 animate-fade-in">
       <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-        Cabos Eleitorais
+        Gestão de Liderança
       </h1>
       <p className="mb-8 text-sm font-medium text-slate-500 dark:text-slate-400">
         Cadastre cabos, defina metas e compartilhe o link personalizado de

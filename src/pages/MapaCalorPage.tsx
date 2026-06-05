@@ -140,84 +140,24 @@ export function MapaCalorPage() {
     return result
   }, [nomesMap, contagemPorCidade])
 
-  /* ---------- Desenhar o mapa com D3 ---------- */
-  const drawMap = useCallback(() => {
-    if (!geoData || !svgRef.current) return
+  /* ---------- Projeção e Cores (Memo) ---------- */
+  const { pathGen, colorScale, features } = useMemo(() => {
+    if (!geoData || !geoData.features) return { pathGen: null, colorScale: null, features: [] }
 
-    const svg = d3.select(svgRef.current)
-    svg.selectAll('*').remove()
+    const width = 800
+    const height = 500
 
-    const container = svgRef.current.parentElement
-    const width = container?.clientWidth || 700
-    const height = container?.clientHeight || 600
-
-    svg.attr('viewBox', `0 0 ${width} ${height}`)
+    const projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], geoData)
+    const pathGenerator = d3.geoPath().projection(projection)
 
     const maxVal = Math.max(1, ...contagemPorId.values())
-    const colorScale = d3
-      .scaleSequential(d3.interpolateYlOrRd)
-      .domain([0, maxVal])
+    const scale = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, maxVal])
 
-    const projection = d3.geoMercator().fitSize([width - 20, height - 20], geoData)
-    const pathGen = d3.geoPath().projection(projection)
+    return { pathGen: pathGenerator, colorScale: scale, features: geoData.features }
+  }, [geoData, contagemPorId])
 
-    const tooltip = d3.select(tooltipRef.current)
-
-    // Desenhar municípios
-    svg
-      .append('g')
-      .selectAll('path')
-      .data(geoData.features)
-      .join('path')
-      .attr('d', (d: any) => pathGen(d) || '')
-      .attr('fill', (d: any) => {
-        const codIBGE = Number(d.properties?.codarea || d.properties?.CD_MUN || d.id)
-        const count = contagemPorId.get(codIBGE) || 0
-        return count > 0 ? colorScale(count) : '#e2e8f0'
-      })
-      .attr('stroke', '#94a3b8')
-      .attr('stroke-width', 0.5)
-      .attr('cursor', 'pointer')
-      .on('mouseenter', function (event: any, d: any) {
-        d3.select(this).attr('stroke', '#1e293b').attr('stroke-width', 2).raise()
-
-        const codIBGE = Number(d.properties?.codarea || d.properties?.CD_MUN || d.id)
-        const nome = nomesMap.get(codIBGE) || 'Desconhecido'
-        const count = contagemPorId.get(codIBGE) || 0
-
-        tooltip
-          .style('opacity', '1')
-          .html(
-            `<strong>${nome}</strong><br/>${count} eleitor${count !== 1 ? 'es' : ''}`
-          )
-      })
-      .on('mousemove', function (event: any) {
-        const svgRect = svgRef.current!.getBoundingClientRect()
-        tooltip
-          .style('left', `${event.clientX - svgRect.left + 12}px`)
-          .style('top', `${event.clientY - svgRect.top - 30}px`)
-      })
-      .on('mouseleave', function () {
-        d3.select(this).attr('stroke', '#94a3b8').attr('stroke-width', 0.5)
-        tooltip.style('opacity', '0')
-      })
-      .on('click', function (_event: any, d: any) {
-        const codIBGE = Number(d.properties?.codarea || d.properties?.CD_MUN || d.id)
-        const nome = nomesMap.get(codIBGE) || null
-        if (nome && cidadeSelecionada === nome) {
-          setCidadeSelecionada(null)
-        } else {
-          setCidadeSelecionada(nome)
-        }
-      })
-  }, [geoData, contagemPorId, nomesMap, cidadeSelecionada])
-
-  useEffect(() => {
-    drawMap()
-    const handleResize = () => drawMap()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [drawMap])
+  /* ---------- Hover State ---------- */
+  const [hoveredMunicipio, setHoveredMunicipio] = useState<{ id: number; nome: string; count: number; x: number; y: number } | null>(null)
 
   /* ---------- Loading / Erro ---------- */
   if (loadingMapa || loadingEleitores) {
@@ -284,17 +224,67 @@ export function MapaCalorPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Mapa SVG */}
         <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 shadow-sm dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
-          <div className="relative w-full" style={{ minHeight: '500px' }}>
+          <div className="relative w-full overflow-hidden h-[60vh] sm:h-[500px]">
             <svg
               ref={svgRef}
               className="w-full h-full"
-              style={{ minHeight: '500px' }}
-            />
-            <div
-              ref={tooltipRef}
-              className="pointer-events-none absolute rounded-lg bg-slate-900 px-3 py-2 text-sm text-white shadow-xl border border-slate-700 opacity-0 transition-opacity duration-150 z-50"
-              style={{ whiteSpace: 'nowrap' }}
-            />
+              viewBox="0 0 800 500"
+              preserveAspectRatio="xMidYMid meet"
+              onMouseLeave={() => setHoveredMunicipio(null)}
+            >
+              {pathGen && colorScale && features.map((feature: any, i: number) => {
+                const codIBGE = Number(feature.properties?.codarea || feature.properties?.CD_MUN || feature.id)
+                const count = contagemPorId.get(codIBGE) || 0
+                const nome = nomesMap.get(codIBGE) || 'Desconhecido'
+                const isHovered = hoveredMunicipio?.id === codIBGE
+                
+                return (
+                  <path
+                    key={i}
+                    d={pathGen(feature) || ''}
+                    fill={count > 0 ? colorScale(count) : '#e2e8f0'}
+                    stroke={isHovered ? '#1e293b' : '#94a3b8'}
+                    strokeWidth={isHovered ? 2 : 0.5}
+                    className="cursor-pointer transition-colors duration-200"
+                    onMouseEnter={(e) => {
+                      const svgRect = svgRef.current?.getBoundingClientRect()
+                      if (!svgRect) return
+                      setHoveredMunicipio({
+                        id: codIBGE,
+                        nome,
+                        count,
+                        x: e.clientX - svgRect.left + 12,
+                        y: e.clientY - svgRect.top - 30
+                      })
+                    }}
+                    onMouseMove={(e) => {
+                      const svgRect = svgRef.current?.getBoundingClientRect()
+                      if (!svgRect) return
+                      setHoveredMunicipio((prev) => prev ? { ...prev, x: e.clientX - svgRect.left + 12, y: e.clientY - svgRect.top - 30 } : null)
+                    }}
+                    onClick={() => {
+                      if (cidadeSelecionada === nome) setCidadeSelecionada(null)
+                      else setCidadeSelecionada(nome)
+                    }}
+                  />
+                )
+              })}
+            </svg>
+            
+            {/* Tooltip renderizado com React */}
+            {hoveredMunicipio && (
+              <div
+                className="pointer-events-none absolute rounded-lg bg-slate-900 px-3 py-2 text-sm text-white shadow-xl border border-slate-700 z-50"
+                style={{ 
+                  left: hoveredMunicipio.x, 
+                  top: hoveredMunicipio.y,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <strong>{hoveredMunicipio.nome}</strong><br/>
+                {hoveredMunicipio.count} eleitor{hoveredMunicipio.count !== 1 ? 'es' : ''}
+              </div>
+            )}
           </div>
 
           {/* Legenda */}

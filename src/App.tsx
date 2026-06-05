@@ -1,13 +1,16 @@
+import { useState } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { ThemeProvider, useTheme } from './components/ThemeProvider'
+import { Logo } from './components/Logo'
 import { CadastroPage } from './pages/CadastroPage'
 import { PlanilhaPage } from './pages/PlanilhaPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CabosPage } from './pages/CabosPage'
 import { UsuariosPage } from './pages/UsuariosPage'
 import { LoginPage } from './pages/LoginPage'
+import { WhatsAppPage } from './pages/WhatsAppPage'
 import { PrivacidadePage } from './pages/PrivacidadePage'
 import { MapaCalorPage } from './pages/MapaCalorPage'
 
@@ -68,6 +71,14 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/whatsapp"
+                element={
+                  <ProtectedRoute roles={['admin']}>
+                    <WhatsAppPage />
+                  </ProtectedRoute>
+                }
+              />
 
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
@@ -82,17 +93,14 @@ export default function App() {
 function Header() {
   const { usuario, role, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <span className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-500/30">
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          Gestor de Votos
+          <Logo />
+          <span className="hidden sm:inline">Gestor de Votos</span>
         </span>
 
         {usuario ? (
@@ -102,9 +110,10 @@ function Header() {
               <Item to="/planilha">Eleitores</Item>
               <Item to="/mapa">Mapa de Força</Item>
               {(role === 'admin' || role === 'coordenador') && (
-                <Item to="/cabos">Gestão de Cabos</Item>
+                <Item to="/cabos">Gestão de Liderança</Item>
               )}
               {role === 'admin' && <Item to="/usuarios">Usuários</Item>}
+              {role === 'admin' && <Item to="/whatsapp">WhatsApp</Item>}
               <Item to="/cadastro">Novo Cadastro</Item>
             </nav>
             <div className="flex items-center gap-3 border-l border-slate-200 pl-5 dark:border-slate-700">
@@ -139,12 +148,37 @@ function Header() {
               >
                 Sair
               </button>
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="md:hidden flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:text-slate-400"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+              </button>
             </div>
           </div>
         ) : (
           <Item to="/login">Entrar</Item>
         )}
       </div>
+
+      {/* Menu Mobile Dropdown */}
+      {usuario && menuOpen && (
+        <div className="md:hidden border-t border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-900 shadow-inner">
+          <nav className="flex flex-col gap-2">
+            <MobileItem to="/" onClick={() => setMenuOpen(false)}>Painel Geral</MobileItem>
+            <MobileItem to="/planilha" onClick={() => setMenuOpen(false)}>Eleitores</MobileItem>
+            <MobileItem to="/mapa" onClick={() => setMenuOpen(false)}>Mapa de Força</MobileItem>
+            {(role === 'admin' || role === 'coordenador') && (
+              <MobileItem to="/cabos" onClick={() => setMenuOpen(false)}>Gestão de Liderança</MobileItem>
+            )}
+            {role === 'admin' && <MobileItem to="/usuarios" onClick={() => setMenuOpen(false)}>Usuários</MobileItem>}
+            {role === 'admin' && <MobileItem to="/whatsapp" onClick={() => setMenuOpen(false)}>WhatsApp</MobileItem>}
+            <MobileItem to="/cadastro" onClick={() => setMenuOpen(false)}>Novo Cadastro</MobileItem>
+          </nav>
+        </div>
+      )}
     </header>
   )
 }
@@ -158,6 +192,24 @@ function Item({ to, children }: { to: string; children: React.ReactNode }) {
           isActive
             ? 'bg-slate-100 text-brand-700 dark:bg-slate-800 dark:text-brand-300'
             : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200'
+        }`
+      }
+    >
+      {children}
+    </NavLink>
+  )
+}
+
+function MobileItem({ to, onClick, children }: { to: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <NavLink
+      to={to}
+      onClick={onClick}
+      className={({ isActive }) =>
+        `rounded-lg px-4 py-3 text-base font-semibold transition-colors ${
+          isActive
+            ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300'
+            : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
         }`
       }
     >
