@@ -97,6 +97,22 @@ export function PlanilhaPage() {
     setEditForm({})
   }
 
+  async function anonimizar(e: EleitorComCabo) {
+    if (
+      !confirm(
+        `Anonimizar "${e.nome}"? Os dados pessoais (nome, telefone) serão ` +
+          `apagados permanentemente, mantendo apenas a estatística (LGPD).`,
+      )
+    )
+      return
+    try {
+      await api.anonimizarEleitor(e.id)
+      recarregar()
+    } catch (err) {
+      alert(`Erro ao anonimizar: ${(err as Error).message}`)
+    }
+  }
+
   async function excluir(e: EleitorComCabo) {
     if (!confirm(`Excluir o cadastro de "${e.nome}"?`)) return
     try {
@@ -364,6 +380,13 @@ export function PlanilhaPage() {
                         className="mr-2 font-medium text-brand-600 hover:underline"
                       >
                         Editar
+                      </button>
+                      <button
+                        onClick={() => anonimizar(e)}
+                        className="mr-2 font-medium text-amber-600 hover:underline"
+                        title="Apaga os dados pessoais, mantém a estatística (LGPD)"
+                      >
+                        Anonimizar
                       </button>
                       <button
                         onClick={() => excluir(e)}

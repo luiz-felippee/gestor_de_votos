@@ -15,14 +15,19 @@ export function LoginPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [msgSucesso, setMsgSucesso] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [acordando, setAcordando] = useState(false)
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
     setErro(null)
     setMsgSucesso(null)
     setLoading(true)
+    // Se demorar, avisa que o servidor (plano grátis) pode estar "acordando"
+    const aviso = setTimeout(() => setAcordando(true), 4000)
 
     const { error } = await signIn(email, senha)
+    clearTimeout(aviso)
+    setAcordando(false)
     setLoading(false)
     if (error) {
       setErro(error)
@@ -118,6 +123,12 @@ export function LoginPage() {
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
+          {acordando && (
+            <p className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
+              O servidor estava em repouso e está acordando — pode levar até 1
+              minuto na primeira vez. Aguarde...
+            </p>
+          )}
           <button
             type="button"
             onClick={handleSignup}

@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CheckCircle2, UserPlus } from 'lucide-react'
 import { api } from '../lib/api'
@@ -36,10 +36,17 @@ export function CadastroPage() {
   const caboDoLink = params.get('cabo') ?? ''
 
   const [form, setForm] = useState<FormState>({ ...VAZIO, cabo_id: caboDoLink })
+  const [website, setWebsite] = useState('') // honeypot (anti-robô)
+  const [bairros, setBairros] = useState<string[]>([])
   const [consentimento, setConsentimento] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState(false)
+
+  // Sugestões de bairro para o autocomplete
+  useEffect(() => {
+    api.getBairros().then(setBairros).catch(() => {})
+  }, [])
 
   const nomeCaboDoLink = useMemo(
     () => cabos.find((c) => c.id === caboDoLink)?.nome ?? null,
@@ -85,6 +92,7 @@ export function CadastroPage() {
         cabo_id: form.cabo_id || null,
         observacoes: form.observacoes.trim() || null,
         status: 'ativo',
+        website, // honeypot: humanos deixam vazio
       })
     } catch (err) {
       setEnviando(false)
@@ -141,6 +149,18 @@ export function CadastroPage() {
             onSubmit={enviar}
             className="max-h-[calc(100vh-9rem)] space-y-6 overflow-y-auto px-6 py-6"
           >
+            {/* Honeypot anti-robô: invisível e fora do fluxo de tab */}
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              style={{ position: 'absolute', left: '-9999px', width: 1, height: 1 }}
+            />
+
             {/* Seção: dados pessoais */}
             <Secao titulo="Dados do eleitor">
               <Campo label="Nome completo" obrigatorio>
@@ -199,11 +219,17 @@ export function CadastroPage() {
                 <Campo label="Bairro" obrigatorio>
                   <input
                     type="text"
+                    list="lista-bairros"
                     value={form.bairro}
                     onChange={(e) => atualizar('bairro', e.target.value)}
                     className={inputClass}
                     placeholder="Ex.: Centro"
                   />
+                  <datalist id="lista-bairros">
+                    {bairros.map((b) => (
+                      <option key={b} value={b} />
+                    ))}
+                  </datalist>
                 </Campo>
                 <Campo label="Cidade" obrigatorio>
                   <select

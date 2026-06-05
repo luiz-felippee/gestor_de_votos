@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { QRCodeCanvas } from 'qrcode.react'
 import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { useEleitores } from '../hooks/useEleitores'
@@ -235,9 +236,11 @@ function CardCabo({
   onExcluir: () => void
 }) {
   const [copiado, setCopiado] = useState(false)
+  const [mostrarQR, setMostrarQR] = useState(false)
   const link = `${window.location.origin}/cadastro?cabo=${cabo.id}`
   const meta = cabo.meta_eleitores || 0
   const pct = meta > 0 ? Math.min(100, Math.round((realizado / meta) * 100)) : 0
+  const qrId = `qr-${cabo.id}`
 
   async function copiar() {
     try {
@@ -247,6 +250,15 @@ function CardCabo({
     } catch {
       alert(link)
     }
+  }
+
+  function baixarQR() {
+    const canvas = document.getElementById(qrId) as HTMLCanvasElement | null
+    if (!canvas) return
+    const a = document.createElement('a')
+    a.href = canvas.toDataURL('image/png')
+    a.download = `qrcode-${cabo.nome.replace(/\s+/g, '-').toLowerCase()}.png`
+    a.click()
   }
 
   return (
@@ -299,7 +311,26 @@ function CardCabo({
         >
           {copiado ? 'Copiado!' : 'Copiar link'}
         </button>
+        <button
+          onClick={() => setMostrarQR((v) => !v)}
+          className="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 active:scale-95 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          {mostrarQR ? 'Ocultar QR' : 'QR Code'}
+        </button>
       </div>
+
+      {/* QR Code do link do cabo */}
+      {mostrarQR && (
+        <div className="mt-4 flex flex-col items-center gap-3 rounded-lg border border-slate-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
+          <QRCodeCanvas id={qrId} value={link} size={160} includeMargin />
+          <button
+            onClick={baixarQR}
+            className="rounded-lg bg-brand-600 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-brand-700"
+          >
+            Baixar QR Code (PNG)
+          </button>
+        </div>
+      )}
     </div>
   )
 }

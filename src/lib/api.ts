@@ -102,4 +102,9 @@ export const api = {
     request<EleitorComCabo>(`/eleitores/${id}`, { method: 'PUT', body: data }),
   deleteEleitor: (id: string) =>
     request<void>(`/eleitores/${id}`, { method: 'DELETE' }),
+  anonimizarEleitor: (id: string) =>
+    request<EleitorComCabo>(`/eleitores/${id}/anonimizar`, { method: 'POST' }),
+
+  // ---- Bairros (autocomplete do formulário) ----
+  getBairros: () => request<string[]>('/bairros'),
 }

@@ -3,12 +3,15 @@ import express, { type Request, type Response, type NextFunction } from 'express
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { createServer } from 'node:http';
 import { Server as SocketServer } from 'socket.io';
 import { PrismaClient, type PerfilAcesso, type StatusEleitor } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const app = express();
+// Render/Netlify ficam atrás de proxy — necessário para o rate limit ler o IP real
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
@@ -23,6 +26,17 @@ const CORS_ORIGIN: '*' | string[] = CORS_LIST.includes('*') ? '*' : CORS_LIST;
 
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
+
+// Limite de cadastros públicos por IP (anti-spam/robô): 8 por minuto
+const cadastroLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Muitos cadastros em sequência. Aguarde um minuto e tente de novo.',
+  },
+});
 
 // --- Tempo real (Socket.io) ---
 const io = new SocketServer(httpServer, { cors: { origin: CORS_ORIGIN } });
@@ -170,11 +184,14 @@ function normalizar(nome: string) {
   return nome.trim().toLowerCase();
 }
 
-// Criar: público (formulário)
+// Criar: público (formulário) — com limite anti-spam por IP
 app.post(
   '/api/eleitores',
+  cadastroLimiter,
   wrap(async (req, res) => {
     const b = req.body ?? {};
+    // Honeypot: campo invisível que só robôs preenchem. Finge sucesso e ignora.
+    if (b.website) return res.status(201).json({ ok: true });
     if (!b.nome || !b.telefone || !b.local_votacao || !b.zona || !b.secao || !b.bairro || !b.cidade) {
       return res.status(400).json({ error: 'Preencha todos os campos obrigatórios.' });
     }
@@ -263,6 +280,40 @@ app.delete(
     await prisma.eleitor.delete({ where: { id: req.params.id } });
     notificarMudanca();
     res.status(204).send();
+  }),
+);
+
+// Anonimizar (LGPD): apaga dados pessoais, mantém estatística (zona/seção/cidade)
+app.post(
+  '/api/eleitores/:id/anonimizar',
+  requireAuth,
+  requireRole('admin'),
+  wrap(async (req, res) => {
+    const eleitor = await prisma.eleitor.update({
+      where: { id: req.params.id },
+      data: {
+        nome: '[anonimizado]',
+        nome_busca: `anon-${req.params.id}`,
+        telefone: '',
+        observacoes: null,
+        status: 'inativo',
+      },
+    });
+    notificarMudanca();
+    res.json(eleitor);
+  }),
+);
+
+// Bairros distintos (público) — alimenta o autocomplete do formulário
+app.get(
+  '/api/bairros',
+  wrap(async (_req, res) => {
+    const linhas = await prisma.eleitor.findMany({
+      distinct: ['bairro'],
+      select: { bairro: true },
+      orderBy: { bairro: 'asc' },
+    });
+    res.json(linhas.map((l) => l.bairro).filter(Boolean));
   }),
 );
 
@@ -372,14 +423,19 @@ app.delete(
 async function bootstrap() {
   const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
   if (ADMIN_EMAIL && ADMIN_PASSWORD) {
-    const senha_hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
     const email = ADMIN_EMAIL.toLowerCase().trim();
-    await prisma.usuario.upsert({
-      where: { email },
-      update: { senha_hash, role: 'admin' },
-      create: { nome: ADMIN_NAME || 'Administrador', email, senha_hash, role: 'admin' },
-    });
-    console.log(`✓ Admin garantido: ${email}`);
+    // Cria o admin só se ainda não existir — assim a senha definida pelo próprio
+    // usuário (na tela de Usuários) NÃO é sobrescrita a cada deploy.
+    const existe = await prisma.usuario.findUnique({ where: { email } });
+    if (!existe) {
+      const senha_hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+      await prisma.usuario.create({
+        data: { nome: ADMIN_NAME || 'Administrador', email, senha_hash, role: 'admin' },
+      });
+      console.log(`✓ Admin criado: ${email}`);
+    } else {
+      console.log(`✓ Admin já existe: ${email} (senha preservada)`);
+    }
   }
 }
 
