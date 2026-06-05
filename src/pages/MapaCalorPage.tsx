@@ -146,13 +146,24 @@ export function MapaCalorPage() {
     const width = 800
     const height = 500
 
-    const projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], geoData)
+    // Mantém só o continente: Fernando de Noronha fica no Atlântico (~-32.4 lon)
+    // e esticaria o mapa, deixando o continente espremido.
+    const maxLonDe = (coords: any): number => {
+      if (typeof coords[0] === 'number') return coords[0]
+      return Math.max(...coords.map(maxLonDe))
+    }
+    const continente = geoData.features.filter(
+      (f: any) => f.geometry && maxLonDe(f.geometry.coordinates) < -33.5,
+    )
+    const fc: any = { type: 'FeatureCollection', features: continente }
+
+    const projection = d3.geoMercator().fitExtent([[20, 20], [width - 20, height - 20]], fc)
     const pathGenerator = d3.geoPath().projection(projection)
 
     const maxVal = Math.max(1, ...contagemPorId.values())
     const scale = d3.scaleSequential(d3.interpolateYlOrRd).domain([0, maxVal])
 
-    return { pathGen: pathGenerator, colorScale: scale, features: geoData.features }
+    return { pathGen: pathGenerator, colorScale: scale, features: continente }
   }, [geoData, contagemPorId])
 
   /* ---------- Hover State ---------- */
@@ -241,9 +252,9 @@ export function MapaCalorPage() {
                   <path
                     key={i}
                     d={pathGen(feature) || ''}
-                    fill={count > 0 ? colorScale(count) : '#e2e8f0'}
-                    stroke={isHovered ? '#1e293b' : '#94a3b8'}
-                    strokeWidth={isHovered ? 2 : 0.5}
+                    fill={count > 0 ? colorScale(count) : '#cbd5e1'}
+                    stroke={isHovered ? '#0f172a' : '#ffffff'}
+                    strokeWidth={isHovered ? 1.8 : 0.7}
                     className="cursor-pointer transition-colors duration-200"
                     onMouseEnter={(e) => {
                       const svgRect = svgRef.current?.getBoundingClientRect()
