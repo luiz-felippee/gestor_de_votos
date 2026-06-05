@@ -1,0 +1,18 @@
+name: Manter API acordada
+
+# Pinga a API a cada ~14 min para o Render (plano grátis) não colocar
+# o servidor "para dormir" — evita a demora de ~50s na primeira visita.
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pingar /api/health
+        run: |
+          curl -fsS --max-time 60 https://gestor-votos-api.onrender.com/api/health \
+            && echo " — API respondeu" \
+            || echo "API não respondeu (pode estar acordando)"
