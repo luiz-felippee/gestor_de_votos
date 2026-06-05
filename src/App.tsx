@@ -9,6 +9,7 @@ import { CabosPage } from './pages/CabosPage'
 import { UsuariosPage } from './pages/UsuariosPage'
 import { LoginPage } from './pages/LoginPage'
 import { PrivacidadePage } from './pages/PrivacidadePage'
+import { MapaCalorPage } from './pages/MapaCalorPage'
 
 export default function App() {
   return (
@@ -40,6 +41,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <PlanilhaPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/mapa"
+                element={
+                  <ProtectedRoute>
+                    <MapaCalorPage />
                   </ProtectedRoute>
                 }
               />
@@ -91,6 +100,7 @@ function Header() {
             <nav className="hidden gap-1.5 md:flex">
               <Item to="/">Painel Geral</Item>
               <Item to="/planilha">Eleitores</Item>
+              <Item to="/mapa">Mapa de Força</Item>
               {(role === 'admin' || role === 'coordenador') && (
                 <Item to="/cabos">Gestão de Cabos</Item>
               )}
