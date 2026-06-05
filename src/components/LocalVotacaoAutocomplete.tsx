@@ -4,6 +4,8 @@ interface NominatimResult {
   place_id: number
   name: string
   display_name: string
+  class: string
+  type: string
   address: {
     amenity?: string
     road?: string

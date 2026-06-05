@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef, useState, useCallback } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { useEleitores } from '../hooks/useEleitores'
 import * as d3 from 'd3'
 
@@ -45,7 +45,6 @@ function normalizar(s: string) {
 export function MapaCalorPage() {
   const { eleitores, loading: loadingEleitores } = useEleitores()
   const svgRef = useRef<SVGSVGElement>(null)
-  const tooltipRef = useRef<HTMLDivElement>(null)
 
   const [geoData, setGeoData] = useState<any>(null)
   const [nomesMap, setNomesMap] = useState<Map<number, string>>(new Map())
