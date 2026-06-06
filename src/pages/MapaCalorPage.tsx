@@ -5,6 +5,7 @@ import {
   CircleMarker,
   Tooltip,
   GeoJSON,
+  useMap,
 } from 'react-leaflet'
 import type { LatLngBoundsExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -31,6 +32,16 @@ function corCalor(intensidade: number) {
   const h = Math.round(45 - intensidade * 45)
   const l = Math.round(58 - intensidade * 14)
   return `hsl(${h}, 95%, ${l}%)`
+}
+
+/* Recalcula o tamanho do mapa quando entra/sai da tela cheia */
+function InvalidarTamanho({ dep }: { dep: boolean }) {
+  const map = useMap()
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 220)
+    return () => clearTimeout(t)
+  }, [dep, map])
+  return null
 }
 
 interface CidadeCoord {
@@ -85,6 +96,7 @@ export function MapaCalorPage() {
   const [cidadeSelecionada, setCidadeSelecionada] = useState<string | null>(null)
   const [geoData, setGeoData] = useState<any>(null)
   const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
+  const [telaCheia, setTelaCheia] = useState(false)
 
   /* ---------- Carrega o contorno de PE (local, sem Noronha) ---------- */
   useEffect(() => {
@@ -143,6 +155,15 @@ export function MapaCalorPage() {
   }, [eleitores])
 
   const maxCount = Math.max(1, ...pontos.map((p) => p.count))
+  // Cidade líder (mais eleitores) e top 5 para rótulos fixos
+  const cidadeLider = pontos.reduce<string | null>(
+    (lider, p) =>
+      p.count === maxCount && maxCount > 0 ? p.cidade : lider,
+    null,
+  )
+  const cidadesComRotulo = new Set(
+    [...pontos].sort((a, b) => b.count - a.count).slice(0, 5).map((p) => p.cidade),
+  )
   const totalEleitores = eleitores.length
   const cidadesComVotos = [...contagemPorCidade.entries()]
     .sort((a, b) => b[1] - a[1])
@@ -178,9 +199,21 @@ export function MapaCalorPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="relative lg:col-span-2 overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-slate-800">
+        <div
+          className={
+            telaCheia
+              ? 'fixed inset-0 z-[2000] bg-white dark:bg-slate-950'
+              : 'relative lg:col-span-2 overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-slate-800'
+          }
+        >
           {pronto ? (
             <>
+              <button
+                onClick={() => setTelaCheia((v) => !v)}
+                className="absolute right-3 top-3 z-[1000] flex items-center gap-1.5 rounded-lg border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-lg backdrop-blur transition hover:bg-white active:scale-95 dark:border-slate-700/70 dark:bg-slate-900/85 dark:text-slate-200"
+              >
+                {telaCheia ? '✕ Sair' : '⛶ Tela cheia'}
+              </button>
               <MapContainer
                 bounds={bounds!}
                 maxBounds={bounds!}
@@ -190,12 +223,13 @@ export function MapaCalorPage() {
                 zoomControl={false}
                 attributionControl={false}
                 style={{
-                  height: '65vh',
+                  height: telaCheia ? '100vh' : '65vh',
                   minHeight: 460,
                   width: '100%',
                   background: theme === 'dark' ? '#0f172a' : '#eef2f6',
                 }}
               >
+                <InvalidarTamanho dep={telaCheia} />
                 <TileLayer key={theme} url={tema.url} subdomains="abcd" detectRetina />
                 {/* Contorno dos municípios de PE */}
                 <GeoJSON
@@ -211,6 +245,8 @@ export function MapaCalorPage() {
                 {pontos.map((p) => {
                   const intensidade = p.count / maxCount
                   const raio = 7 + Math.sqrt(intensidade) * 25
+                  const ehLider = p.cidade === cidadeLider
+                  const temRotulo = cidadesComRotulo.has(p.cidade)
                   return (
                     <CircleMarker
                       key={p.cidade}
@@ -218,9 +254,10 @@ export function MapaCalorPage() {
                       radius={raio}
                       pathOptions={{
                         color: '#ffffff',
-                        weight: 1.5,
+                        weight: ehLider ? 2.5 : 1.5,
                         fillColor: corCalor(intensidade),
-                        fillOpacity: 0.82,
+                        fillOpacity: 0.85,
+                        className: ehLider ? 'marcador-lider' : undefined,
                       }}
                       eventHandlers={{
                         click: () =>
@@ -229,11 +266,23 @@ export function MapaCalorPage() {
                           ),
                       }}
                     >
-                      <Tooltip direction="top" opacity={1}>
-                        <strong>{p.cidade}</strong>
-                        <br />
-                        {p.count} eleitor{p.count !== 1 ? 'es' : ''}
-                      </Tooltip>
+                      {temRotulo ? (
+                        <Tooltip
+                          permanent
+                          direction="top"
+                          offset={[0, -raio + 2]}
+                          className="rotulo-cidade"
+                        >
+                          {ehLider ? '👑 ' : ''}
+                          {p.cidade} · {p.count}
+                        </Tooltip>
+                      ) : (
+                        <Tooltip direction="top" opacity={1}>
+                          <strong>{p.cidade}</strong>
+                          <br />
+                          {p.count} eleitor{p.count !== 1 ? 'es' : ''}
+                        </Tooltip>
+                      )}
                     </CircleMarker>
                   )
                 })}
