@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapContainer,
   TileLayer,
@@ -9,7 +9,9 @@ import {
 } from 'react-leaflet'
 import type { LatLngBoundsExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import html2canvas from 'html2canvas'
 import { useEleitores } from '../hooks/useEleitores'
+import { useCabos } from '../hooks/useCabos'
 import { useTheme } from '../components/ThemeProvider'
 import cidadesPE from '../data/pe-cidades.json'
 
@@ -90,13 +92,56 @@ function calcularBounds(geo: any): LatLngBoundsExpression {
 }
 
 export function MapaCalorPage() {
-  const { eleitores, loading } = useEleitores()
+  const { eleitores: todosEleitores, loading } = useEleitores()
+  const { cabos } = useCabos()
   const { theme } = useTheme()
   const tema = theme === 'dark' ? TILES.dark : TILES.light
+  const mapaRef = useRef<HTMLDivElement>(null)
   const [cidadeSelecionada, setCidadeSelecionada] = useState<string | null>(null)
   const [geoData, setGeoData] = useState<any>(null)
   const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
   const [telaCheia, setTelaCheia] = useState(false)
+  const [modo, setModo] = useState<'bolhas' | 'mapa'>('bolhas')
+  const [caboFiltro, setCaboFiltro] = useState('')
+  const [exportando, setExportando] = useState(false)
+
+  // Filtra por cabo (se selecionado)
+  const eleitores = useMemo(
+    () => (caboFiltro ? todosEleitores.filter((e) => e.cabo_id === caboFiltro) : todosEleitores),
+    [todosEleitores, caboFiltro],
+  )
+
+  // Contagem por município (normalizado) para o mapa pintado
+  const countPorCidadeNorm = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const e of eleitores) {
+      if (!e.cidade) continue
+      const k = normalizar(e.cidade)
+      m.set(k, (m.get(k) || 0) + 1)
+    }
+    return m
+  }, [eleitores])
+  const maxChoropleth = Math.max(1, ...countPorCidadeNorm.values())
+
+  async function exportarImagem() {
+    if (!mapaRef.current) return
+    setExportando(true)
+    try {
+      const canvas = await html2canvas(mapaRef.current, {
+        useCORS: true,
+        backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff',
+        scale: 2,
+      })
+      const a = document.createElement('a')
+      a.href = canvas.toDataURL('image/png')
+      a.download = `mapa-pernambuco${caboFiltro ? '-filtrado' : ''}.png`
+      a.click()
+    } catch {
+      alert('Não foi possível exportar a imagem. Tente novamente.')
+    } finally {
+      setExportando(false)
+    }
+  }
 
   /* ---------- Carrega o contorno de PE (local, sem Noronha) ---------- */
   useEffect(() => {
@@ -198,8 +243,48 @@ export function MapaCalorPage() {
         />
       </div>
 
+      {/* Barra de controles */}
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm font-bold shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <button
+            onClick={() => setModo('bolhas')}
+            className={`rounded-md px-3 py-1.5 transition ${modo === 'bolhas' ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+          >
+            ● Bolhas
+          </button>
+          <button
+            onClick={() => setModo('mapa')}
+            className={`rounded-md px-3 py-1.5 transition ${modo === 'mapa' ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+          >
+            ▦ Mapa pintado
+          </button>
+        </div>
+
+        <select
+          value={caboFiltro}
+          onChange={(e) => setCaboFiltro(e.target.value)}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+        >
+          <option value="">Todos os cabos</option>
+          {cabos.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nome}
+            </option>
+          ))}
+        </select>
+
+        <button
+          onClick={exportarImagem}
+          disabled={exportando}
+          className="ml-auto rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-brand-500 hover:text-brand-600 active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+        >
+          {exportando ? 'Gerando...' : '⬇ Exportar imagem'}
+        </button>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div
+          ref={mapaRef}
           className={
             telaCheia
               ? 'fixed inset-0 z-[2000] bg-white dark:bg-slate-950'
@@ -230,18 +315,50 @@ export function MapaCalorPage() {
                 }}
               >
                 <InvalidarTamanho dep={telaCheia} />
-                <TileLayer key={theme} url={tema.url} subdomains="abcd" detectRetina />
-                {/* Contorno dos municípios de PE */}
+                <TileLayer
+                  key={theme}
+                  url={tema.url}
+                  subdomains="abcd"
+                  detectRetina
+                  crossOrigin="anonymous"
+                />
+                {/* Municípios: contorno (modo bolhas) ou pintados (modo mapa) */}
                 <GeoJSON
+                  key={`${modo}-${theme}-${maxChoropleth}-${[...countPorCidadeNorm].join()}`}
                   data={geoData}
-                  style={{
-                    color: tema.boundary,
-                    weight: 0.8,
-                    fillColor: tema.fill,
-                    fillOpacity: 0.04,
+                  style={(feature: any) => {
+                    const c = countPorCidadeNorm.get(normalizar(feature.properties.nome)) || 0
+                    if (modo === 'mapa') {
+                      return {
+                        color: '#ffffff',
+                        weight: 0.6,
+                        fillColor:
+                          c > 0
+                            ? corCalor(c / maxChoropleth)
+                            : theme === 'dark'
+                              ? '#1e293b'
+                              : '#e2e8f0',
+                        fillOpacity: c > 0 ? 0.85 : 0.35,
+                      }
+                    }
+                    return {
+                      color: tema.boundary,
+                      weight: 0.8,
+                      fillColor: tema.fill,
+                      fillOpacity: 0.04,
+                    }
+                  }}
+                  onEachFeature={(feature: any, layer: any) => {
+                    const c = countPorCidadeNorm.get(normalizar(feature.properties.nome)) || 0
+                    layer.bindTooltip(
+                      `<strong>${feature.properties.nome}</strong><br/>${c} eleitor${c !== 1 ? 'es' : ''}`,
+                      { sticky: true },
+                    )
                   }}
                 />
-                {/* Círculos de calor (raio proporcional à área) */}
+                {/* Círculos de calor — só no modo "bolhas" */}
+                {modo === 'bolhas' && (
+                  <>
                 {pontos.map((p) => {
                   const intensidade = p.count / maxCount
                   const raio = 7 + Math.sqrt(intensidade) * 25
@@ -315,6 +432,8 @@ export function MapaCalorPage() {
                     </Tooltip>
                   </CircleMarker>
                 ))}
+                  </>
+                )}
               </MapContainer>
 
               {/* Legenda flutuante */}
