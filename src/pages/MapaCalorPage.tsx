@@ -9,7 +9,29 @@ import {
 import type { LatLngBoundsExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useEleitores } from '../hooks/useEleitores'
+import { useTheme } from '../components/ThemeProvider'
 import cidadesPE from '../data/pe-cidades.json'
+
+/* Tiles limpos (CARTO) — visual profissional, claro e escuro */
+const TILES = {
+  light: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    boundary: '#94a3b8',
+    fill: '#1e293b',
+  },
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    boundary: '#475569',
+    fill: '#cbd5e1',
+  },
+}
+
+/* Cor de calor: amarelo -> laranja -> vermelho profundo */
+function corCalor(intensidade: number) {
+  const h = Math.round(45 - intensidade * 45)
+  const l = Math.round(58 - intensidade * 14)
+  return `hsl(${h}, 95%, ${l}%)`
+}
 
 interface CidadeCoord {
   nome: string
@@ -58,6 +80,8 @@ function calcularBounds(geo: any): LatLngBoundsExpression {
 
 export function MapaCalorPage() {
   const { eleitores, loading } = useEleitores()
+  const { theme } = useTheme()
+  const tema = theme === 'dark' ? TILES.dark : TILES.light
   const [cidadeSelecionada, setCidadeSelecionada] = useState<string | null>(null)
   const [geoData, setGeoData] = useState<any>(null)
   const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
@@ -74,14 +98,29 @@ export function MapaCalorPage() {
   }, [])
 
   /* ---------- Agregações ---------- */
-  const { contagemPorCidade, bairrosList, pontos } = useMemo(() => {
+  const { contagemPorCidade, bairrosList, pontos, marcadoresIndividuais } = useMemo(() => {
     const cidadeMap = new Map<string, number>()
     const bairrosMap = new Map<string, Map<string, number>>()
+    const pontos: { cidade: string; count: number; lat: number; lng: number }[] = []
+    const marcadoresIndividuais: { id: string; nome: string; cidade: string; bairro: string; lat: number; lng: number }[] = []
 
     for (const e of eleitores) {
       if (!e.cidade) continue
       const cidade = e.cidade.trim()
-      cidadeMap.set(cidade, (cidadeMap.get(cidade) || 0) + 1)
+      
+      if (e.lat != null && e.lng != null) {
+        marcadoresIndividuais.push({
+          id: e.id,
+          nome: e.nome,
+          cidade,
+          bairro: e.bairro || '',
+          lat: e.lat,
+          lng: e.lng
+        })
+      } else {
+        cidadeMap.set(cidade, (cidadeMap.get(cidade) || 0) + 1)
+      }
+      
       if (e.bairro) {
         if (!bairrosMap.has(cidade)) bairrosMap.set(cidade, new Map())
         const bm = bairrosMap.get(cidade)!
@@ -95,14 +134,12 @@ export function MapaCalorPage() {
       for (const [bairro, count] of bm) bairrosList.push({ cidade, bairro, count })
     bairrosList.sort((a, b) => b.count - a.count)
 
-    const pontos = [...cidadeMap.entries()]
-      .map(([cidade, count]) => {
-        const coord = COORD_POR_CIDADE.get(normalizar(cidade))
-        return coord ? { cidade, count, lat: coord.lat, lng: coord.lng } : null
-      })
-      .filter(Boolean) as { cidade: string; count: number; lat: number; lng: number }[]
+    for (const [cidade, count] of cidadeMap) {
+      const coord = COORD_POR_CIDADE.get(normalizar(cidade))
+      if (coord) pontos.push({ cidade, count, lat: coord.lat, lng: coord.lng })
+    }
 
-    return { contagemPorCidade: cidadeMap, bairrosList, pontos }
+    return { contagemPorCidade: cidadeMap, bairrosList, pontos, marcadoresIndividuais }
   }, [eleitores])
 
   const maxCount = Math.max(1, ...pontos.map((p) => p.count))
@@ -141,62 +178,116 @@ export function MapaCalorPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-slate-800">
+        <div className="relative lg:col-span-2 overflow-hidden rounded-2xl border border-slate-200 shadow-sm dark:border-slate-800">
           {pronto ? (
-            <MapContainer
-              bounds={bounds!}
-              maxBounds={bounds!}
-              maxBoundsViscosity={0.9}
-              minZoom={6}
-              scrollWheelZoom
-              style={{ height: '65vh', minHeight: 460, width: '100%' }}
-            >
-              <TileLayer
-                attribution="&copy; OpenStreetMap"
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              {/* Contorno dos municípios de PE */}
-              <GeoJSON
-                data={geoData}
+            <>
+              <MapContainer
+                bounds={bounds!}
+                maxBounds={bounds!}
+                maxBoundsViscosity={0.9}
+                minZoom={6}
+                scrollWheelZoom
+                zoomControl={false}
+                attributionControl={false}
                 style={{
-                  color: '#475569',
-                  weight: 1,
-                  fillColor: '#64748b',
-                  fillOpacity: 0.05,
+                  height: '65vh',
+                  minHeight: 460,
+                  width: '100%',
+                  background: theme === 'dark' ? '#0f172a' : '#eef2f6',
                 }}
-              />
-              {/* Círculos de calor */}
-              {pontos.map((p) => {
-                const intensidade = p.count / maxCount
-                const raio = 8 + intensidade * 22
-                const cor = `hsl(${Math.round(45 - intensidade * 45)}, 90%, 50%)`
-                return (
+              >
+                <TileLayer key={theme} url={tema.url} subdomains="abcd" detectRetina />
+                {/* Contorno dos municípios de PE */}
+                <GeoJSON
+                  data={geoData}
+                  style={{
+                    color: tema.boundary,
+                    weight: 0.8,
+                    fillColor: tema.fill,
+                    fillOpacity: 0.04,
+                  }}
+                />
+                {/* Círculos de calor (raio proporcional à área) */}
+                {pontos.map((p) => {
+                  const intensidade = p.count / maxCount
+                  const raio = 7 + Math.sqrt(intensidade) * 25
+                  return (
+                    <CircleMarker
+                      key={p.cidade}
+                      center={[p.lat, p.lng]}
+                      radius={raio}
+                      pathOptions={{
+                        color: '#ffffff',
+                        weight: 1.5,
+                        fillColor: corCalor(intensidade),
+                        fillOpacity: 0.82,
+                      }}
+                      eventHandlers={{
+                        click: () =>
+                          setCidadeSelecionada(
+                            cidadeSelecionada === p.cidade ? null : p.cidade,
+                          ),
+                      }}
+                    >
+                      <Tooltip direction="top" opacity={1}>
+                        <strong>{p.cidade}</strong>
+                        <br />
+                        {p.count} eleitor{p.count !== 1 ? 'es' : ''}
+                      </Tooltip>
+                    </CircleMarker>
+                  )
+                })}
+
+                {/* Marcadores individuais (geocodificados) */}
+                {marcadoresIndividuais.map((m) => (
                   <CircleMarker
-                    key={p.cidade}
-                    center={[p.lat, p.lng]}
-                    radius={raio}
+                    key={m.id}
+                    center={[m.lat, m.lng]}
+                    radius={5}
                     pathOptions={{
                       color: '#ffffff',
                       weight: 1.5,
-                      fillColor: cor,
-                      fillOpacity: 0.8,
+                      fillColor: '#2563eb',
+                      fillOpacity: 0.9,
                     }}
                     eventHandlers={{
                       click: () =>
-                        setCidadeSelecionada(
-                          cidadeSelecionada === p.cidade ? null : p.cidade,
-                        ),
+                        setCidadeSelecionada(cidadeSelecionada === m.cidade ? null : m.cidade),
                     }}
                   >
-                    <Tooltip direction="top">
-                      <strong>{p.cidade}</strong>
+                    <Tooltip direction="top" opacity={1}>
+                      <strong>{m.nome}</strong>
                       <br />
-                      {p.count} eleitor{p.count !== 1 ? 'es' : ''}
+                      <span className="text-xs">
+                        {m.bairro}
+                        {m.bairro && ', '}
+                        {m.cidade}
+                      </span>
                     </Tooltip>
                   </CircleMarker>
-                )
-              })}
-            </MapContainer>
+                ))}
+              </MapContainer>
+
+              {/* Legenda flutuante */}
+              <div className="pointer-events-none absolute bottom-4 left-4 z-[1000] rounded-xl border border-slate-200/70 bg-white/90 px-4 py-3 shadow-lg backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/85">
+                <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Concentração
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold text-slate-400">0</span>
+                  <div
+                    className="h-2.5 w-28 rounded-full"
+                    style={{
+                      background:
+                        'linear-gradient(to right, hsl(45,95%,58%), hsl(22,95%,51%), hsl(0,95%,44%))',
+                    }}
+                  />
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    {maxCount}
+                  </span>
+                </div>
+              </div>
+            </>
           ) : (
             <div className="flex h-[65vh] min-h-[460px] items-center justify-center bg-slate-50 dark:bg-slate-900">
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
