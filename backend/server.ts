@@ -120,7 +120,9 @@ const wrap =
     });
 
 // --- Saúde ---
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) =>
+  res.json({ ok: true, version: '2026-06-07-compilado', runtime: 'node-dist' }),
+);
 
 // --- Autenticação ---
 app.post(
