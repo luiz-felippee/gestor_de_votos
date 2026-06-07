@@ -1,0 +1,33 @@
+name: Backup diário do banco
+
+# Faz um dump do PostgreSQL (Neon) todo dia e guarda como artefato por 30 dias.
+# Requer o segredo DATABASE_URL configurado no repositório (Settings > Secrets).
+on:
+  schedule:
+    - cron: '0 6 * * *' # todo dia ~03:00 (horário de Brasília)
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar pg_dump 18 (compatível com a Neon)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-18
+
+      - name: Gerar dump compactado
+        run: |
+          DATA=$(date +%Y-%m-%d)
+          pg_dump "${{ secrets.DATABASE_URL }}" --no-owner --no-privileges \
+            | gzip > "backup-${DATA}.sql.gz"
+          ls -lh backup-*.sql.gz
+
+      - name: Guardar backup (artefato, 30 dias)
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-banco-${{ github.run_id }}
+          path: backup-*.sql.gz
+          retention-days: 30
