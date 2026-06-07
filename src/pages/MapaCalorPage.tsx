@@ -7,8 +7,9 @@ import {
   GeoJSON,
   useMap,
 } from 'react-leaflet'
-import type { LatLngBoundsExpression } from 'leaflet'
+import L, { type LatLngBoundsExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import 'leaflet.heat'
 import html2canvas from 'html2canvas'
 import { useEleitores } from '../hooks/useEleitores'
 import { useCabos } from '../hooks/useCabos'
@@ -44,6 +45,40 @@ function InvalidarTamanho({ dep }: { dep: boolean }) {
     return () => clearTimeout(t)
   }, [dep, map])
   return null
+}
+
+/* Camada de calor (heatmap real) — densidade distribuída e suave */
+function CamadaCalor({ pontos }: { pontos: [number, number, number][] }) {
+  const map = useMap()
+  useEffect(() => {
+    if (!pontos.length) return
+    const layer = (L as any).heatLayer(pontos, {
+      radius: 32,
+      blur: 24,
+      minOpacity: 0.35,
+      maxZoom: 11,
+      gradient: {
+        0.0: '#1e3a8a',
+        0.3: '#06b6d4',
+        0.5: '#22c55e',
+        0.7: '#facc15',
+        0.85: '#f97316',
+        1.0: '#dc2626',
+      },
+    })
+    layer.addTo(map)
+    return () => {
+      map.removeLayer(layer)
+    }
+  }, [map, pontos])
+  return null
+}
+
+/* Jitter determinístico (espalha eleitores ao redor do centro da cidade) */
+function jitter(seed: string, escala = 0.05) {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
+  return ((h % 1000) / 1000 - 0.5) * escala
 }
 
 interface CidadeCoord {
@@ -101,7 +136,7 @@ export function MapaCalorPage() {
   const [geoData, setGeoData] = useState<any>(null)
   const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
   const [telaCheia, setTelaCheia] = useState(false)
-  const [modo, setModo] = useState<'bolhas' | 'mapa'>('bolhas')
+  const [modo, setModo] = useState<'calor' | 'mapa'>('calor')
   const [caboFiltro, setCaboFiltro] = useState('')
   const [exportando, setExportando] = useState(false)
 
@@ -122,6 +157,20 @@ export function MapaCalorPage() {
     return m
   }, [eleitores])
   const maxChoropleth = Math.max(1, ...countPorCidadeNorm.values())
+
+  // Pontos do heatmap: 1 ponto por eleitor, espalhado ao redor da cidade
+  const pontosCalor = useMemo(() => {
+    const arr: [number, number, number][] = []
+    for (const e of eleitores) {
+      if (e.lat != null && e.lng != null) {
+        arr.push([e.lat, e.lng, 0.9])
+      } else if (e.cidade) {
+        const c = COORD_POR_CIDADE.get(normalizar(e.cidade))
+        if (c) arr.push([c.lat + jitter(e.id + 'a'), c.lng + jitter(e.id + 'b'), 0.7])
+      }
+    }
+    return arr
+  }, [eleitores])
 
   async function exportarImagem() {
     if (!mapaRef.current) return
@@ -155,7 +204,7 @@ export function MapaCalorPage() {
   }, [])
 
   /* ---------- Agregações ---------- */
-  const { contagemPorCidade, bairrosList, pontos, marcadoresIndividuais } = useMemo(() => {
+  const { contagemPorCidade, bairrosList, pontos } = useMemo(() => {
     const cidadeMap = new Map<string, number>()
     const bairrosMap = new Map<string, Map<string, number>>()
     const pontos: { cidade: string; count: number; lat: number; lng: number }[] = []
@@ -247,10 +296,10 @@ export function MapaCalorPage() {
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-sm font-bold shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <button
-            onClick={() => setModo('bolhas')}
-            className={`rounded-md px-3 py-1.5 transition ${modo === 'bolhas' ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+            onClick={() => setModo('calor')}
+            className={`rounded-md px-3 py-1.5 transition ${modo === 'calor' ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
           >
-            ● Bolhas
+            🔥 Calor
           </button>
           <button
             onClick={() => setModo('mapa')}
@@ -356,82 +405,46 @@ export function MapaCalorPage() {
                     )
                   }}
                 />
-                {/* Círculos de calor — só no modo "bolhas" */}
-                {modo === 'bolhas' && (
+                {/* Mapa de calor (heatmap) — modo "calor" */}
+                {modo === 'calor' && (
                   <>
-                {pontos.map((p) => {
-                  const intensidade = p.count / maxCount
-                  const raio = 7 + Math.sqrt(intensidade) * 25
-                  const ehLider = p.cidade === cidadeLider
-                  const temRotulo = cidadesComRotulo.has(p.cidade)
-                  return (
-                    <CircleMarker
-                      key={p.cidade}
-                      center={[p.lat, p.lng]}
-                      radius={raio}
-                      pathOptions={{
-                        color: '#ffffff',
-                        weight: ehLider ? 2.5 : 1.5,
-                        fillColor: corCalor(intensidade),
-                        fillOpacity: 0.85,
-                        className: ehLider ? 'marcador-lider' : undefined,
-                      }}
-                      eventHandlers={{
-                        click: () =>
-                          setCidadeSelecionada(
-                            cidadeSelecionada === p.cidade ? null : p.cidade,
-                          ),
-                      }}
-                    >
-                      {temRotulo ? (
-                        <Tooltip
-                          permanent
-                          direction="top"
-                          offset={[0, -raio + 2]}
-                          className="rotulo-cidade"
-                        >
-                          {ehLider ? '👑 ' : ''}
-                          {p.cidade} · {p.count}
-                        </Tooltip>
-                      ) : (
-                        <Tooltip direction="top" opacity={1}>
-                          <strong>{p.cidade}</strong>
-                          <br />
-                          {p.count} eleitor{p.count !== 1 ? 'es' : ''}
-                        </Tooltip>
-                      )}
-                    </CircleMarker>
-                  )
-                })}
-
-                {/* Marcadores individuais (geocodificados) */}
-                {marcadoresIndividuais.map((m) => (
-                  <CircleMarker
-                    key={m.id}
-                    center={[m.lat, m.lng]}
-                    radius={5}
-                    pathOptions={{
-                      color: '#ffffff',
-                      weight: 1.5,
-                      fillColor: '#2563eb',
-                      fillOpacity: 0.9,
-                    }}
-                    eventHandlers={{
-                      click: () =>
-                        setCidadeSelecionada(cidadeSelecionada === m.cidade ? null : m.cidade),
-                    }}
-                  >
-                    <Tooltip direction="top" opacity={1}>
-                      <strong>{m.nome}</strong>
-                      <br />
-                      <span className="text-xs">
-                        {m.bairro}
-                        {m.bairro && ', '}
-                        {m.cidade}
-                      </span>
-                    </Tooltip>
-                  </CircleMarker>
-                ))}
+                    <CamadaCalor pontos={pontosCalor} />
+                    {/* Rótulos discretos das principais cidades sobre o calor */}
+                    {pontos
+                      .filter((p) => cidadesComRotulo.has(p.cidade))
+                      .map((p) => {
+                        const ehLider = p.cidade === cidadeLider
+                        return (
+                          <CircleMarker
+                            key={p.cidade}
+                            center={[p.lat, p.lng]}
+                            radius={ehLider ? 5 : 3}
+                            pathOptions={{
+                              color: '#ffffff',
+                              weight: 2,
+                              fillColor: ehLider ? '#dc2626' : '#0f172a',
+                              fillOpacity: 1,
+                              className: ehLider ? 'marcador-lider' : undefined,
+                            }}
+                            eventHandlers={{
+                              click: () =>
+                                setCidadeSelecionada(
+                                  cidadeSelecionada === p.cidade ? null : p.cidade,
+                                ),
+                            }}
+                          >
+                            <Tooltip
+                              permanent
+                              direction="top"
+                              offset={[0, -8]}
+                              className="rotulo-cidade"
+                            >
+                              {ehLider ? '👑 ' : ''}
+                              {p.cidade} · {p.count}
+                            </Tooltip>
+                          </CircleMarker>
+                        )
+                      })}
                   </>
                 )}
               </MapContainer>
@@ -442,16 +455,20 @@ export function MapaCalorPage() {
                   Concentração
                 </p>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold text-slate-400">0</span>
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    {modo === 'calor' ? 'menos' : '0'}
+                  </span>
                   <div
                     className="h-2.5 w-28 rounded-full"
                     style={{
                       background:
-                        'linear-gradient(to right, hsl(45,95%,58%), hsl(22,95%,51%), hsl(0,95%,44%))',
+                        modo === 'calor'
+                          ? 'linear-gradient(to right, #1e3a8a, #06b6d4, #22c55e, #facc15, #f97316, #dc2626)'
+                          : 'linear-gradient(to right, hsl(45,95%,58%), hsl(22,95%,51%), hsl(0,95%,44%))',
                     }}
                   />
                   <span className="text-[10px] font-semibold text-slate-400">
-                    {maxCount}
+                    {modo === 'calor' ? 'mais' : maxCount}
                   </span>
                 </div>
               </div>
