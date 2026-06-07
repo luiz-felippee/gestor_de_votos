@@ -27,6 +27,11 @@ model CaboEleitoral {
   bairro_atuacao String?
   cidade         String?
   meta_eleitores Int       @default(0)
+  foi_candidato  Boolean   @default(false)
+  cargo_candidato String?
+  ano_eleicao    String?
+  votacao        Int?
+  data_nascimento String?
   created_at     DateTime  @default(now())
   eleitores      Eleitor[]
   usuarios       Usuario[]
@@ -47,6 +52,11 @@ model Eleitor {
   status           StatusEleitor  @default(ativo)
   observacoes      String?
   whatsapp_enviado Boolean        @default(false)
+  data_nascimento  String?
+  cpf              String?        @unique
+  titulo_eleitor   String?        @unique
+  lat              Float?
+  lng              Float?
   created_at       DateTime       @default(now())
   // Normalizado (minúsculo, sem espaços nas pontas) p/ impedir duplicados
   nome_busca    String
@@ -79,4 +89,17 @@ model ConfiguracaoWhatsApp {
   updated_at       DateTime @updatedAt
 
   @@map("configuracao_whatsapp")
+}
+
+model Evento {
+  id        String   @id @default(uuid())
+  titulo    String
+  descricao String?
+  data_hora DateTime
+  local     String
+  bairro    String?
+  cidade    String?
+  created_at DateTime @default(now())
+
+  @@map("eventos")
 }

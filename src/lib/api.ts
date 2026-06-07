@@ -6,6 +6,7 @@ import type {
   Usuario,
   UsuarioAdmin,
   ConfiguracaoWhatsApp,
+  Evento,
 } from './types'
 
 export const API_BASE =
@@ -85,6 +86,16 @@ export const api = {
     request<CaboEleitoral>(`/cabos/${id}`, { method: 'PUT', body: data }),
   deleteCabo: (id: string) =>
     request<void>(`/cabos/${id}`, { method: 'DELETE' }),
+  createCaboPublic: async (dados: Partial<CaboEleitoral> & { website?: string }) => {
+    const res = await fetch(`${API_BASE}/api/cabos-public`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dados),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Erro ao criar liderança')
+    return data
+  },
 
   // ---- Usuários (gestão de acessos — admin) ----
   getUsuarios: () => request<UsuarioAdmin[]>('/usuarios'),
@@ -97,6 +108,7 @@ export const api = {
 
   // ---- Eleitores ----
   getEleitores: () => request<EleitorComCabo[]>('/eleitores'),
+  getDashboardStats: (query: string = '') => request<any>(`/dashboard/stats${query}`),
   createEleitor: (data: unknown) =>
     request<EleitorComCabo>('/eleitores', { method: 'POST', body: data }),
   updateEleitor: (id: string, data: unknown) =>
@@ -115,4 +127,13 @@ export const api = {
   getConfigWhatsApp: () => request<ConfiguracaoWhatsApp>('/config/whatsapp'),
   updateConfigWhatsApp: (data: Partial<ConfiguracaoWhatsApp>) =>
     request<ConfiguracaoWhatsApp>('/config/whatsapp', { method: 'PUT', body: data }),
+
+  // ---- Eventos ----
+  getEventos: () => request<Evento[]>('/eventos'),
+  createEvento: (data: unknown) =>
+    request<Evento>('/eventos', { method: 'POST', body: data }),
+  updateEvento: (id: string, data: unknown) =>
+    request<Evento>(`/eventos/${id}`, { method: 'PUT', body: data }),
+  deleteEvento: (id: string) =>
+    request<void>(`/eventos/${id}`, { method: 'DELETE' }),
 }

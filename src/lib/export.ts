@@ -12,6 +12,7 @@ function toRows(eleitores: EleitorComCabo[]) {
     Seção: e.secao,
     Bairro: e.bairro,
     Cidade: e.cidade,
+    'Data de Nascimento': e.data_nascimento ?? '',
     'Indicação (Cabo)': e.cabo?.nome ?? '',
     Status: e.status,
     Observações: e.observacoes ?? '',

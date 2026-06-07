@@ -13,6 +13,8 @@ import { LoginPage } from './pages/LoginPage'
 import { WhatsAppPage } from './pages/WhatsAppPage'
 import { PrivacidadePage } from './pages/PrivacidadePage'
 import { MapaCalorPage } from './pages/MapaCalorPage'
+import { CadastroLiderancaPage } from './pages/CadastroLiderancaPage'
+import { EventosPage } from './pages/EventosPage'
 
 export default function App() {
   return (
@@ -28,6 +30,7 @@ export default function App() {
               {/* Públicas */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/cadastro" element={<CadastroPage />} />
+              <Route path="/cadastro-lideranca" element={<CadastroLiderancaPage />} />
               <Route path="/privacidade" element={<PrivacidadePage />} />
 
               {/* Protegidas */}
@@ -52,6 +55,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <MapaCalorPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/eventos"
+                element={
+                  <ProtectedRoute>
+                    <EventosPage />
                   </ProtectedRoute>
                 }
               />
@@ -109,6 +120,7 @@ function Header() {
               <Item to="/">Painel Geral</Item>
               <Item to="/planilha">Eleitores</Item>
               <Item to="/mapa">Mapa de Força</Item>
+              <Item to="/eventos">Agenda</Item>
               {(role === 'admin' || role === 'coordenador') && (
                 <Item to="/cabos">Gestão de Liderança</Item>
               )}
@@ -170,6 +182,7 @@ function Header() {
             <MobileItem to="/" onClick={() => setMenuOpen(false)}>Painel Geral</MobileItem>
             <MobileItem to="/planilha" onClick={() => setMenuOpen(false)}>Eleitores</MobileItem>
             <MobileItem to="/mapa" onClick={() => setMenuOpen(false)}>Mapa de Força</MobileItem>
+            <MobileItem to="/eventos" onClick={() => setMenuOpen(false)}>Agenda</MobileItem>
             {(role === 'admin' || role === 'coordenador') && (
               <MobileItem to="/cabos" onClick={() => setMenuOpen(false)}>Gestão de Liderança</MobileItem>
             )}

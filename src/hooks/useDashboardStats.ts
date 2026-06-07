@@ -1,0 +1,47 @@
+import { api } from "../lib/api"
+import { useState, useEffect, useCallback } from "react"
+import { getSocket } from "../lib/socket"
+
+export interface DashboardStats {
+  kpis: {
+    totalEleitores: number
+    totalCidades: number
+    totalBairros: number
+    totalCabos: number
+  }
+  porCidade: { label: string; total: number }[]
+  porBairro: { label: string; total: number }[]
+  porLocalVotacao: { label: string; total: number }[]
+  porDia: { label: string; total: number }[]
+  ranking: { nome: string; meta: number; total: number }[]
+  aniversariantes: { id: string; nome: string; telefone: string | null; data_nascimento: string; diffDias: number; bairro: string | null; cidade: string | null }[]
+}
+
+export function useDashboardStats(cidade?: string) {
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true)
+      const query = cidade ? `?cidade=${encodeURIComponent(cidade)}` : ""
+      const data = await api.getDashboardStats(query)
+      setStats(data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [cidade])
+
+  useEffect(() => {
+    load()
+    const socket = getSocket()
+    socket.on("eleitores:changed", load)
+    return () => {
+      socket.off("eleitores:changed", load)
+    }
+  }, [load])
+
+  return { stats, loading }
+}

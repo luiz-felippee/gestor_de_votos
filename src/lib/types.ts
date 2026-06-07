@@ -33,6 +33,11 @@ export interface Eleitor {
   cabo_id: string | null
   status: StatusEleitor
   observacoes: string | null
+  data_nascimento?: string | null
+  cpf?: string | null
+  titulo_eleitor?: string | null
+  lat?: number | null
+  lng?: number | null
   whatsapp_enviado: boolean
   created_at: string
 }
@@ -41,10 +46,15 @@ export interface CaboEleitoral {
   id: string
   nome: string
   telefone: string
-  bairro_atuacao: string | null
-  cidade: string | null
+  bairro_atuacao?: string
+  cidade?: string
   meta_eleitores: number
-  created_at: string
+  foi_candidato?: boolean
+  cargo_candidato?: string
+  ano_eleicao?: string
+  votacao?: number
+  data_nascimento?: string | null
+  created_at?: string
 }
 
 /** Eleitor com o nome do cabo já resolvido (join), usado na planilha. */
@@ -59,4 +69,15 @@ export interface ConfiguracaoWhatsApp {
   api_token: string | null
   api_instancia_id: string | null
   updated_at: string
+}
+
+export interface Evento {
+  id: string
+  titulo: string
+  descricao: string | null
+  data_hora: string
+  local: string
+  bairro: string | null
+  cidade: string | null
+  created_at: string
 }

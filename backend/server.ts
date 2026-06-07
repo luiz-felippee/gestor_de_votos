@@ -4,10 +4,14 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { rateLimit } from 'express-rate-limit';
-import { initWhatsApp, getWhatsAppStatus, sendWhatsAppMessage } from './whatsapp';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { initWhatsApp, getWhatsAppStatus, sendWhatsAppMessage, sendWhatsAppMediaFile } from './whatsapp';
 import { createServer } from 'node:http';
 import { Server as SocketServer } from 'socket.io';
 import { PrismaClient, type PerfilAcesso, type StatusEleitor } from '@prisma/client';
+import cron from 'node-cron';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -27,6 +31,21 @@ const CORS_ORIGIN: '*' | string[] = CORS_LIST.includes('*') ? '*' : CORS_LIST;
 
 app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
+
+// --- Upload de mídias (multer) ---
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    }
+  }),
+  limits: { fileSize: 64 * 1024 * 1024 } // 64 MB max
+});
 
 // Limite de cadastros públicos por IP (anti-spam/robô): 8 por minuto
 const cadastroLimiter = rateLimit({
@@ -135,7 +154,7 @@ app.post(
   requireAuth,
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
-    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores } = req.body ?? {};
+    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao } = req.body ?? {};
     if (!nome || !telefone) return res.status(400).json({ error: 'Nome e telefone são obrigatórios.' });
     const cabo = await prisma.caboEleitoral.create({
       data: {
@@ -144,6 +163,39 @@ app.post(
         bairro_atuacao: bairro_atuacao || null,
         cidade: cidade || null,
         meta_eleitores: Number(meta_eleitores) || 0,
+        data_nascimento: req.body.data_nascimento || null,
+        foi_candidato: Boolean(foi_candidato),
+        cargo_candidato: cargo_candidato || null,
+        ano_eleicao: ano_eleicao || null,
+        votacao: votacao ? Number(votacao) : null,
+      },
+    });
+    res.status(201).json(cabo);
+  }),
+);
+
+// Criar Cabo (Público - para auto-cadastro)
+app.post(
+  '/api/cabos-public',
+  cadastroLimiter,
+  wrap(async (req, res) => {
+    const b = req.body ?? {};
+    if (b.website) return res.status(201).json({ ok: true }); // honeypot
+    if (!b.nome || !b.telefone) {
+      return res.status(400).json({ error: 'Nome e telefone são obrigatórios.' });
+    }
+    const cabo = await prisma.caboEleitoral.create({
+      data: {
+        nome: String(b.nome).trim(),
+        telefone: String(b.telefone),
+        bairro_atuacao: b.bairro_atuacao ? String(b.bairro_atuacao).trim() : null,
+        cidade: b.cidade ? String(b.cidade) : null,
+        meta_eleitores: 0,
+        data_nascimento: b.data_nascimento || null,
+        foi_candidato: Boolean(b.foi_candidato),
+        cargo_candidato: b.cargo_candidato || null,
+        ano_eleicao: b.ano_eleicao || null,
+        votacao: b.votacao ? Number(b.votacao) : null,
       },
     });
     res.status(201).json(cabo);
@@ -155,7 +207,7 @@ app.put(
   requireAuth,
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
-    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores } = req.body ?? {};
+    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao } = req.body ?? {};
     const cabo = await prisma.caboEleitoral.update({
       where: { id: String(req.params.id) },
       data: {
@@ -164,6 +216,11 @@ app.put(
         bairro_atuacao: bairro_atuacao || null,
         cidade: cidade || null,
         meta_eleitores: Number(meta_eleitores) || 0,
+        data_nascimento: req.body.data_nascimento || null,
+        foi_candidato: Boolean(foi_candidato),
+        cargo_candidato: cargo_candidato || null,
+        ano_eleicao: ano_eleicao || null,
+        votacao: votacao ? Number(votacao) : null,
       },
     });
     res.json(cabo);
@@ -185,6 +242,25 @@ function normalizar(nome: string) {
   return nome.trim().toLowerCase();
 }
 
+async function geocodeAddress(bairro: string, cidade: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const q = `${bairro}, ${cidade}, Pernambuco, Brasil`;
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`, {
+      headers: { 'User-Agent': 'GestorDeVotos/1.0' }
+    });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      // Add slight random jitter (approx 100m) to avoid all markers stacking perfectly on top of each other
+      const jitterLat = (Math.random() - 0.5) * 0.002;
+      const jitterLng = (Math.random() - 0.5) * 0.002;
+      return { lat: parseFloat(data[0].lat) + jitterLat, lng: parseFloat(data[0].lon) + jitterLng };
+    }
+  } catch (err) {
+    console.error('Erro no geocode', err);
+  }
+  return null;
+}
+
 // Criar: público (formulário) — com limite anti-spam por IP
 app.post(
   '/api/eleitores',
@@ -196,7 +272,12 @@ app.post(
     if (!b.nome || !b.telefone || !b.local_votacao || !b.zona || !b.secao || !b.bairro || !b.cidade) {
       return res.status(400).json({ error: 'Preencha todos os campos obrigatórios.' });
     }
+    const bairroStr = String(b.bairro).trim();
+    const cidadeStr = String(b.cidade).trim();
+
     try {
+      const coord = await geocodeAddress(bairroStr, cidadeStr);
+
       const eleitor = await prisma.eleitor.create({
         data: {
           nome: String(b.nome).trim(),
@@ -205,9 +286,14 @@ app.post(
           local_votacao: String(b.local_votacao).trim(),
           zona: Number(b.zona),
           secao: Number(b.secao),
-          bairro: String(b.bairro).trim(),
-          cidade: String(b.cidade),
+          bairro: bairroStr,
+          cidade: cidadeStr,
           cabo_id: b.cabo_id || null,
+          data_nascimento: b.data_nascimento || null,
+          cpf: b.cpf ? String(b.cpf).replace(/\D/g, '') : null,
+          titulo_eleitor: b.titulo_eleitor ? String(b.titulo_eleitor).replace(/\D/g, '') : null,
+          lat: coord?.lat || null,
+          lng: coord?.lng || null,
           status: (b.status as StatusEleitor) || 'ativo',
           observacoes: b.observacoes?.trim() || null,
         },
@@ -216,6 +302,13 @@ app.post(
       res.status(201).json(eleitor);
     } catch (err: any) {
       if (err?.code === 'P2002') {
+        const target = err.meta?.target as string[] | string | undefined;
+        if (target?.includes('cpf')) {
+          return res.status(409).json({ error: 'Este CPF já está cadastrado em nossa base.' });
+        }
+        if (target?.includes('titulo_eleitor')) {
+          return res.status(409).json({ error: 'Este Título de Eleitor já está cadastrado.' });
+        }
         return res.status(409).json({ error: 'Este eleitor já foi cadastrado nesta zona e seção.' });
       }
       throw err;
@@ -236,6 +329,153 @@ app.get(
     });
     res.json(eleitores);
   }),
+);
+
+// Dashboard Stats Otimizado
+app.get(
+  '/api/dashboard/stats',
+  requireAuth,
+  wrap(async (req, res) => {
+    const filtroCidade = req.query.cidade as string;
+    const whereBase = req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : {};
+    const whereFiltrado = filtroCidade ? { ...whereBase, cidade: filtroCidade } : whereBase;
+
+    // 1. Cabos ativos (somente admin/coordenador vêem a meta e todos cabos)
+    const cabos = await prisma.caboEleitoral.findMany({ select: { id: true, nome: true, meta_eleitores: true } });
+
+    // 2. Busca campos otimizados para cálculo na memória do backend
+    const eleitores = await prisma.eleitor.findMany({
+      where: whereFiltrado,
+      select: {
+        id: true,
+        cidade: true,
+        bairro: true,
+        local_votacao: true,
+        zona: true,
+        cabo_id: true,
+        created_at: true,
+        data_nascimento: true,
+        nome: true,
+        telefone: true
+      }
+    });
+
+    const totalEleitores = eleitores.length;
+    
+    // Aggregation maps
+    const mapCidades = new Map<string, number>();
+    const mapBairros = new Map<string, number>();
+    const mapLocais = new Map<string, number>();
+    const mapDias = new Map<string, number>();
+    const mapCabosCount = new Map<string, number>();
+
+    const hoje = new Date();
+    const mesAtual = hoje.getMonth() + 1;
+    const diaAtual = hoje.getDate();
+    const aniversariantes = [];
+
+    for (let i = 0; i < eleitores.length; i++) {
+      const e = eleitores[i];
+
+      // Cidade
+      if (e.cidade) mapCidades.set(e.cidade, (mapCidades.get(e.cidade) || 0) + 1);
+
+      // Bairro
+      if (e.bairro) {
+        const bNormalizado = e.bairro.trim().toLowerCase().replace(/(?:^|\s)\S/g, (a) => a.toUpperCase());
+        mapBairros.set(bNormalizado, (mapBairros.get(bNormalizado) || 0) + 1);
+      }
+
+      // Local
+      if (e.local_votacao) {
+        const loc = `${e.local_votacao} (Z${e.zona}) - ${e.bairro || ''}, ${e.cidade || ''}`;
+        mapLocais.set(loc, (mapLocais.get(loc) || 0) + 1);
+      }
+
+      // Cabo count
+      if (e.cabo_id) {
+        mapCabosCount.set(e.cabo_id, (mapCabosCount.get(e.cabo_id) || 0) + 1);
+      }
+
+      // Dia
+      const diaIso = e.created_at.toISOString().slice(0, 10);
+      mapDias.set(diaIso, (mapDias.get(diaIso) || 0) + 1);
+
+      // Aniversariantes
+      if (e.data_nascimento) {
+        const parts = e.data_nascimento.split('-');
+        if (parts.length === 3) {
+          const mes = parseInt(parts[1], 10);
+          const dia = parseInt(parts[2], 10);
+          let diffDias = 0;
+          if (mes === mesAtual) {
+            diffDias = dia - diaAtual;
+          } else if (mes === (mesAtual % 12) + 1 && diaAtual > 20) {
+            const diasNoMes = new Date(hoje.getFullYear(), mesAtual, 0).getDate();
+            diffDias = (diasNoMes - diaAtual) + dia;
+          } else {
+            diffDias = -999;
+          }
+
+          if (diffDias >= 0 && diffDias <= 30) {
+            aniversariantes.push({
+              id: e.id,
+              nome: e.nome,
+              telefone: e.telefone,
+              data_nascimento: e.data_nascimento,
+              diffDias,
+              bairro: e.bairro,
+              cidade: e.cidade
+            });
+          }
+        }
+      }
+    }
+
+    // Sort and Format outputs
+    const porCidade = Array.from(mapCidades.entries()).map(([label, total]) => ({ label, total })).sort((a, b) => b.total - a.total);
+    const porBairro = Array.from(mapBairros.entries()).map(([label, total]) => ({ label, total })).sort((a, b) => b.total - a.total).slice(0, 10);
+    
+    let porLocalVotacaoOriginal = Array.from(mapLocais.entries()).map(([label, total]) => ({ label, total })).sort((a, b) => b.total - a.total);
+    let porLocalVotacao = porLocalVotacaoOriginal;
+    if (porLocalVotacaoOriginal.length > 8) {
+      const top7 = porLocalVotacaoOriginal.slice(0, 7);
+      const outrosTotal = porLocalVotacaoOriginal.slice(7).reduce((acc, curr) => acc + curr.total, 0);
+      porLocalVotacao = [...top7, { label: 'Outros locais', total: outrosTotal }];
+    }
+
+    const porDia = Array.from(mapDias.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([dia, total]) => ({
+      label: dia.slice(8, 10) + '/' + dia.slice(5, 7),
+      total
+    }));
+
+    const ranking = cabos.map(c => ({
+      nome: c.nome,
+      meta: c.meta_eleitores || 0,
+      total: mapCabosCount.get(c.id) || 0
+    })).sort((a, b) => b.total - a.total);
+
+    aniversariantes.sort((a, b) => a.diffDias - b.diffDias);
+    const topAniversariantes = aniversariantes.slice(0, 10);
+
+    const bairrosTodosCount = (await prisma.eleitor.findMany({ where: whereBase, select: { bairro: true }, distinct: ['bairro'] })).length;
+    const cidadesTodasCount = (await prisma.eleitor.findMany({ where: whereBase, select: { cidade: true }, distinct: ['cidade'] })).length;
+
+    res.json({
+      kpis: {
+        totalEleitores: totalEleitores,
+        totalCidades: cidadesTodasCount,
+        totalBairros: bairrosTodosCount,
+        totalCabos: cabos.length
+      },
+      porCidade,
+      porBairro,
+      porLocalVotacao,
+      porDia,
+      ranking,
+      aniversariantes: topAniversariantes
+    });
+  })
 );
 
 // Marcar WhatsApp Enviado
@@ -261,6 +501,11 @@ app.put(
   wrap(async (req, res) => {
     const b = req.body ?? {};
     try {
+      let coord = undefined;
+      if (b.bairro && b.cidade) {
+        coord = await geocodeAddress(b.bairro, b.cidade);
+      }
+
       const eleitor = await prisma.eleitor.update({
         where: { id: String(req.params.id) },
         data: {
@@ -272,6 +517,10 @@ app.put(
           secao: b.secao !== undefined ? Number(b.secao) : undefined,
           bairro: b.bairro,
           cidade: b.cidade,
+          data_nascimento: b.data_nascimento || null,
+          cpf: b.cpf ? String(b.cpf).replace(/\D/g, '') : null,
+          titulo_eleitor: b.titulo_eleitor ? String(b.titulo_eleitor).replace(/\D/g, '') : null,
+          ...(coord ? { lat: coord.lat, lng: coord.lng } : {}),
           status: b.status as StatusEleitor,
           observacoes: b.observacoes || null,
         },
@@ -280,6 +529,13 @@ app.put(
       res.json(eleitor);
     } catch (err: any) {
       if (err?.code === 'P2002') {
+        const target = err.meta?.target as string[] | string | undefined;
+        if (target?.includes('cpf')) {
+          return res.status(409).json({ error: 'Este CPF já está cadastrado em nossa base.' });
+        }
+        if (target?.includes('titulo_eleitor')) {
+          return res.status(409).json({ error: 'Este Título de Eleitor já está cadastrado.' });
+        }
         return res.status(409).json({ error: 'Já existe um eleitor com esse nome nesta zona e seção.' });
       }
       throw err;
@@ -547,6 +803,131 @@ app.post(
   })
 );
 
+// --- Upload de arquivo real (foto/vídeo/áudio do computador) ---
+app.post(
+  '/api/whatsapp/send-media',
+  requireAuth,
+  upload.single('arquivo'),
+  wrap(async (req, res) => {
+    const { numero, texto, tipo } = req.body;
+    const file = req.file;
+    if (!numero) return res.status(400).json({ error: 'Número é obrigatório.' });
+    if (!file) return res.status(400).json({ error: 'Arquivo é obrigatório.' });
+
+    const config = await prisma.configuracaoWhatsApp.findUnique({ where: { id: 'singleton' } });
+
+    try {
+      if (config?.modo === 'interno') {
+        await sendWhatsAppMediaFile(numero, file.path, file.mimetype, texto || '', tipo || 'image');
+        return res.json({ success: true });
+      }
+
+      if (config?.modo === 'zapi' && config.api_url && config.api_token) {
+        // Z-API aceita base64
+        const fileBuffer = fs.readFileSync(file.path);
+        const base64 = fileBuffer.toString('base64');
+        let endpoint = '/send-image';
+        const body: any = { phone: `55${numero}` };
+
+        if (tipo === 'image') {
+          endpoint = '/send-image';
+          body.image = `data:${file.mimetype};base64,${base64}`;
+          if (texto) body.caption = texto;
+        } else if (tipo === 'video') {
+          endpoint = '/send-video';
+          body.video = `data:${file.mimetype};base64,${base64}`;
+          if (texto) body.caption = texto;
+        } else if (tipo === 'audio') {
+          endpoint = '/send-audio';
+          body.audio = `data:${file.mimetype};base64,${base64}`;
+        } else {
+          body.message = texto;
+          endpoint = '/send-text';
+        }
+
+        const response = await fetch(`${config.api_url}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Client-Token': config.api_token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!response.ok) throw new Error('Erro na API Externa Z-API');
+        return res.json({ success: true });
+      }
+
+      res.status(400).json({ error: 'Nenhuma configuração de WhatsApp ativa.' });
+    } finally {
+      // Limpa o arquivo temporário
+      try { fs.unlinkSync(file.path); } catch (_) { /* ignore */ }
+    }
+  })
+);
+
+// --- Eventos (Agenda de Reuniões) ---
+app.get(
+  '/api/eventos',
+  requireAuth,
+  wrap(async (req, res) => {
+    const eventos = await prisma.evento.findMany({
+      orderBy: { data_hora: 'asc' },
+    });
+    res.json(eventos);
+  })
+);
+
+app.post(
+  '/api/eventos',
+  requireAuth,
+  requireRole('admin', 'coordenador'),
+  wrap(async (req, res) => {
+    const { titulo, descricao, data_hora, local, bairro, cidade } = req.body ?? {};
+    if (!titulo || !data_hora || !local) {
+      return res.status(400).json({ error: 'Título, data/hora e local são obrigatórios.' });
+    }
+    const evento = await prisma.evento.create({
+      data: {
+        titulo: String(titulo),
+        descricao: descricao ? String(descricao) : null,
+        data_hora: new Date(data_hora),
+        local: String(local),
+        bairro: bairro ? String(bairro) : null,
+        cidade: cidade ? String(cidade) : null,
+      }
+    });
+    res.status(201).json(evento);
+  })
+);
+
+app.put(
+  '/api/eventos/:id',
+  requireAuth,
+  requireRole('admin', 'coordenador'),
+  wrap(async (req, res) => {
+    const { titulo, descricao, data_hora, local, bairro, cidade } = req.body ?? {};
+    const evento = await prisma.evento.update({
+      where: { id: String(req.params.id) },
+      data: {
+        titulo: titulo ? String(titulo) : undefined,
+        descricao: descricao !== undefined ? String(descricao) : undefined,
+        data_hora: data_hora ? new Date(data_hora) : undefined,
+        local: local ? String(local) : undefined,
+        bairro: bairro !== undefined ? String(bairro) : undefined,
+        cidade: cidade !== undefined ? String(cidade) : undefined,
+      }
+    });
+    res.json(evento);
+  })
+);
+
+app.delete(
+  '/api/eventos/:id',
+  requireAuth,
+  requireRole('admin', 'coordenador'),
+  wrap(async (req, res) => {
+    await prisma.evento.delete({ where: { id: String(req.params.id) } });
+    res.status(204).send();
+  })
+);
+
 // --- Inicialização: cria/atualiza o admin a partir das variáveis de ambiente ---
 async function bootstrap() {
   const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
@@ -567,12 +948,71 @@ async function bootstrap() {
   }
 }
 
+// --- Automação de Aniversários ---
+function startCronJobs() {
+  // Roda todos os dias às 09:00 (hora local do servidor)
+  cron.schedule('0 9 * * *', async () => {
+    console.log('[CRON] Iniciando rotina de aniversários...');
+    try {
+      // Data atual no formato DD/MM
+      const hoje = new Date();
+      const dia = hoje.getDate().toString().padStart(2, '0');
+      const mes = (hoje.getMonth() + 1).toString().padStart(2, '0');
+      const prefixoData = `${dia}/${mes}`;
+
+      const aniversariantes = await prisma.eleitor.findMany({
+        where: {
+          data_nascimento: {
+            startsWith: prefixoData
+          },
+          status: 'ativo'
+        }
+      });
+
+      console.log(`[CRON] Encontrados ${aniversariantes.length} aniversariantes hoje (${prefixoData}).`);
+
+      // Verifica configuração de WhatsApp (exemplo lógico)
+      const config = await prisma.configuracaoWhatsApp.findUnique({ where: { id: 'singleton' } });
+      
+      if (!config || config.modo === 'nenhum') {
+        console.log('[CRON] WhatsApp não configurado. Nenhuma mensagem será enviada.');
+        return;
+      }
+
+      for (let i = 0; i < aniversariantes.length; i++) {
+        const eleitor = aniversariantes[i];
+        if (!eleitor.telefone) continue;
+
+        const numero = eleitor.telefone.replace(/\D/g, '');
+        const primeiroNome = eleitor.nome.split(' ')[0];
+        const texto = `Olá ${primeiroNome}! O Sistema Gestor de Votos te deseja um feliz aniversário! Que seu dia seja muito especial. 🎉🎂`;
+
+        try {
+          await sendWhatsAppMessage(numero, texto, 'text');
+          console.log(`[CRON] Mensagem enviada para ${primeiroNome} (${numero})`);
+        } catch (err) {
+          console.error(`[CRON] Falha ao enviar para ${numero}:`, err);
+        }
+
+        // Delay para não tomar ban
+        if (i < aniversariantes.length - 1) {
+          await new Promise(r => setTimeout(r, 3000));
+        }
+      }
+    } catch (err) {
+      console.error('[CRON] Erro na rotina de aniversários:', err);
+    }
+  });
+  console.log('✓ Cron jobs agendados.');
+}
+
 const PORT = Number(process.env.PORT) || 3000;
 bootstrap()
   .catch((err) => console.error('Falha no bootstrap:', err.message))
   .finally(async () => {
     // Inicia o WhatsApp Interno se estiver configurado
     try {
+      startCronJobs();
       const config = await prisma.configuracaoWhatsApp.findUnique({ where: { id: 'singleton' } });
       if (config?.modo === 'interno') {
         initWhatsApp(io).catch(console.error);

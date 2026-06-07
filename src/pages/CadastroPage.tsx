@@ -10,11 +10,15 @@ import { LocalVotacaoAutocomplete } from '../components/LocalVotacaoAutocomplete
 interface FormState {
   nome: string
   telefone: string
+  cep: string
   local_votacao: string
   zona: string
   secao: string
   bairro: string
   cidade: string
+  data_nascimento: string
+  cpf: string
+  titulo_eleitor: string
   cabo_id: string
   observacoes: string
 }
@@ -22,11 +26,15 @@ interface FormState {
 const VAZIO: FormState = {
   nome: '',
   telefone: '',
+  cep: '',
   local_votacao: '',
   zona: '',
   secao: '',
   bairro: '',
   cidade: '',
+  data_nascimento: '',
+  cpf: '',
+  titulo_eleitor: '',
   cabo_id: '',
   observacoes: '',
 }
@@ -57,6 +65,46 @@ export function CadastroPage() {
 
   function atualizar<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((f) => ({ ...f, [campo]: valor }))
+  }
+
+  async function buscarCep(cepFormatado: string) {
+    const limpo = cepFormatado.replace(/\D/g, '')
+    if (limpo.length !== 8) return
+
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${limpo}/json/`)
+      const data = await res.json()
+      if (!data.erro) {
+        setForm(f => ({
+          ...f,
+          bairro: data.bairro || f.bairro,
+          cidade: data.localidade || f.cidade
+        }))
+      }
+    } catch {
+      // Ignora erro do viacep
+    }
+  }
+
+  function handleCepChange(val: string) {
+    // Formata CEP: 12345-678
+    let f = val.replace(/\D/g, '')
+    if (f.length > 5) f = f.slice(0, 5) + '-' + f.slice(5, 8)
+    atualizar('cep', f)
+    if (f.length === 9) buscarCep(f)
+  }
+
+  function maskCpf(v: string) {
+    return v
+      .replace(/\D/g, '')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+      .slice(0, 14);
+  }
+
+  function maskTitulo(v: string) {
+    return v.replace(/\D/g, '').slice(0, 12);
   }
 
   function validar(): string | null {
@@ -90,6 +138,9 @@ export function CadastroPage() {
         secao: Number(form.secao),
         bairro: form.bairro.trim(),
         cidade: form.cidade,
+        data_nascimento: form.data_nascimento || null,
+        cpf: form.cpf || null,
+        titulo_eleitor: form.titulo_eleitor || null,
         cabo_id: form.cabo_id || null,
         observacoes: form.observacoes.trim() || null,
         status: 'ativo',
@@ -111,26 +162,32 @@ export function CadastroPage() {
   }
 
   return (
-    // Fundo estilo "modal": backdrop com gradiente e o card centralizado
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-600 via-brand-700 to-slate-900 p-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-slate-900">
+    // Fundo da página (tela toda)
+    <div className="flex min-h-[100dvh] items-start justify-center bg-slate-50 py-6 sm:py-12 sm:px-4">
+      <div className="w-full max-w-lg overflow-hidden sm:rounded-2xl bg-white shadow-2xl dark:bg-slate-900 border-x border-y sm:border border-slate-200 dark:border-slate-800">
+        
+        {/* Cover Image & Avatar */}
+        <div className="relative h-32 w-full bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-700 sm:h-40">
+          <div className="absolute inset-0 bg-black/20" />
+          <div className="absolute -bottom-10 left-6">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800">
+              <UserPlus className="h-10 w-10 text-brand-600 dark:text-brand-400" />
+            </div>
+          </div>
+        </div>
+
         {/* Cabeçalho do modal */}
-        <div className="flex items-center gap-3 border-b border-slate-100 bg-white px-6 py-5 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-500/30">
-            {sucesso ? <CheckCircle2 className="h-6 w-6" /> : <UserPlus className="h-6 w-6" />}
-          </div>
-          <div>
-            <h1 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-              {sucesso ? 'Cadastro realizado!' : 'Cadastro de Eleitor'}
-            </h1>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              {sucesso
-                ? 'Os dados foram registrados com sucesso.'
-                : nomeCaboDoLink
-                  ? `Indicação de ${nomeCaboDoLink}`
-                  : 'Preencha os dados abaixo'}
-            </p>
-          </div>
+        <div className="px-6 pb-6 pt-12">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            {sucesso ? 'Cadastro realizado!' : 'Apoio à Campanha'}
+          </h1>
+          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+            {sucesso
+              ? 'Os dados foram registrados com sucesso.'
+              : nomeCaboDoLink
+                ? `Indicação de ${nomeCaboDoLink}`
+                : 'Preencha seus dados para fazer parte do projeto.'}
+          </p>
         </div>
 
         {sucesso ? (
@@ -183,6 +240,51 @@ export function CadastroPage() {
                   placeholder="(11) 91234-5678"
                 />
               </Campo>
+              <Campo label="Data de Nascimento (Opcional)">
+                <input
+                  type="date"
+                  value={form.data_nascimento}
+                  onChange={(e) => atualizar('data_nascimento', e.target.value)}
+                  className={inputClass}
+                />
+              </Campo>
+              <Campo label="CEP">
+                <div className="relative">
+                  <input
+                    type="tel"
+                    value={form.cep}
+                    onChange={(e) => handleCepChange(e.target.value)}
+                    className={inputClass}
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                  {form.cep.length === 9 && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    </div>
+                  )}
+                </div>
+              </Campo>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Campo label="CPF (Opcional)">
+                  <input
+                    type="tel"
+                    value={form.cpf}
+                    onChange={(e) => atualizar('cpf', maskCpf(e.target.value))}
+                    className={inputClass}
+                    placeholder="000.000.000-00"
+                  />
+                </Campo>
+                <Campo label="Título de Eleitor (Opcional)">
+                  <input
+                    type="tel"
+                    value={form.titulo_eleitor}
+                    onChange={(e) => atualizar('titulo_eleitor', maskTitulo(e.target.value))}
+                    className={inputClass}
+                    placeholder="Apenas números"
+                  />
+                </Campo>
+              </div>
             </Secao>
 
             {/* Seção: local de votação */}

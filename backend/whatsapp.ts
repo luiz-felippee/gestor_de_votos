@@ -65,3 +65,28 @@ export async function sendWhatsAppMessage(number: string, text: string, tipo: st
     await sock.sendMessage(jid, { text });
   }
 }
+
+/** Envia mídia a partir de um arquivo local (buffer) */
+export async function sendWhatsAppMediaFile(
+  number: string,
+  filePath: string,
+  mimetype: string,
+  caption: string,
+  tipo: string
+) {
+  if (!sock?.user) throw new Error("WhatsApp não está conectado.");
+  
+  const fs = await import('fs');
+  const buffer = fs.readFileSync(filePath);
+  const jid = `${number}@s.whatsapp.net`;
+  
+  if (tipo === 'image') {
+    await sock.sendMessage(jid, { image: buffer, mimetype, caption: caption || undefined });
+  } else if (tipo === 'video') {
+    await sock.sendMessage(jid, { video: buffer, mimetype, caption: caption || undefined });
+  } else if (tipo === 'audio') {
+    await sock.sendMessage(jid, { audio: buffer, mimetype: mimetype || 'audio/mp4', ptt: true });
+  } else {
+    await sock.sendMessage(jid, { document: buffer, mimetype, fileName: `arquivo.${mimetype.split('/')[1] || 'bin'}` });
+  }
+}
