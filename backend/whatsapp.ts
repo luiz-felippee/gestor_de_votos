@@ -11,7 +11,9 @@ let currentQr: string | null = null;
 export async function initWhatsApp(io: Server) {
   ioInstance = io;
   
-  const authFolder = path.join(__dirname, 'baileys_auth_info');
+  // Em produção, aponte WHATSAPP_AUTH_DIR para um Disco Persistente (ex.: /data/whatsapp)
+  // para a sessão do WhatsApp sobreviver a deploys/reinícios.
+  const authFolder = process.env.WHATSAPP_AUTH_DIR || path.join(__dirname, 'baileys_auth_info');
   const { state, saveCreds } = await useMultiFileAuthState(authFolder);
 
   sock = makeWASocket({
