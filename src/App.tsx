@@ -1,20 +1,39 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { ThemeProvider, useTheme } from './components/ThemeProvider'
 import { Logo } from './components/Logo'
+// Leves / críticas: carregam de imediato (formulário público e login)
 import { CadastroPage } from './pages/CadastroPage'
-import { PlanilhaPage } from './pages/PlanilhaPage'
-import { DashboardPage } from './pages/DashboardPage'
-import { CabosPage } from './pages/CabosPage'
-import { UsuariosPage } from './pages/UsuariosPage'
 import { LoginPage } from './pages/LoginPage'
-import { WhatsAppPage } from './pages/WhatsAppPage'
 import { PrivacidadePage } from './pages/PrivacidadePage'
-import { MapaCalorPage } from './pages/MapaCalorPage'
-import { CadastroLiderancaPage } from './pages/CadastroLiderancaPage'
-import { EventosPage } from './pages/EventosPage'
+
+// Pesadas: carregam sob demanda (mapa, gráficos, WhatsApp, planilha, etc.)
+const lazyPage = <T extends Record<string, React.ComponentType<any>>>(
+  loader: () => Promise<T>,
+  nome: keyof T,
+) => lazy(() => loader().then((m) => ({ default: m[nome] })))
+
+const DashboardPage = lazyPage(() => import('./pages/DashboardPage'), 'DashboardPage')
+const PlanilhaPage = lazyPage(() => import('./pages/PlanilhaPage'), 'PlanilhaPage')
+const CabosPage = lazyPage(() => import('./pages/CabosPage'), 'CabosPage')
+const UsuariosPage = lazyPage(() => import('./pages/UsuariosPage'), 'UsuariosPage')
+const WhatsAppPage = lazyPage(() => import('./pages/WhatsAppPage'), 'WhatsAppPage')
+const MapaCalorPage = lazyPage(() => import('./pages/MapaCalorPage'), 'MapaCalorPage')
+const CadastroLiderancaPage = lazyPage(
+  () => import('./pages/CadastroLiderancaPage'),
+  'CadastroLiderancaPage',
+)
+const EventosPage = lazyPage(() => import('./pages/EventosPage'), 'EventosPage')
+
+function CarregandoPagina() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+    </div>
+  )
+}
 
 export default function App() {
   return (
@@ -24,6 +43,7 @@ export default function App() {
         <div className="flex min-h-full flex-col">
           <Header />
           <main className="flex-1">
+            <Suspense fallback={<CarregandoPagina />}>
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
@@ -93,6 +113,7 @@ export default function App() {
 
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
+            </Suspense>
           </main>
         </div>
       </BrowserRouter>

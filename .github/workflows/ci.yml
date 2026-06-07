@@ -1,0 +1,21 @@
+name: CI
+
+# Testa o build do site a cada envio — pega erros antes de publicar no Netlify
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Build do front (tsc + vite)
+        run: npm run build

@@ -58,6 +58,17 @@ const cadastroLimiter = rateLimit({
   },
 });
 
+// Anti força-bruta no login: 10 tentativas por IP a cada 5 minutos
+const loginLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Muitas tentativas de login. Aguarde alguns minutos e tente de novo.',
+  },
+});
+
 // --- Tempo real (Socket.io) ---
 const io = new SocketServer(httpServer, { cors: { origin: CORS_ORIGIN } });
 function notificarMudanca() {
@@ -114,6 +125,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 // --- Autenticação ---
 app.post(
   '/api/auth/login',
+  loginLimiter,
   wrap(async (req, res) => {
     const { email, senha } = req.body ?? {};
     if (!email || !senha) return res.status(400).json({ error: 'Informe e-mail e senha.' });
