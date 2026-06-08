@@ -63,6 +63,12 @@ model Eleitor {
   cabo          CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
 
   @@unique([nome_busca, zona, secao])
+  // Índices para acelerar filtros/ordenação da planilha, dashboard e mapa
+  @@index([cidade])
+  @@index([bairro])
+  @@index([cabo_id])
+  @@index([status])
+  @@index([created_at])
   @@map("eleitores")
 }
 

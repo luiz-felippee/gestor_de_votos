@@ -121,7 +121,7 @@ const wrap =
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-07-compilado', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-07-indices', runtime: 'node-dist' }),
 );
 
 // --- Autenticação ---
@@ -599,6 +599,8 @@ app.get(
       select: { bairro: true },
       orderBy: { bairro: 'asc' },
     });
+    // Cache leve: sugestões de autocomplete podem ficar ~5 min desatualizadas
+    res.set('Cache-Control', 'public, max-age=300');
     res.json(linhas.map((l) => l.bairro).filter(Boolean));
   }),
 );
