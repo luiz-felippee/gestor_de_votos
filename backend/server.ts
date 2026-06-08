@@ -119,9 +119,36 @@ const wrap =
       res.status(500).json({ error: 'Erro interno do servidor.' });
     });
 
+// Registra uma ação no log de auditoria (nunca quebra a operação principal)
+function registrarLog(
+  req: AuthedRequest,
+  acao: string,
+  entidade: string,
+  entidade_id?: string,
+  detalhe?: string,
+) {
+  const ip =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+    req.ip ||
+    null;
+  prisma.logAuditoria
+    .create({
+      data: {
+        usuario_id: req.user?.id ?? null,
+        usuario_nome: req.user?.nome ?? null,
+        acao,
+        entidade,
+        entidade_id: entidade_id ?? null,
+        detalhe: detalhe ?? null,
+        ip,
+      },
+    })
+    .catch((e) => console.error('Falha ao registrar log de auditoria:', e));
+}
+
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-07-indices', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-07-auditoria', runtime: 'node-dist' }),
 );
 
 // --- Autenticação ---
@@ -184,6 +211,7 @@ app.post(
         votacao: votacao ? Number(votacao) : null,
       },
     });
+    registrarLog(req, 'criar', 'cabo', cabo.id, cabo.nome);
     res.status(201).json(cabo);
   }),
 );
@@ -237,6 +265,7 @@ app.put(
         votacao: votacao ? Number(votacao) : null,
       },
     });
+    registrarLog(req, 'editar', 'cabo', String(req.params.id), cabo.nome);
     res.json(cabo);
   }),
 );
@@ -247,6 +276,7 @@ app.delete(
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
     await prisma.caboEleitoral.delete({ where: { id: String(req.params.id) } });
+    registrarLog(req, 'excluir', 'cabo', String(req.params.id));
     res.status(204).send();
   }),
 );
@@ -539,6 +569,7 @@ app.put(
           observacoes: b.observacoes || null,
         },
       });
+      registrarLog(req, 'editar', 'eleitor', String(req.params.id), eleitor.nome);
       notificarMudanca();
       res.json(eleitor);
     } catch (err: any) {
@@ -564,6 +595,7 @@ app.delete(
   requireRole('admin'),
   wrap(async (req, res) => {
     await prisma.eleitor.delete({ where: { id: String(req.params.id) } });
+    registrarLog(req, 'excluir', 'eleitor', String(req.params.id));
     notificarMudanca();
     res.status(204).send();
   }),
@@ -585,6 +617,7 @@ app.post(
         status: 'inativo',
       },
     });
+    registrarLog(req, 'anonimizar', 'eleitor', String(req.params.id));
     notificarMudanca();
     res.json(eleitor);
   }),
@@ -653,6 +686,7 @@ app.post(
         },
         select: USUARIO_PUBLICO,
       });
+      registrarLog(req, 'criar', 'usuario', usuario.id, usuario.email);
       res.status(201).json(usuario);
     } catch (err: any) {
       if (err?.code === 'P2002') {
@@ -684,6 +718,7 @@ app.put(
         },
         select: USUARIO_PUBLICO,
       });
+      registrarLog(req, 'editar', 'usuario', String(req.params.id), usuario.email);
       res.json(usuario);
     } catch (err: any) {
       if (err?.code === 'P2002') {
@@ -703,7 +738,22 @@ app.delete(
       return res.status(400).json({ error: 'Você não pode excluir o próprio usuário.' });
     }
     await prisma.usuario.delete({ where: { id: String(req.params.id) } });
+    registrarLog(req, 'excluir', 'usuario', String(req.params.id));
     res.status(204).send();
+  }),
+);
+
+// --- Log de auditoria (somente admin) ---
+app.get(
+  '/api/auditoria',
+  requireAuth,
+  requireRole('admin'),
+  wrap(async (_req, res) => {
+    const logs = await prisma.logAuditoria.findMany({
+      orderBy: { created_at: 'desc' },
+      take: 300,
+    });
+    res.json(logs);
   }),
 );
 

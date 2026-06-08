@@ -109,3 +109,19 @@ model Evento {
 
   @@map("eventos")
 }
+
+model LogAuditoria {
+  id           String   @id @default(uuid())
+  usuario_id   String?
+  usuario_nome String?
+  acao         String // criar, editar, excluir, anonimizar
+  entidade     String // eleitor, cabo, usuario
+  entidade_id  String?
+  detalhe      String?
+  ip           String?
+  created_at   DateTime @default(now())
+
+  @@index([created_at])
+  @@index([entidade])
+  @@map("logs_auditoria")
+}

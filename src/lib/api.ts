@@ -7,6 +7,7 @@ import type {
   UsuarioAdmin,
   ConfiguracaoWhatsApp,
   Evento,
+  LogAuditoria,
 } from './types'
 
 export const API_BASE =
@@ -96,6 +97,9 @@ export const api = {
     if (!res.ok) throw new Error(data.error || 'Erro ao criar liderança')
     return data
   },
+
+  // ---- Auditoria (admin) ----
+  getAuditoria: () => request<LogAuditoria[]>('/auditoria'),
 
   // ---- Usuários (gestão de acessos — admin) ----
   getUsuarios: () => request<UsuarioAdmin[]>('/usuarios'),

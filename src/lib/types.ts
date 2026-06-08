@@ -71,6 +71,18 @@ export interface ConfiguracaoWhatsApp {
   updated_at: string
 }
 
+export interface LogAuditoria {
+  id: string
+  usuario_id: string | null
+  usuario_nome: string | null
+  acao: string
+  entidade: string
+  entidade_id: string | null
+  detalhe: string | null
+  ip: string | null
+  created_at: string
+}
+
 export interface Evento {
   id: string
   titulo: string
