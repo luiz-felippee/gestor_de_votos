@@ -74,6 +74,29 @@ function CamadaCalor({ pontos }: { pontos: [number, number, number][] }) {
   return null
 }
 
+/* Drill-down: voa para a cidade selecionada (e volta para PE ao desmarcar) */
+function ZoomNaCidade({
+  cidade,
+  centro,
+  boundsPE,
+}: {
+  cidade: string | null
+  centro: [number, number] | null
+  boundsPE: LatLngBoundsExpression
+}) {
+  const map = useMap()
+  const anterior = useRef<string | null>(null)
+  useEffect(() => {
+    if (cidade && centro) {
+      map.flyTo(centro, 12, { duration: 1.2 })
+    } else if (!cidade && anterior.current) {
+      map.flyToBounds(boundsPE, { duration: 1.2 })
+    }
+    anterior.current = cidade
+  }, [cidade, centro, boundsPE, map])
+  return null
+}
+
 /* Jitter determinístico (espalha eleitores ao redor do centro da cidade) */
 function jitter(seed: string, escala = 0.05) {
   let h = 0
@@ -348,6 +371,14 @@ export function MapaCalorPage() {
               >
                 {telaCheia ? '✕ Sair' : '⛶ Tela cheia'}
               </button>
+              {cidadeSelecionada && (
+                <button
+                  onClick={() => setCidadeSelecionada(null)}
+                  className="absolute left-3 top-3 z-[1000] flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-600/95 px-3 py-1.5 text-xs font-bold text-white shadow-lg backdrop-blur transition hover:bg-brand-700 active:scale-95"
+                >
+                  ← Pernambuco · saindo de {cidadeSelecionada}
+                </button>
+              )}
               <MapContainer
                 bounds={bounds!}
                 maxBounds={bounds!}
@@ -364,6 +395,20 @@ export function MapaCalorPage() {
                 }}
               >
                 <InvalidarTamanho dep={telaCheia} />
+                <ZoomNaCidade
+                  cidade={cidadeSelecionada}
+                  centro={
+                    cidadeSelecionada
+                      ? (() => {
+                          const c = COORD_POR_CIDADE.get(
+                            normalizar(cidadeSelecionada),
+                          )
+                          return c ? [c.lat, c.lng] : null
+                        })()
+                      : null
+                  }
+                  boundsPE={bounds!}
+                />
                 <TileLayer
                   key={theme}
                   url={tema.url}
