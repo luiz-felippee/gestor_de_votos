@@ -72,8 +72,9 @@ export function LoginPage() {
         </svg>
 
         <div className="absolute inset-0 flex flex-col justify-between p-12 lg:p-20">
-          <div>
+          <div className="flex items-center gap-3">
             <Logo className="h-12 w-auto" iconClassName="h-12 w-12" />
+            <span className="text-2xl font-bold tracking-tight text-white">Gestor de Votos</span>
           </div>
           <div className="max-w-xl">
             <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl mb-6 leading-tight">
@@ -90,8 +91,9 @@ export function LoginPage() {
       <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:w-[480px] xl:w-[560px] bg-white dark:bg-slate-950">
         <div className="mx-auto w-full max-w-sm lg:w-[380px]">
           <div className="text-center lg:text-left mb-10">
-            <div className="lg:hidden mb-8 flex justify-center">
+            <div className="lg:hidden mb-8 flex items-center justify-center gap-3">
               <Logo className="h-12 w-auto" iconClassName="h-12 w-12" />
+              <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Gestor de Votos</span>
             </div>
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Bem-vindo de volta
