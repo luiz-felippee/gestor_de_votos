@@ -151,7 +151,15 @@ function Header() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <span className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
           <Logo />
-          <span className="hidden sm:inline">Gestor de Votos</span>
+          <span className="flex flex-col leading-tight">
+            <span className="hidden sm:inline">Gestor de Votos</span>
+            {usuario?.campanha_nome && (
+              <span className="text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+                {usuario.super_admin ? '★ ' : ''}
+                {usuario.campanha_nome}
+              </span>
+            )}
+          </span>
         </span>
 
         {usuario ? (

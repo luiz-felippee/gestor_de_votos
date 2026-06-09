@@ -10,6 +10,7 @@ export interface Usuario {
   cabo_id: string | null
   campanha_id?: string | null
   super_admin?: boolean
+  campanha_nome?: string | null
 }
 
 /** Campanha (candidato) — visão do super-admin. */

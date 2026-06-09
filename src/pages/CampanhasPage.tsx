@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../lib/api'
+import { useAuth } from '../auth/AuthContext'
 import { formatDataHora } from '../lib/format'
 import type { Campanha } from '../lib/types'
 
@@ -13,6 +14,7 @@ interface FormState {
 const VAZIO: FormState = { nome: '', admin_nome: '', admin_email: '', admin_senha: '' }
 
 export function CampanhasPage() {
+  const { usuario } = useAuth()
   const [campanhas, setCampanhas] = useState<Campanha[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState<FormState>(VAZIO)
@@ -36,6 +38,21 @@ export function CampanhasPage() {
 
   function set<K extends keyof FormState>(c: K, v: FormState[K]) {
     setForm((f) => ({ ...f, [c]: v }))
+  }
+
+  async function excluir(c: Campanha) {
+    if (
+      !confirm(
+        `EXCLUIR a campanha "${c.nome}" e TODOS os dados dela (${c.total_eleitores ?? 0} eleitores)?\n\nEsta ação é permanente e não pode ser desfeita.`,
+      )
+    )
+      return
+    try {
+      await api.deleteCampanha(c.id)
+      await recarregar()
+    } catch (err) {
+      alert(`Erro ao excluir: ${(err as Error).message}`)
+    }
   }
 
   async function salvar(e: FormEvent) {
@@ -128,20 +145,36 @@ export function CampanhasPage() {
               <th className="px-4 py-3">Eleitores</th>
               <th className="px-4 py-3">Usuários</th>
               <th className="px-4 py-3">Criada em</th>
+              <th className="px-4 py-3 text-right">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {loading ? (
-              <tr><td colSpan={4} className="px-4 py-10 text-center text-slate-400">Carregando...</td></tr>
+              <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400">Carregando...</td></tr>
             ) : campanhas.length === 0 ? (
-              <tr><td colSpan={4} className="px-4 py-10 text-center text-slate-400">Nenhuma campanha ainda.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-10 text-center text-slate-400">Nenhuma campanha ainda.</td></tr>
             ) : (
               campanhas.map((c) => (
                 <tr key={c.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                  <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">{c.nome}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">
+                    {c.nome}
+                    {c.id === usuario?.campanha_id && (
+                      <span className="ml-2 text-[10px] font-semibold uppercase text-brand-500">a sua</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-bold text-brand-600 dark:text-brand-400">{c.total_eleitores ?? 0}</td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{c.total_usuarios ?? 0}</td>
                   <td className="px-4 py-3 text-slate-500">{formatDataHora(c.created_at)}</td>
+                  <td className="px-4 py-3 text-right">
+                    {c.id !== usuario?.campanha_id && (
+                      <button
+                        onClick={() => excluir(c)}
+                        className="font-medium text-red-600 hover:underline"
+                      >
+                        Excluir
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))
             )}

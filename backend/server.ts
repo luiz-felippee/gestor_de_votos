@@ -237,7 +237,7 @@ function registrarLog(
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-09-multitenant3', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-09-multitenant4', runtime: 'node-dist' }),
 );
 
 // --- Autenticação ---
@@ -255,6 +255,14 @@ app.post(
       return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
     }
     const token = assinarToken(usuario);
+    let campanha_nome: string | null = null;
+    if (usuario.campanha_id) {
+      const c = await prisma.campanha.findUnique({
+        where: { id: usuario.campanha_id },
+        select: { nome: true },
+      });
+      campanha_nome = c?.nome ?? null;
+    }
     res.json({
       token,
       usuario: {
@@ -264,6 +272,7 @@ app.post(
         cabo_id: usuario.cabo_id,
         campanha_id: usuario.campanha_id,
         super_admin: usuario.super_admin,
+        campanha_nome,
       },
     });
   }),
@@ -273,7 +282,15 @@ app.get(
   '/api/auth/me',
   requireAuth,
   wrap(async (req, res) => {
-    res.json({ usuario: req.user });
+    let campanha_nome: string | null = null;
+    if (req.user!.campanha_id) {
+      const c = await prisma.campanha.findUnique({
+        where: { id: req.user!.campanha_id },
+        select: { nome: true },
+      });
+      campanha_nome = c?.nome ?? null;
+    }
+    res.json({ usuario: { ...req.user, campanha_nome } });
   }),
 );
 
@@ -1028,6 +1045,27 @@ app.post(
       }
       throw err;
     }
+  }),
+);
+
+// Excluir uma campanha e TODOS os dados dela (super-admin)
+app.delete(
+  '/api/campanhas/:id',
+  requireAuth,
+  requireSuperAdmin,
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (id === req.user!.campanha_id) {
+      return res.status(400).json({ error: 'Você não pode excluir a sua própria campanha.' });
+    }
+    // Apaga os filhos antes dos pais (eleitores/usuários referenciam cabos)
+    await prisma.eleitor.deleteMany({ where: { campanha_id: id } });
+    await prisma.usuario.deleteMany({ where: { campanha_id: id } });
+    await prisma.caboEleitoral.deleteMany({ where: { campanha_id: id } });
+    await prisma.evento.deleteMany({ where: { campanha_id: id } });
+    await prisma.logAuditoria.deleteMany({ where: { campanha_id: id } });
+    await prisma.campanha.delete({ where: { id } });
+    res.status(204).send();
   }),
 );
 
