@@ -149,7 +149,7 @@ function registrarLog(
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-09-geocode', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-09-geocode2', runtime: 'node-dist' }),
 );
 
 // --- Autenticação ---
@@ -305,7 +305,10 @@ function normalizar(nome: string) {
 
 async function geocodeAddress(bairro: string, cidade: string): Promise<{ lat: number; lng: number } | null> {
   try {
-    const q = `${bairro}, ${cidade}, Pernambuco, Brasil`;
+    const q = [bairro, cidade, 'Pernambuco', 'Brasil']
+      .map((s) => (s || '').trim())
+      .filter(Boolean)
+      .join(', ');
     const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`, {
       headers: { 'User-Agent': 'GestorDeVotos/1.0' }
     });
@@ -654,7 +657,12 @@ app.post(
     });
     let geocodificados = 0;
     for (const e of lote) {
-      const coord = await geocodeAddress(e.bairro, e.cidade);
+      let coord = await geocodeAddress(e.bairro, e.cidade);
+      // Se o bairro não resolver, cai para a cidade (não fica preso reprocessando)
+      if (!coord && e.bairro) {
+        await new Promise((r) => setTimeout(r, 1100));
+        coord = await geocodeAddress('', e.cidade);
+      }
       if (coord) {
         await prisma.eleitor.update({
           where: { id: e.id },
