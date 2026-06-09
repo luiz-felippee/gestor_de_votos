@@ -266,7 +266,7 @@ function registrarLog(
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-09-perfil-campanha', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-09-dash-rapido', runtime: 'node-dist' }),
 );
 
 // --- Autenticação ---
@@ -585,14 +585,15 @@ app.get(
     };
     const whereFiltrado = filtroCidade ? { ...whereBase, cidade: filtroCidade } : whereBase;
 
-    // 1. Cabos ativos (somente admin/coordenador vêem a meta e todos cabos)
-    const cabos = await prisma.caboEleitoral.findMany({
-      where: escopoCampanha(req),
-      select: { id: true, nome: true, meta_eleitores: true },
-    });
-
-    // 2. Busca campos otimizados para cálculo na memória do backend
-    const eleitores = await prisma.eleitor.findMany({
+    // Carrega cabos, eleitores e a campanha em paralelo (1 ida ao banco em vez de 3 em série)
+    const [cabos, eleitores, campanhaAtual] = await Promise.all([
+      // 1. Cabos ativos (somente admin/coordenador vêem a meta e todos cabos)
+      prisma.caboEleitoral.findMany({
+        where: escopoCampanha(req),
+        select: { id: true, nome: true, meta_eleitores: true },
+      }),
+      // 2. Busca campos otimizados para cálculo na memória do backend
+      prisma.eleitor.findMany({
       where: whereFiltrado,
       select: {
         id: true,
@@ -605,8 +606,13 @@ app.get(
         data_nascimento: true,
         nome: true,
         telefone: true
-      }
-    });
+        }
+      }),
+      // 3. Dados da campanha atual (para o cartão de perfil no dashboard)
+      req.user?.campanha_id
+        ? prisma.campanha.findUnique({ where: { id: req.user.campanha_id } })
+        : Promise.resolve(null),
+    ]);
 
     const totalEleitores = eleitores.length;
     
@@ -706,12 +712,22 @@ app.get(
     aniversariantes.sort((a, b) => a.diffDias - b.diffDias);
     const topAniversariantes = aniversariantes.slice(0, 10);
 
-    const bairrosTodosCount = (await prisma.eleitor.findMany({ where: whereBase, select: { bairro: true }, distinct: ['bairro'] })).length;
-    const cidadesTodasCount = (await prisma.eleitor.findMany({ where: whereBase, select: { cidade: true }, distinct: ['cidade'] })).length;
-
-    const campanhaAtual = req.user?.campanha_id 
-        ? await prisma.campanha.findUnique({ where: { id: req.user.campanha_id } }) 
-        : null;
+    // Totais de cidades/bairros. Sem filtro de cidade os mapas já agregados
+    // dão a resposta (evita 2 idas extras ao banco no painel inicial);
+    // com filtro, conta o escopo completo (ignorando o filtro de cidade).
+    let cidadesTodasCount: number;
+    let bairrosTodosCount: number;
+    if (filtroCidade) {
+      const [cidadesDistinct, bairrosDistinct] = await Promise.all([
+        prisma.eleitor.findMany({ where: whereBase, select: { cidade: true }, distinct: ['cidade'] }),
+        prisma.eleitor.findMany({ where: whereBase, select: { bairro: true }, distinct: ['bairro'] }),
+      ]);
+      cidadesTodasCount = cidadesDistinct.length;
+      bairrosTodosCount = bairrosDistinct.length;
+    } else {
+      cidadesTodasCount = mapCidades.size;
+      bairrosTodosCount = mapBairros.size;
+    }
 
     res.json({
       campanha: campanhaAtual,
