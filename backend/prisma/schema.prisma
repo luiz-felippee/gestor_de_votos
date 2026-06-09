@@ -32,6 +32,7 @@ model CaboEleitoral {
   ano_eleicao    String?
   votacao        Int?
   data_nascimento String?
+  foto_url       String?
   created_at     DateTime  @default(now())
   eleitores      Eleitor[]
   usuarios       Usuario[]

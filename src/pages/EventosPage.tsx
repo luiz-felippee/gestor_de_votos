@@ -89,8 +89,7 @@ export function EventosPage() {
                 )}
                 {ev.descricao && <p className="text-sm text-slate-500 mt-3 border-t pt-3 dark:border-slate-800">{ev.descricao}</p>}
               </div>
-              
-              <div className="mt-5 flex gap-2 border-t pt-4 border-slate-100 dark:border-slate-800">
+              <div className="mt-5 flex flex-wrap gap-2 border-t pt-4 border-slate-100 dark:border-slate-800">
                 <button
                   onClick={() => handleConvidarBairro(ev)}
                   className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 font-bold py-2 rounded-lg text-sm transition dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40"

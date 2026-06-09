@@ -34,6 +34,7 @@ export function CadastroLiderancaPage() {
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState(false)
+  const [arquivoFoto, setArquivoFoto] = useState<File | null>(null)
 
   function atualizar<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((f) => ({ ...f, [campo]: valor }))
@@ -43,6 +44,7 @@ export function CadastroLiderancaPage() {
     if (!form.nome.trim()) return 'Informe seu nome completo.'
     if (!isTelefoneValido(form.telefone))
       return 'Telefone inválido. Use (XX) XXXXX-XXXX.'
+    if (!arquivoFoto) return 'A foto da liderança é obrigatória.'
     if (!form.bairro_atuacao.trim()) return 'Informe o bairro onde atua.'
     if (!form.cidade) return 'Selecione sua cidade.'
     return null
@@ -56,6 +58,7 @@ export function CadastroLiderancaPage() {
 
     setEnviando(true)
     try {
+      const { url } = await api.uploadArquivo(arquivoFoto!)
       await api.createCaboPublic({
         nome: form.nome.trim(),
         telefone: form.telefone,
@@ -66,6 +69,7 @@ export function CadastroLiderancaPage() {
         cargo_candidato: form.foi_candidato ? form.cargo_candidato : undefined,
         ano_eleicao: form.foi_candidato ? form.ano_eleicao : undefined,
         votacao: form.foi_candidato && form.votacao ? Number(form.votacao) : undefined,
+        foto_url: url,
         website, // honeypot
       })
     } catch (err) {
@@ -79,6 +83,7 @@ export function CadastroLiderancaPage() {
 
   function novoCadastro() {
     setForm(VAZIO)
+    setArquivoFoto(null)
     setSucesso(false)
   }
 
@@ -90,8 +95,12 @@ export function CadastroLiderancaPage() {
         <div className="relative h-32 w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 sm:h-40">
           <div className="absolute inset-0 bg-black/20" />
           <div className="absolute -bottom-10 left-6">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800">
-              <Users className="h-10 w-10 text-teal-600 dark:text-teal-400" />
+            <div className="flex h-20 w-20 overflow-hidden items-center justify-center rounded-2xl border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800">
+              {arquivoFoto ? (
+                <img src={URL.createObjectURL(arquivoFoto)} alt="Preview" className="h-full w-full object-cover" />
+              ) : (
+                <Users className="h-10 w-10 text-teal-600 dark:text-teal-400" />
+              )}
             </div>
           </div>
         </div>
@@ -142,6 +151,14 @@ export function CadastroLiderancaPage() {
 
             {/* Seção: dados pessoais */}
             <Secao titulo="Seus Dados">
+              <Campo label="Sua Foto" obrigatorio>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setArquivoFoto(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-sm file:font-bold file:text-teal-700 hover:file:bg-teal-100 dark:text-slate-400 dark:file:bg-teal-900/30 dark:file:text-teal-400"
+                />
+              </Campo>
               <Campo label="Nome completo" obrigatorio>
                 <input
                   type="text"

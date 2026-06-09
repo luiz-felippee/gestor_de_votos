@@ -209,6 +209,16 @@ function Header() {
       {/* Menu Mobile Dropdown */}
       {usuario && menuOpen && (
         <div className="md:hidden border-t border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-900 shadow-inner">
+          <div className="mb-4 flex flex-col border-b border-slate-200 pb-4 dark:border-slate-800">
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {usuario?.nome ?? 'Usuário'}
+            </span>
+            {role && (
+              <span className="text-[10px] font-bold tracking-widest text-brand-500 uppercase dark:text-brand-400 mt-0.5">
+                {role}
+              </span>
+            )}
+          </div>
           <nav className="flex flex-col gap-2">
             <MobileItem to="/" onClick={() => setMenuOpen(false)}>Painel Geral</MobileItem>
             <MobileItem to="/planilha" onClick={() => setMenuOpen(false)}>Eleitores</MobileItem>

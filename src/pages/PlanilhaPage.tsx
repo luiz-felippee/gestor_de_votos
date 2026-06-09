@@ -277,7 +277,7 @@ export function PlanilhaPage() {
 
       {/* Barra de Ação em Massa Flutuante */}
       {selecionados.size > 0 && (
-        <div className="mb-6 flex animate-fade-in items-center justify-between rounded-xl border border-brand-200 bg-brand-50 px-5 py-3 shadow-sm dark:border-brand-900/50 dark:bg-brand-900/20">
+        <div className="mb-6 flex flex-col sm:flex-row animate-fade-in items-center justify-between gap-4 sm:gap-0 rounded-xl border border-brand-200 bg-brand-50 px-5 py-3 shadow-sm dark:border-brand-900/50 dark:bg-brand-900/20">
           <div className="flex items-center gap-3">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white">
               {selecionados.size}
@@ -286,7 +286,7 @@ export function PlanilhaPage() {
               eleitores selecionados
             </span>
           </div>
-          <div className="flex gap-3">
+          <div className="flex w-full sm:w-auto justify-end gap-3">
             <button
               onClick={() => setSelecionados(new Set())}
               className="rounded-lg px-3 py-1.5 text-sm font-bold text-slate-600 transition hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800"

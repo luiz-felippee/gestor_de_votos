@@ -97,6 +97,21 @@ export const api = {
     if (!res.ok) throw new Error(data.error || 'Erro ao criar liderança')
     return data
   },
+  uploadArquivo: async (file: File) => {
+    const formData = new FormData()
+    formData.append('foto', file)
+    const token = getToken()
+    const headers: Record<string, string> = {}
+    if (token) headers['Authorization'] = `Bearer ${token}`
+    const res = await fetch(`${API_BASE}/api/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Erro ao fazer upload da imagem.')
+    return data as { url: string }
+  },
 
   // ---- Auditoria (admin) ----
   getAuditoria: () => request<LogAuditoria[]>('/auditoria'),

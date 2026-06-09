@@ -35,6 +35,7 @@ app.use(express.json());
 // --- Upload de mídias (multer) ---
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir));
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -148,7 +149,7 @@ function registrarLog(
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-07-auditoria', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-09-geocode', runtime: 'node-dist' }),
 );
 
 // --- Autenticação ---
@@ -181,6 +182,14 @@ app.get(
   }),
 );
 
+// --- Upload Genérico ---
+app.post('/api/upload', upload.single('foto'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+  }
+  res.json({ url: `/uploads/${req.file.filename}` });
+});
+
 // --- Cabos (leitura pública p/ o dropdown do formulário; escrita restrita) ---
 app.get(
   '/api/cabos',
@@ -195,8 +204,9 @@ app.post(
   requireAuth,
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
-    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao } = req.body ?? {};
+    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao, foto_url } = req.body ?? {};
     if (!nome || !telefone) return res.status(400).json({ error: 'Nome e telefone são obrigatórios.' });
+    if (!foto_url) return res.status(400).json({ error: 'A foto da liderança é obrigatória.' });
     const cabo = await prisma.caboEleitoral.create({
       data: {
         nome: String(nome).trim(),
@@ -209,6 +219,7 @@ app.post(
         cargo_candidato: cargo_candidato || null,
         ano_eleicao: ano_eleicao || null,
         votacao: votacao ? Number(votacao) : null,
+        foto_url: foto_url || null,
       },
     });
     registrarLog(req, 'criar', 'cabo', cabo.id, cabo.nome);
@@ -226,6 +237,9 @@ app.post(
     if (!b.nome || !b.telefone) {
       return res.status(400).json({ error: 'Nome e telefone são obrigatórios.' });
     }
+    if (!b.foto_url) {
+      return res.status(400).json({ error: 'A foto da liderança é obrigatória.' });
+    }
     const cabo = await prisma.caboEleitoral.create({
       data: {
         nome: String(b.nome).trim(),
@@ -238,6 +252,7 @@ app.post(
         cargo_candidato: b.cargo_candidato || null,
         ano_eleicao: b.ano_eleicao || null,
         votacao: b.votacao ? Number(b.votacao) : null,
+        foto_url: b.foto_url || null,
       },
     });
     res.status(201).json(cabo);
@@ -249,7 +264,8 @@ app.put(
   requireAuth,
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
-    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao } = req.body ?? {};
+    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao, foto_url } = req.body ?? {};
+    if (!foto_url) return res.status(400).json({ error: 'A foto da liderança é obrigatória.' });
     const cabo = await prisma.caboEleitoral.update({
       where: { id: String(req.params.id) },
       data: {
@@ -263,6 +279,7 @@ app.put(
         cargo_candidato: cargo_candidato || null,
         ano_eleicao: ano_eleicao || null,
         votacao: votacao ? Number(votacao) : null,
+        foto_url: foto_url || null,
       },
     });
     registrarLog(req, 'editar', 'cabo', String(req.params.id), cabo.nome);
@@ -620,6 +637,36 @@ app.post(
     registrarLog(req, 'anonimizar', 'eleitor', String(req.params.id));
     notificarMudanca();
     res.json(eleitor);
+  }),
+);
+
+// Mutirão de geolocalização (admin): preenche lat/lng dos eleitores antigos,
+// em lotes, respeitando o limite do Nominatim (1 requisição por segundo).
+app.post(
+  '/api/eleitores/geocodificar',
+  requireAuth,
+  requireRole('admin'),
+  wrap(async (_req, res) => {
+    const lote = await prisma.eleitor.findMany({
+      where: { lat: null },
+      take: 15,
+      select: { id: true, bairro: true, cidade: true },
+    });
+    let geocodificados = 0;
+    for (const e of lote) {
+      const coord = await geocodeAddress(e.bairro, e.cidade);
+      if (coord) {
+        await prisma.eleitor.update({
+          where: { id: e.id },
+          data: { lat: coord.lat, lng: coord.lng },
+        });
+        geocodificados++;
+      }
+      await new Promise((r) => setTimeout(r, 1100)); // ~1 req/s
+    }
+    const restantes = await prisma.eleitor.count({ where: { lat: null } });
+    if (geocodificados > 0) notificarMudanca();
+    res.json({ processados: lote.length, geocodificados, restantes });
   }),
 );
 

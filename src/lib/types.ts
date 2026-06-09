@@ -54,6 +54,7 @@ export interface CaboEleitoral {
   ano_eleicao?: string
   votacao?: number
   data_nascimento?: string | null
+  foto_url?: string | null
   created_at?: string
 }
 
