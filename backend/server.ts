@@ -84,13 +84,33 @@ interface TokenPayload {
   nome: string;
   role: PerfilAcesso;
   cabo_id: string | null;
+  campanha_id: string | null;
+  super_admin: boolean;
 }
 interface AuthedRequest extends Request {
   user?: TokenPayload;
 }
 
-function assinarToken(u: { id: string; nome: string; role: PerfilAcesso; cabo_id: string | null }) {
-  return jwt.sign(u, JWT_SECRET, { expiresIn: '7d' });
+function assinarToken(u: {
+  id: string;
+  nome: string;
+  role: PerfilAcesso;
+  cabo_id: string | null;
+  campanha_id: string | null;
+  super_admin: boolean;
+}) {
+  return jwt.sign(
+    {
+      id: u.id,
+      nome: u.nome,
+      role: u.role,
+      cabo_id: u.cabo_id,
+      campanha_id: u.campanha_id,
+      super_admin: u.super_admin,
+    },
+    JWT_SECRET,
+    { expiresIn: '7d' },
+  );
 }
 
 function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
@@ -112,6 +132,55 @@ function requireRole(...roles: PerfilAcesso[]) {
     }
     next();
   };
+}
+
+// Só o super-admin (gerencia as campanhas/candidatos).
+function requireSuperAdmin(req: AuthedRequest, res: Response, next: NextFunction) {
+  if (!req.user?.super_admin) {
+    return res.status(403).json({ error: 'Ação exclusiva do super-admin.' });
+  }
+  next();
+}
+
+function gerarSlug(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-');
+}
+
+// Auth opcional: se vier um token válido, popula req.user; senão segue (público).
+function optionalAuth(req: AuthedRequest, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (token) {
+    try {
+      req.user = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    } catch {
+      /* token inválido → trata como público */
+    }
+  }
+  next();
+}
+
+// Isolamento multi-campanha: super-admin enxerga tudo; os demais, só a sua campanha.
+// (Para o perfil 'cabo', some-se também o filtro do próprio cabo onde fizer sentido.)
+function escopoCampanha(req: AuthedRequest): Record<string, unknown> {
+  if (req.user?.super_admin) return {};
+  return { campanha_id: req.user?.campanha_id ?? '__sem_campanha__' };
+}
+
+// Confere se um eleitor pertence à campanha do usuário (antes de editar/excluir).
+async function eleitorNaCampanha(req: AuthedRequest, id: string): Promise<boolean> {
+  const e = await prisma.eleitor.findFirst({
+    where: { id, ...escopoCampanha(req) },
+    select: { id: true },
+  });
+  return Boolean(e);
 }
 
 const wrap =
@@ -137,6 +206,7 @@ function registrarLog(
   prisma.logAuditoria
     .create({
       data: {
+        campanha_id: req.user?.campanha_id ?? null,
         usuario_id: req.user?.id ?? null,
         usuario_nome: req.user?.nome ?? null,
         acao,
@@ -151,7 +221,7 @@ function registrarLog(
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-09-multitenant1', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-09-multitenant2', runtime: 'node-dist' }),
 );
 
 // --- Autenticação ---
@@ -171,7 +241,14 @@ app.post(
     const token = assinarToken(usuario);
     res.json({
       token,
-      usuario: { id: usuario.id, nome: usuario.nome, role: usuario.role, cabo_id: usuario.cabo_id },
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        role: usuario.role,
+        cabo_id: usuario.cabo_id,
+        campanha_id: usuario.campanha_id,
+        super_admin: usuario.super_admin,
+      },
     });
   }),
 );
@@ -195,8 +272,14 @@ app.post('/api/upload', upload.single('foto'), (req, res) => {
 // --- Cabos (leitura pública p/ o dropdown do formulário; escrita restrita) ---
 app.get(
   '/api/cabos',
-  wrap(async (_req, res) => {
-    const cabos = await prisma.caboEleitoral.findMany({ orderBy: { nome: 'asc' } });
+  optionalAuth,
+  wrap(async (req, res) => {
+    // Logado: só os cabos da própria campanha. Público (formulário): todos.
+    const where = req.user ? escopoCampanha(req) : {};
+    const cabos = await prisma.caboEleitoral.findMany({
+      where,
+      orderBy: { nome: 'asc' },
+    });
     res.json(cabos);
   }),
 );
@@ -211,6 +294,7 @@ app.post(
     if (!foto_url) return res.status(400).json({ error: 'A foto da liderança é obrigatória.' });
     const cabo = await prisma.caboEleitoral.create({
       data: {
+        campanha_id: req.user!.campanha_id,
         nome: String(nome).trim(),
         telefone: String(telefone),
         bairro_atuacao: bairro_atuacao || null,
@@ -242,8 +326,13 @@ app.post(
     if (!b.foto_url) {
       return res.status(400).json({ error: 'A foto da liderança é obrigatória.' });
     }
+    // A liderança entra na campanha do link (slug) ou, na falta, na campanha principal
+    const campanha = b.campanha_slug
+      ? await prisma.campanha.findUnique({ where: { slug: String(b.campanha_slug) } })
+      : await prisma.campanha.findFirst({ orderBy: { created_at: 'asc' } });
     const cabo = await prisma.caboEleitoral.create({
       data: {
+        campanha_id: campanha?.id ?? null,
         nome: String(b.nome).trim(),
         telefone: String(b.telefone),
         bairro_atuacao: b.bairro_atuacao ? String(b.bairro_atuacao).trim() : null,
@@ -268,6 +357,12 @@ app.put(
   wrap(async (req, res) => {
     const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao, foto_url } = req.body ?? {};
     if (!foto_url) return res.status(400).json({ error: 'A foto da liderança é obrigatória.' });
+    // Garante que o cabo pertence à campanha do usuário (isolamento)
+    const dono = await prisma.caboEleitoral.findFirst({
+      where: { id: String(req.params.id), ...escopoCampanha(req) },
+      select: { id: true },
+    });
+    if (!dono) return res.status(404).json({ error: 'Cabo não encontrado.' });
     const cabo = await prisma.caboEleitoral.update({
       where: { id: String(req.params.id) },
       data: {
@@ -294,6 +389,11 @@ app.delete(
   requireAuth,
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
+    const dono = await prisma.caboEleitoral.findFirst({
+      where: { id: String(req.params.id), ...escopoCampanha(req) },
+      select: { id: true },
+    });
+    if (!dono) return res.status(404).json({ error: 'Cabo não encontrado.' });
     await prisma.caboEleitoral.delete({ where: { id: String(req.params.id) } });
     registrarLog(req, 'excluir', 'cabo', String(req.params.id));
     res.status(204).send();
@@ -341,11 +441,22 @@ app.post(
     const bairroStr = String(b.bairro).trim();
     const cidadeStr = String(b.cidade).trim();
 
+    // O eleitor herda a campanha do cabo que o indicou (isolamento)
+    let campanhaId: string | null = null;
+    if (b.cabo_id) {
+      const cabo = await prisma.caboEleitoral.findUnique({
+        where: { id: String(b.cabo_id) },
+        select: { campanha_id: true },
+      });
+      campanhaId = cabo?.campanha_id ?? null;
+    }
+
     try {
       const coord = await geocodeAddress(bairroStr, cidadeStr);
 
       const eleitor = await prisma.eleitor.create({
         data: {
+          campanha_id: campanhaId,
           nome: String(b.nome).trim(),
           nome_busca: normalizar(String(b.nome)),
           telefone: String(b.telefone),
@@ -387,7 +498,10 @@ app.get(
   '/api/eleitores',
   requireAuth,
   wrap(async (req, res) => {
-    const where = req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : {};
+    const where = {
+      ...escopoCampanha(req),
+      ...(req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : {}),
+    };
     const eleitores = await prisma.eleitor.findMany({
       where,
       include: { cabo: { select: { id: true, nome: true } } },
@@ -403,11 +517,17 @@ app.get(
   requireAuth,
   wrap(async (req, res) => {
     const filtroCidade = req.query.cidade as string;
-    const whereBase = req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : {};
+    const whereBase = {
+      ...escopoCampanha(req),
+      ...(req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : {}),
+    };
     const whereFiltrado = filtroCidade ? { ...whereBase, cidade: filtroCidade } : whereBase;
 
     // 1. Cabos ativos (somente admin/coordenador vêem a meta e todos cabos)
-    const cabos = await prisma.caboEleitoral.findMany({ select: { id: true, nome: true, meta_eleitores: true } });
+    const cabos = await prisma.caboEleitoral.findMany({
+      where: escopoCampanha(req),
+      select: { id: true, nome: true, meta_eleitores: true },
+    });
 
     // 2. Busca campos otimizados para cálculo na memória do backend
     const eleitores = await prisma.eleitor.findMany({
@@ -550,6 +670,8 @@ app.patch(
   requireAuth,
   wrap(async (req, res) => {
     const { enviado } = req.body ?? {};
+    if (!(await eleitorNaCampanha(req, String(req.params.id))))
+      return res.status(404).json({ error: 'Eleitor não encontrado.' });
     const eleitor = await prisma.eleitor.update({
       where: { id: String(req.params.id) },
       data: { whatsapp_enviado: Boolean(enviado) }
@@ -566,6 +688,8 @@ app.put(
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
     const b = req.body ?? {};
+    if (!(await eleitorNaCampanha(req, String(req.params.id))))
+      return res.status(404).json({ error: 'Eleitor não encontrado.' });
     try {
       let coord = undefined;
       if (b.bairro && b.cidade) {
@@ -616,6 +740,8 @@ app.delete(
   requireAuth,
   requireRole('admin'),
   wrap(async (req, res) => {
+    if (!(await eleitorNaCampanha(req, String(req.params.id))))
+      return res.status(404).json({ error: 'Eleitor não encontrado.' });
     await prisma.eleitor.delete({ where: { id: String(req.params.id) } });
     registrarLog(req, 'excluir', 'eleitor', String(req.params.id));
     notificarMudanca();
@@ -629,6 +755,8 @@ app.post(
   requireAuth,
   requireRole('admin'),
   wrap(async (req, res) => {
+    if (!(await eleitorNaCampanha(req, String(req.params.id))))
+      return res.status(404).json({ error: 'Eleitor não encontrado.' });
     const eleitor = await prisma.eleitor.update({
       where: { id: String(req.params.id) },
       data: {
@@ -651,9 +779,9 @@ app.post(
   '/api/eleitores/geocodificar',
   requireAuth,
   requireRole('admin'),
-  wrap(async (_req, res) => {
+  wrap(async (req, res) => {
     const lote = await prisma.eleitor.findMany({
-      where: { lat: null },
+      where: { lat: null, ...escopoCampanha(req) },
       take: 15,
       select: { id: true, bairro: true, cidade: true },
     });
@@ -674,7 +802,9 @@ app.post(
       }
       await new Promise((r) => setTimeout(r, 1100)); // ~1 req/s
     }
-    const restantes = await prisma.eleitor.count({ where: { lat: null } });
+    const restantes = await prisma.eleitor.count({
+      where: { lat: null, ...escopoCampanha(req) },
+    });
     if (geocodificados > 0) notificarMudanca();
     res.json({ processados: lote.length, geocodificados, restantes });
   }),
@@ -683,8 +813,10 @@ app.post(
 // Bairros distintos (público) — alimenta o autocomplete do formulário
 app.get(
   '/api/bairros',
-  wrap(async (_req, res) => {
+  optionalAuth,
+  wrap(async (req, res) => {
     const linhas = await prisma.eleitor.findMany({
+      where: req.user ? escopoCampanha(req) : {},
       distinct: ['bairro'],
       select: { bairro: true },
       orderBy: { bairro: 'asc' },
@@ -711,8 +843,9 @@ app.get(
   '/api/usuarios',
   requireAuth,
   requireRole('admin'),
-  wrap(async (_req, res) => {
+  wrap(async (req, res) => {
     const usuarios = await prisma.usuario.findMany({
+      where: escopoCampanha(req),
       select: USUARIO_PUBLICO,
       orderBy: { nome: 'asc' },
     });
@@ -735,6 +868,7 @@ app.post(
     try {
       const usuario = await prisma.usuario.create({
         data: {
+          campanha_id: req.user!.campanha_id,
           nome: String(nome).trim(),
           email: String(email).toLowerCase().trim(),
           senha_hash: await bcrypt.hash(String(senha), 10),
@@ -763,6 +897,11 @@ app.put(
     if (role && !PERFIS.includes(role)) {
       return res.status(400).json({ error: 'Perfil inválido.' });
     }
+    const alvo = await prisma.usuario.findFirst({
+      where: { id: String(req.params.id), ...escopoCampanha(req) },
+      select: { id: true },
+    });
+    if (!alvo) return res.status(404).json({ error: 'Usuário não encontrado.' });
     try {
       const usuario = await prisma.usuario.update({
         where: { id: String(req.params.id) },
@@ -794,6 +933,11 @@ app.delete(
     if (req.params.id === req.user!.id) {
       return res.status(400).json({ error: 'Você não pode excluir o próprio usuário.' });
     }
+    const alvo = await prisma.usuario.findFirst({
+      where: { id: String(req.params.id), ...escopoCampanha(req) },
+      select: { id: true },
+    });
+    if (!alvo) return res.status(404).json({ error: 'Usuário não encontrado.' });
     await prisma.usuario.delete({ where: { id: String(req.params.id) } });
     registrarLog(req, 'excluir', 'usuario', String(req.params.id));
     res.status(204).send();
@@ -805,12 +949,69 @@ app.get(
   '/api/auditoria',
   requireAuth,
   requireRole('admin'),
-  wrap(async (_req, res) => {
+  wrap(async (req, res) => {
     const logs = await prisma.logAuditoria.findMany({
+      where: escopoCampanha(req),
       orderBy: { created_at: 'desc' },
       take: 300,
     });
     res.json(logs);
+  }),
+);
+
+// --- Campanhas (provisionamento — somente super-admin) ---
+app.get(
+  '/api/campanhas',
+  requireAuth,
+  requireSuperAdmin,
+  wrap(async (_req, res) => {
+    const campanhas = await prisma.campanha.findMany({ orderBy: { created_at: 'asc' } });
+    // Anexa a contagem de eleitores e usuários de cada campanha
+    const comContagem = await Promise.all(
+      campanhas.map(async (c) => ({
+        ...c,
+        total_eleitores: await prisma.eleitor.count({ where: { campanha_id: c.id } }),
+        total_usuarios: await prisma.usuario.count({ where: { campanha_id: c.id } }),
+      })),
+    );
+    res.json(comContagem);
+  }),
+);
+
+// Cria uma campanha + o primeiro admin dela (login do candidato)
+app.post(
+  '/api/campanhas',
+  requireAuth,
+  requireSuperAdmin,
+  wrap(async (req, res) => {
+    const { nome, admin_nome, admin_email, admin_senha } = req.body ?? {};
+    if (!nome || !admin_email || !admin_senha) {
+      return res
+        .status(400)
+        .json({ error: 'Nome da campanha + e-mail e senha do admin são obrigatórios.' });
+    }
+    try {
+      const campanha = await prisma.campanha.create({
+        data: { nome: String(nome).trim(), slug: gerarSlug(String(nome)) },
+      });
+      await prisma.usuario.create({
+        data: {
+          campanha_id: campanha.id,
+          nome: admin_nome ? String(admin_nome).trim() : 'Administrador',
+          email: String(admin_email).toLowerCase().trim(),
+          senha_hash: await bcrypt.hash(String(admin_senha), 10),
+          role: 'admin',
+        },
+      });
+      res.status(201).json(campanha);
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        return res
+          .status(409)
+          .json({ error: 'Já existe uma campanha com esse nome ou um usuário com esse e-mail.' });
+      }
+      throw err;
+    }
   }),
 );
 
@@ -991,6 +1192,7 @@ app.get(
   requireAuth,
   wrap(async (req, res) => {
     const eventos = await prisma.evento.findMany({
+      where: escopoCampanha(req),
       orderBy: { data_hora: 'asc' },
     });
     res.json(eventos);
@@ -1008,6 +1210,7 @@ app.post(
     }
     const evento = await prisma.evento.create({
       data: {
+        campanha_id: req.user!.campanha_id,
         titulo: String(titulo),
         descricao: descricao ? String(descricao) : null,
         data_hora: new Date(data_hora),
@@ -1026,6 +1229,11 @@ app.put(
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
     const { titulo, descricao, data_hora, local, bairro, cidade } = req.body ?? {};
+    const dono = await prisma.evento.findFirst({
+      where: { id: String(req.params.id), ...escopoCampanha(req) },
+      select: { id: true },
+    });
+    if (!dono) return res.status(404).json({ error: 'Evento não encontrado.' });
     const evento = await prisma.evento.update({
       where: { id: String(req.params.id) },
       data: {
@@ -1046,6 +1254,11 @@ app.delete(
   requireAuth,
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
+    const dono = await prisma.evento.findFirst({
+      where: { id: String(req.params.id), ...escopoCampanha(req) },
+      select: { id: true },
+    });
+    if (!dono) return res.status(404).json({ error: 'Evento não encontrado.' });
     await prisma.evento.delete({ where: { id: String(req.params.id) } });
     res.status(204).send();
   })
