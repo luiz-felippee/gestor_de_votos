@@ -161,13 +161,19 @@ export function MapaCalorPage() {
   const [telaCheia, setTelaCheia] = useState(false)
   const [modo, setModo] = useState<'calor' | 'mapa'>('calor')
   const [caboFiltro, setCaboFiltro] = useState('')
+  const [periodo, setPeriodo] = useState<'todos' | '7' | '30' | '90'>('todos')
   const [exportando, setExportando] = useState(false)
 
-  // Filtra por cabo (se selecionado)
-  const eleitores = useMemo(
-    () => (caboFiltro ? todosEleitores.filter((e) => e.cabo_id === caboFiltro) : todosEleitores),
-    [todosEleitores, caboFiltro],
-  )
+  // Filtra por cabo e por período (se selecionados)
+  const eleitores = useMemo(() => {
+    let lista = todosEleitores
+    if (caboFiltro) lista = lista.filter((e) => e.cabo_id === caboFiltro)
+    if (periodo !== 'todos') {
+      const limite = Date.now() - Number(periodo) * 24 * 60 * 60 * 1000
+      lista = lista.filter((e) => new Date(e.created_at).getTime() >= limite)
+    }
+    return lista
+  }, [todosEleitores, caboFiltro, periodo])
 
   // Contagem por município (normalizado) para o mapa pintado
   const countPorCidadeNorm = useMemo(() => {
@@ -343,6 +349,18 @@ export function MapaCalorPage() {
               {c.nome}
             </option>
           ))}
+        </select>
+
+        <select
+          value={periodo}
+          onChange={(e) => setPeriodo(e.target.value as typeof periodo)}
+          title="Mostrar só os cadastros mais recentes"
+          className="w-full sm:w-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+        >
+          <option value="todos">Período: todos</option>
+          <option value="7">Últimos 7 dias</option>
+          <option value="30">Últimos 30 dias</option>
+          <option value="90">Últimos 90 dias</option>
         </select>
 
         <button
