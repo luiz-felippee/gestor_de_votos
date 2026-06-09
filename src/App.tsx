@@ -27,6 +27,7 @@ const CadastroLiderancaPage = lazyPage(
 )
 const EventosPage = lazyPage(() => import('./pages/EventosPage'), 'EventosPage')
 const AuditoriaPage = lazyPage(() => import('./pages/AuditoriaPage'), 'AuditoriaPage')
+const CampanhasPage = lazyPage(() => import('./pages/CampanhasPage'), 'CampanhasPage')
 
 function CarregandoPagina() {
   return (
@@ -113,6 +114,14 @@ export default function App() {
                 }
               />
               <Route
+                path="/campanhas"
+                element={
+                  <ProtectedRoute>
+                    <CampanhasPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/whatsapp"
                 element={
                   <ProtectedRoute roles={['admin']}>
@@ -155,6 +164,7 @@ function Header() {
               {(role === 'admin' || role === 'coordenador') && (
                 <Item to="/cabos">Gestão de Liderança</Item>
               )}
+              {usuario?.super_admin && <Item to="/campanhas">Campanhas</Item>}
               {role === 'admin' && <Item to="/usuarios">Usuários</Item>}
               {role === 'admin' && <Item to="/auditoria">Auditoria</Item>}
               {role === 'admin' && <Item to="/whatsapp">WhatsApp</Item>}
@@ -228,6 +238,7 @@ function Header() {
             {(role === 'admin' || role === 'coordenador') && (
               <MobileItem to="/cabos" onClick={() => setMenuOpen(false)}>Gestão de Liderança</MobileItem>
             )}
+            {usuario?.super_admin && <MobileItem to="/campanhas" onClick={() => setMenuOpen(false)}>Campanhas</MobileItem>}
             {role === 'admin' && <MobileItem to="/usuarios" onClick={() => setMenuOpen(false)}>Usuários</MobileItem>}
             {role === 'admin' && <MobileItem to="/auditoria" onClick={() => setMenuOpen(false)}>Auditoria</MobileItem>}
             {role === 'admin' && <MobileItem to="/whatsapp" onClick={() => setMenuOpen(false)}>WhatsApp</MobileItem>}

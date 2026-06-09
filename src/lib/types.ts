@@ -8,6 +8,19 @@ export interface Usuario {
   nome: string | null
   role: PerfilAcesso
   cabo_id: string | null
+  campanha_id?: string | null
+  super_admin?: boolean
+}
+
+/** Campanha (candidato) — visão do super-admin. */
+export interface Campanha {
+  id: string
+  nome: string
+  slug: string | null
+  ativa: boolean
+  created_at: string
+  total_eleitores?: number
+  total_usuarios?: number
 }
 
 /** Usuário completo, usado na tela de gestão de acessos (admin). */

@@ -8,6 +8,7 @@ import type {
   ConfiguracaoWhatsApp,
   Evento,
   LogAuditoria,
+  Campanha,
 } from './types'
 
 export const API_BASE =
@@ -115,6 +116,11 @@ export const api = {
 
   // ---- Auditoria (admin) ----
   getAuditoria: () => request<LogAuditoria[]>('/auditoria'),
+
+  // ---- Campanhas (super-admin) ----
+  getCampanhas: () => request<Campanha[]>('/campanhas'),
+  createCampanha: (data: unknown) =>
+    request<Campanha>('/campanhas', { method: 'POST', body: data }),
 
   // ---- Usuários (gestão de acessos — admin) ----
   getUsuarios: () => request<UsuarioAdmin[]>('/usuarios'),
