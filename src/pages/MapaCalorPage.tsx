@@ -312,7 +312,7 @@ export function MapaCalorPage() {
         <select
           value={caboFiltro}
           onChange={(e) => setCaboFiltro(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          className="w-full sm:w-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
         >
           <option value="">Todos os cabos</option>
           {cabos.map((c) => (
@@ -325,7 +325,7 @@ export function MapaCalorPage() {
         <button
           onClick={exportarImagem}
           disabled={exportando}
-          className="ml-auto rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-brand-500 hover:text-brand-600 active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          className="w-full sm:w-auto sm:ml-auto rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition hover:border-brand-500 hover:text-brand-600 active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
         >
           {exportando ? 'Gerando...' : '⬇ Exportar imagem'}
         </button>

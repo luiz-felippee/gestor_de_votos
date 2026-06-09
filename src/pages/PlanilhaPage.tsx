@@ -232,7 +232,7 @@ export function PlanilhaPage() {
         <select
           value={filtroCidade}
           onChange={(e) => setFiltroCidade(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+          className="w-full lg:w-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
         >
           <option value="">Todas as cidades</option>
           {CIDADES.map((c) => (
@@ -244,7 +244,7 @@ export function PlanilhaPage() {
         <select
           value={filtroStatus}
           onChange={(e) => setFiltroStatus(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+          className="w-full lg:w-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
         >
           <option value="">Todos os status</option>
           {STATUS_OPTIONS.map((s) => (
@@ -256,7 +256,7 @@ export function PlanilhaPage() {
         <select
           value={filtroBairro}
           onChange={(e) => setFiltroBairro(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 lg:w-[150px]"
+          className="w-full lg:w-[150px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
         >
           <option value="">Bairros</option>
           {bairrosUnicos.map((b) => (
@@ -266,7 +266,7 @@ export function PlanilhaPage() {
         <select
           value={filtroZona}
           onChange={(e) => setFiltroZona(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 lg:w-[100px]"
+          className="w-full lg:w-[100px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
         >
           <option value="">Zonas</option>
           {zonasUnicas.map((z) => (

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { useAuth } from '../auth/AuthContext'
+import { Eye, EyeOff } from 'lucide-react'
 import type { PerfilAcesso, UsuarioAdmin } from '../lib/types'
 
 const PERFIS: { value: PerfilAcesso; label: string }[] = [
@@ -44,6 +45,7 @@ export function UsuariosPage() {
   const [editId, setEditId] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
+  const [mostrarSenha, setMostrarSenha] = useState(false)
 
   async function recarregar() {
     try {
@@ -156,13 +158,23 @@ export function UsuariosPage() {
             />
           </Campo>
           <Campo label={editId ? 'Nova senha (deixe em branco p/ manter)' : 'Senha inicial'}>
-            <input
-              type="password"
-              className={inputClass}
-              value={form.senha}
-              onChange={(e) => atualizar('senha', e.target.value)}
-              placeholder={editId ? '••••••••' : ''}
-            />
+            <div className="relative">
+              <input
+                type={mostrarSenha ? "text" : "password"}
+                className={`${inputClass} pr-10`}
+                value={form.senha}
+                onChange={(e) => atualizar('senha', e.target.value)}
+                placeholder={editId ? '••••••••' : ''}
+              />
+              <button
+                type="button"
+                onClick={() => setMostrarSenha(!mostrarSenha)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                tabIndex={-1}
+              >
+                {mostrarSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
           </Campo>
           <Campo label="Perfil de acesso">
             <select
