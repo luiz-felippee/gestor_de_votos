@@ -207,6 +207,35 @@ const wrap =
       res.status(500).json({ error: 'Erro interno do servidor.' });
     });
 
+// Atualiza dados da campanha
+app.put(
+  '/api/campanhas/:id',
+  requireAuth,
+  wrap(async (req, res) => {
+    const campanhaId = String(req.params.id);
+    // SuperAdmin pode editar qualquer uma. Admin pode editar a sua própria.
+    if (!req.user?.super_admin && req.user?.campanha_id !== campanhaId) {
+      return res.status(403).json({ error: 'Você não tem permissão para editar esta campanha.' });
+    }
+    const { nome, foto_url, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
+    try {
+      const atualizada = await prisma.campanha.update({
+        where: { id: campanhaId },
+        data: {
+          nome: nome ? String(nome).trim() : undefined,
+          foto_url: foto_url !== undefined ? String(foto_url) : undefined,
+          cargo_ultima_eleicao: cargo_ultima_eleicao !== undefined ? String(cargo_ultima_eleicao).trim() : undefined,
+          ano_ultima_eleicao: ano_ultima_eleicao !== undefined ? String(ano_ultima_eleicao).trim() : undefined,
+          votos_ultima_eleicao: votos_ultima_eleicao !== undefined ? parseInt(votos_ultima_eleicao, 10) || null : undefined,
+        },
+      });
+      res.json(atualizada);
+    } catch (e: any) {
+      res.status(400).json({ error: 'Erro ao atualizar campanha.' });
+    }
+  })
+);
+
 // Registra uma ação no log de auditoria (nunca quebra a operação principal)
 function registrarLog(
   req: AuthedRequest,
@@ -237,7 +266,7 @@ function registrarLog(
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-09-multitenant4', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-09-perfil-campanha', runtime: 'node-dist' }),
 );
 
 // --- Autenticação ---
@@ -680,7 +709,12 @@ app.get(
     const bairrosTodosCount = (await prisma.eleitor.findMany({ where: whereBase, select: { bairro: true }, distinct: ['bairro'] })).length;
     const cidadesTodasCount = (await prisma.eleitor.findMany({ where: whereBase, select: { cidade: true }, distinct: ['cidade'] })).length;
 
+    const campanhaAtual = req.user?.campanha_id 
+        ? await prisma.campanha.findUnique({ where: { id: req.user.campanha_id } }) 
+        : null;
+
     res.json({
+      campanha: campanhaAtual,
       kpis: {
         totalEleitores: totalEleitores,
         totalCidades: cidadesTodasCount,
@@ -1017,7 +1051,7 @@ app.post(
   requireAuth,
   requireSuperAdmin,
   wrap(async (req, res) => {
-    const { nome, admin_nome, admin_email, admin_senha } = req.body ?? {};
+    const { nome, admin_nome, admin_email, admin_senha, foto_url, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
     if (!nome || !admin_email || !admin_senha) {
       return res
         .status(400)
@@ -1025,7 +1059,14 @@ app.post(
     }
     try {
       const campanha = await prisma.campanha.create({
-        data: { nome: String(nome).trim(), slug: gerarSlug(String(nome)) },
+        data: { 
+          nome: String(nome).trim(), 
+          slug: gerarSlug(String(nome)),
+          foto_url: foto_url ? String(foto_url) : null,
+          cargo_ultima_eleicao: cargo_ultima_eleicao ? String(cargo_ultima_eleicao).trim() : null,
+          ano_ultima_eleicao: ano_ultima_eleicao ? String(ano_ultima_eleicao).trim() : null,
+          votos_ultima_eleicao: votos_ultima_eleicao ? parseInt(votos_ultima_eleicao, 10) : null
+        },
       });
       await prisma.usuario.create({
         data: {

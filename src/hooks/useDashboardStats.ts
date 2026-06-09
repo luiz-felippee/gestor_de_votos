@@ -2,7 +2,10 @@ import { api } from "../lib/api"
 import { useState, useEffect, useCallback } from "react"
 import { getSocket } from "../lib/socket"
 
+import type { Campanha } from "../lib/types"
+
 export interface DashboardStats {
+  campanha?: Campanha | null
   kpis: {
     totalEleitores: number
     totalCidades: number

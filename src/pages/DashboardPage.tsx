@@ -37,6 +37,7 @@ export function DashboardPage() {
     porDia,
     ranking,
     aniversariantes,
+    campanha,
   } = stats
 
   return (
@@ -56,6 +57,46 @@ export function DashboardPage() {
           ))}
         </select>
       </div>
+
+      {/* Perfil da Campanha */}
+      {campanha && (campanha.foto_url || campanha.cargo_ultima_eleicao || campanha.ano_ultima_eleicao || campanha.votos_ultima_eleicao) && (
+        <div className="mb-8 flex items-center gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+            <svg className="w-48 h-48" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          
+          {campanha.foto_url ? (
+            <img src={campanha.foto_url} alt="Candidato" className="h-24 w-24 sm:h-32 sm:w-32 rounded-full object-cover border-4 border-brand-100 dark:border-brand-900/50 shadow-md" />
+          ) : (
+            <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+              <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+            </div>
+          )}
+          
+          <div className="flex-1 z-10">
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white leading-tight">
+              {campanha.nome}
+            </h2>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {campanha.cargo_ultima_eleicao && (
+                <span className="inline-flex items-center rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
+                  {campanha.cargo_ultima_eleicao}
+                </span>
+              )}
+              {campanha.ano_ultima_eleicao && (
+                <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  Última Eleição: {campanha.ano_ultima_eleicao}
+                </span>
+              )}
+              {campanha.votos_ultima_eleicao && (
+                <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                  Votos: {campanha.votos_ultima_eleicao.toLocaleString('pt-BR')}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -9,9 +9,13 @@ interface FormState {
   admin_nome: string
   admin_email: string
   admin_senha: string
+  foto_url: string
+  cargo_ultima_eleicao: string
+  ano_ultima_eleicao: string
+  votos_ultima_eleicao: string
 }
 
-const VAZIO: FormState = { nome: '', admin_nome: '', admin_email: '', admin_senha: '' }
+const VAZIO: FormState = { nome: '', admin_nome: '', admin_email: '', admin_senha: '', foto_url: '', cargo_ultima_eleicao: '', ano_ultima_eleicao: '', votos_ultima_eleicao: '' }
 
 export function CampanhasPage() {
   const { usuario } = useAuth()
@@ -70,6 +74,10 @@ export function CampanhasPage() {
         admin_nome: form.admin_nome.trim() || undefined,
         admin_email: form.admin_email.trim(),
         admin_senha: form.admin_senha,
+        foto_url: form.foto_url.trim() || undefined,
+        cargo_ultima_eleicao: form.cargo_ultima_eleicao.trim() || undefined,
+        ano_ultima_eleicao: form.ano_ultima_eleicao.trim() || undefined,
+        votos_ultima_eleicao: form.votos_ultima_eleicao ? Number(form.votos_ultima_eleicao) : undefined,
       })
       setSucesso(
         `Campanha "${form.nome.trim()}" criada! O candidato já pode entrar com ${form.admin_email.trim()}.`,
@@ -102,16 +110,34 @@ export function CampanhasPage() {
           Nova campanha (candidato)
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Campo label="Nome da campanha / candidato">
+          <Campo label="Nome da campanha / candidato *">
             <input className={inputClass} value={form.nome} onChange={(e) => set('nome', e.target.value)} />
           </Campo>
+          <Campo label="Foto do Candidato (URL ou Link da Imagem)">
+            <input className={inputClass} value={form.foto_url} onChange={(e) => set('foto_url', e.target.value)} placeholder="https://..." />
+          </Campo>
+          <Campo label="Cargo na Última Eleição">
+            <input className={inputClass} value={form.cargo_ultima_eleicao} onChange={(e) => set('cargo_ultima_eleicao', e.target.value)} placeholder="Ex: Vereador, Deputado..." />
+          </Campo>
+          <Campo label="Ano da Última Eleição">
+            <input className={inputClass} value={form.ano_ultima_eleicao} onChange={(e) => set('ano_ultima_eleicao', e.target.value)} placeholder="Ex: 2020" />
+          </Campo>
+          <Campo label="Quantidade de Votos na Última">
+            <input type="number" className={inputClass} value={form.votos_ultima_eleicao} onChange={(e) => set('votos_ultima_eleicao', e.target.value)} />
+          </Campo>
+        </div>
+
+        <h3 className="mt-6 mb-3 text-sm font-bold text-slate-800 dark:text-slate-200 border-b pb-2 dark:border-slate-800">
+          Dados de Acesso (Administrador)
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-3">
           <Campo label="Nome do administrador">
             <input className={inputClass} value={form.admin_nome} onChange={(e) => set('admin_nome', e.target.value)} placeholder="Opcional" />
           </Campo>
-          <Campo label="E-mail do administrador (login)">
+          <Campo label="E-mail de login *">
             <input type="email" className={inputClass} value={form.admin_email} onChange={(e) => set('admin_email', e.target.value)} />
           </Campo>
-          <Campo label="Senha inicial do administrador">
+          <Campo label="Senha inicial *">
             <input type="text" className={inputClass} value={form.admin_senha} onChange={(e) => set('admin_senha', e.target.value)} />
           </Campo>
         </div>

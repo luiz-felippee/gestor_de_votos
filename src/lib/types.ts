@@ -17,8 +17,12 @@ export interface Usuario {
 export interface Campanha {
   id: string
   nome: string
-  slug: string | null
+  slug?: string | null
   ativa: boolean
+  foto_url?: string | null
+  cargo_ultima_eleicao?: string | null
+  ano_ultima_eleicao?: string | null
+  votos_ultima_eleicao?: number | null
   created_at: string
   total_eleitores?: number
   total_usuarios?: number

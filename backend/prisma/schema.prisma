@@ -22,11 +22,15 @@ enum StatusEleitor {
 
 // Cada campanha (candidato) é um "inquilino" isolado: vê só os próprios dados.
 model Campanha {
-  id         String   @id @default(uuid())
-  nome       String
-  slug       String?  @unique
-  ativa      Boolean  @default(true)
-  created_at DateTime @default(now())
+  id                   String   @id @default(uuid())
+  nome                 String
+  slug                 String?  @unique
+  ativa                Boolean  @default(true)
+  foto_url             String?
+  cargo_ultima_eleicao String?
+  ano_ultima_eleicao   String?
+  votos_ultima_eleicao Int?
+  created_at           DateTime @default(now())
 
   @@map("campanhas")
 }

@@ -121,6 +121,8 @@ export const api = {
   getCampanhas: () => request<Campanha[]>('/campanhas'),
   createCampanha: (data: unknown) =>
     request<Campanha>('/campanhas', { method: 'POST', body: data }),
+  updateCampanha: (id: string, data: Partial<Campanha>) =>
+    request<Campanha>(`/campanhas/${id}`, { method: 'PUT', body: data }),
   deleteCampanha: (id: string) =>
     request<void>(`/campanhas/${id}`, { method: 'DELETE' }),
 
