@@ -113,12 +113,26 @@ function assinarToken(u: {
   );
 }
 
-function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
+// Completa tokens antigos (emitidos antes do multi-campanha) com dados do banco.
+async function completarToken(p: TokenPayload): Promise<void> {
+  if (p.super_admin === undefined || p.campanha_id === undefined) {
+    const u = await prisma.usuario.findUnique({
+      where: { id: p.id },
+      select: { campanha_id: true, super_admin: true },
+    });
+    p.campanha_id = u?.campanha_id ?? null;
+    p.super_admin = u?.super_admin ?? false;
+  }
+}
+
+async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'Não autenticado.' });
   try {
-    req.user = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    await completarToken(payload);
+    req.user = payload;
     next();
   } catch {
     return res.status(401).json({ error: 'Sessão inválida.' });
@@ -154,12 +168,14 @@ function gerarSlug(texto: string): string {
 }
 
 // Auth opcional: se vier um token válido, popula req.user; senão segue (público).
-function optionalAuth(req: AuthedRequest, _res: Response, next: NextFunction) {
+async function optionalAuth(req: AuthedRequest, _res: Response, next: NextFunction) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (token) {
     try {
-      req.user = jwt.verify(token, JWT_SECRET) as TokenPayload;
+      const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
+      await completarToken(payload);
+      req.user = payload;
     } catch {
       /* token inválido → trata como público */
     }
@@ -221,7 +237,7 @@ function registrarLog(
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-09-multitenant2', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-09-multitenant3', runtime: 'node-dist' }),
 );
 
 // --- Autenticação ---
