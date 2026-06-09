@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../lib/api'
 import { useAuth } from '../auth/AuthContext'
 import { formatDataHora } from '../lib/format'
+import { compressImage } from '../lib/imageOptimization'
 import type { Campanha } from '../lib/types'
 
 interface FormState {
@@ -22,6 +23,7 @@ export function CampanhasPage() {
   const [campanhas, setCampanhas] = useState<Campanha[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState<FormState>(VAZIO)
+  const [arquivoFoto, setArquivoFoto] = useState<File | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
@@ -69,12 +71,20 @@ export function CampanhasPage() {
 
     setSalvando(true)
     try {
+      // Se o usuário escolheu um arquivo, comprime e faz upload antes de salvar.
+      let fotoUrl = form.foto_url.trim() || undefined
+      if (arquivoFoto) {
+        const compressed = await compressImage(arquivoFoto)
+        const { url } = await api.uploadArquivo(compressed)
+        fotoUrl = url
+      }
+
       await api.createCampanha({
         nome: form.nome.trim(),
         admin_nome: form.admin_nome.trim() || undefined,
         admin_email: form.admin_email.trim(),
         admin_senha: form.admin_senha,
-        foto_url: form.foto_url.trim() || undefined,
+        foto_url: fotoUrl,
         cargo_ultima_eleicao: form.cargo_ultima_eleicao.trim() || undefined,
         ano_ultima_eleicao: form.ano_ultima_eleicao.trim() || undefined,
         votos_ultima_eleicao: form.votos_ultima_eleicao ? Number(form.votos_ultima_eleicao) : undefined,
@@ -83,6 +93,7 @@ export function CampanhasPage() {
         `Campanha "${form.nome.trim()}" criada! O candidato já pode entrar com ${form.admin_email.trim()}.`,
       )
       setForm(VAZIO)
+      setArquivoFoto(null)
       await recarregar()
     } catch (err) {
       setErro(`Erro: ${(err as Error).message}`)
@@ -109,12 +120,34 @@ export function CampanhasPage() {
         <h2 className="mb-5 text-lg font-bold text-slate-800 dark:text-slate-100">
           Nova campanha (candidato)
         </h2>
+        {/* Foto do candidato (upload) */}
+        <div className="mb-4 flex items-center gap-4">
+          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+            {arquivoFoto ? (
+              <img src={URL.createObjectURL(arquivoFoto)} alt="Preview" className="h-full w-full object-cover" />
+            ) : form.foto_url ? (
+              <img src={form.foto_url.startsWith('http') ? form.foto_url : `${api.base}${form.foto_url}`} alt="Preview" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-slate-300 dark:text-slate-600">
+                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <Campo label="Foto do Candidato">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setArquivoFoto(e.target.files?.[0] || null)}
+                className="w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:text-slate-400 dark:file:bg-brand-900/30 dark:file:text-brand-400"
+              />
+            </Campo>
+          </div>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo label="Nome da campanha / candidato *">
             <input className={inputClass} value={form.nome} onChange={(e) => set('nome', e.target.value)} />
-          </Campo>
-          <Campo label="Foto do Candidato (URL ou Link da Imagem)">
-            <input className={inputClass} value={form.foto_url} onChange={(e) => set('foto_url', e.target.value)} placeholder="https://..." />
           </Campo>
           <Campo label="Cargo na Última Eleição">
             <input className={inputClass} value={form.cargo_ultima_eleicao} onChange={(e) => set('cargo_ultima_eleicao', e.target.value)} placeholder="Ex: Vereador, Deputado..." />

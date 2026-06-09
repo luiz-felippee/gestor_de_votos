@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState } from 'react'
 import { useDashboardStats } from '../hooks/useDashboardStats'
+import { api } from '../lib/api'
 import { CIDADES } from '../lib/constants'
 
 // Gráficos (recharts) em chunk separado — o painel pinta KPIs/perfil na hora.
@@ -54,7 +55,7 @@ export function DashboardPage() {
           </div>
           
           {campanha.foto_url ? (
-            <img src={campanha.foto_url} alt="Candidato" className="h-24 w-24 sm:h-32 sm:w-32 rounded-full object-cover border-4 border-brand-100 dark:border-brand-900/50 shadow-md" />
+            <img src={campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`} alt="Candidato" className="h-24 w-24 sm:h-32 sm:w-32 rounded-full object-cover border-4 border-brand-100 dark:border-brand-900/50 shadow-md" />
           ) : (
             <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
               <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
