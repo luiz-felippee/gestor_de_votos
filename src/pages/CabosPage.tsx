@@ -5,7 +5,8 @@ import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { useEleitores } from '../hooks/useEleitores'
 import { CIDADES } from '../lib/constants'
-import { maskTelefone } from '../lib/format'
+import { maskTelefone, generateSlug } from '../lib/format'
+import { compressImage } from '../lib/imageOptimization'
 import type { CaboEleitoral } from '../lib/types'
 
 interface FormState {
@@ -113,7 +114,8 @@ export function CabosPage() {
 
     if (arquivoFoto) {
       try {
-        const { url } = await api.uploadArquivo(arquivoFoto)
+        const compressed = await compressImage(arquivoFoto)
+        const { url } = await api.uploadArquivo(compressed)
         finalFotoUrl = url
       } catch (err) {
         setSalvando(false)
@@ -401,7 +403,11 @@ function CardCabo({
 }) {
   const [copiado, setCopiado] = useState(false)
   const [mostrarQR, setMostrarQR] = useState(false)
-  const link = `${window.location.origin}/cadastro?cabo=${cabo.id}`
+  
+  // Cria a url amigavel: dominio.com/edsonviera/joao-silva
+  const slugLideranca = generateSlug(cabo.nome)
+  const link = `${window.location.origin}/edsonviera/${slugLideranca}`
+  
   const meta = cabo.meta_eleitores || 0
   const pct = meta > 0 ? Math.min(100, Math.round((realizado / meta) * 100)) : 0
   const qrId = `qr-${cabo.id}`

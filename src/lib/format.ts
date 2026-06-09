@@ -27,3 +27,16 @@ export function formatDataHora(iso: string): string {
     minute: '2-digit',
   })
 }
+
+/** Cria um slug amigável a partir de uma string (ex: 'João Silva' -> 'joao-silva') */
+export function generateSlug(text: string): string {
+  return text
+    .toString()
+    .normalize('NFD')                   // Decompõe os acentos
+    .replace(/[\u0300-\u036f]/g, '')    // Remove os acentos
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')               // Substitui espaços por hifens
+    .replace(/[^\w-]+/g, '')            // Remove caracteres não alfanuméricos (exceto hifens)
+    .replace(/--+/g, '-')               // Remove múltiplos hifens
+}

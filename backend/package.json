@@ -28,6 +28,7 @@
     "@types/qrcode": "^1.5.6",
     "@whiskeysockets/baileys": "^7.0.0-rc13",
     "bcryptjs": "^2.4.3",
+    "compression": "^1.8.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -42,5 +43,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/compression": "^1.8.1"
+  }
 }

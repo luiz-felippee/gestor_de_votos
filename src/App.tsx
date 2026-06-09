@@ -51,6 +51,7 @@ export default function App() {
               {/* Públicas */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/cadastro" element={<CadastroPage />} />
+              <Route path="/edsonviera/:nomeCabo" element={<CadastroPage />} />
               <Route path="/cadastro-lideranca" element={<CadastroLiderancaPage />} />
               <Route path="/privacidade" element={<PrivacidadePage />} />
 

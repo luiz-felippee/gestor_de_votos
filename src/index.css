@@ -18,6 +18,36 @@ body {
 }
 
 @layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 20px);
+  }
+  .min-h-safe {
+    min-height: calc(100vh - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px));
+  }
+}
+
+/* Ajustes específicos para iOS para não dar zoom automático nos inputs */
+html.is-ios input[type="text"],
+html.is-ios input[type="number"],
+html.is-ios input[type="password"],
+html.is-ios input[type="email"],
+html.is-ios input[type="tel"],
+html.is-ios select,
+html.is-ios textarea {
+  font-size: 16px !important;
+}
+
+/* Suavidade no scroll nativo do iOS */
+html.is-ios body {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ajustes para o teclado Android não comprimir demais as telas */
+html.is-android body {
+  overscroll-behavior-y: contain;
 }
 
 /* Mapa: pulso no marcador da cidade líder */

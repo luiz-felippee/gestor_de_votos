@@ -3,6 +3,7 @@ import express, { type Request, type Response, type NextFunction } from 'express
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import compression from 'compression';
 import { rateLimit } from 'express-rate-limit';
 import multer from 'multer';
 import path from 'path';
@@ -30,7 +31,8 @@ const CORS_LIST = (process.env.CORS_ORIGIN || 'http://localhost:5173')
 const CORS_ORIGIN: '*' | string[] = CORS_LIST.includes('*') ? '*' : CORS_LIST;
 
 app.use(cors({ origin: CORS_ORIGIN }));
-app.use(express.json());
+app.use(express.json())
+app.use(compression());
 
 // --- Upload de mídias (multer) ---
 const uploadsDir = path.join(__dirname, 'uploads');

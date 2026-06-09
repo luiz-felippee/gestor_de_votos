@@ -169,6 +169,7 @@ export function MapaCalorPage() {
     let lista = todosEleitores
     if (caboFiltro) lista = lista.filter((e) => e.cabo_id === caboFiltro)
     if (periodo !== 'todos') {
+      // eslint-disable-next-line react-hooks/purity
       const limite = Date.now() - Number(periodo) * 24 * 60 * 60 * 1000
       lista = lista.filter((e) => new Date(e.created_at).getTime() >= limite)
     }

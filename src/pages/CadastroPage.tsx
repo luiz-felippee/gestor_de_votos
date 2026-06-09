@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useParams } from 'react-router-dom'
 import { CheckCircle2, UserPlus } from 'lucide-react'
 import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
-import { maskTelefone, isTelefoneValido } from '../lib/format'
+import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
 import { LocalVotacaoAutocomplete } from '../components/LocalVotacaoAutocomplete'
 
 interface FormState {
@@ -42,9 +42,22 @@ const VAZIO: FormState = {
 export function CadastroPage() {
   const { cabos } = useCabos()
   const [params] = useSearchParams()
+  const { nomeCabo } = useParams() // Pega da rota amigável /edsonviera/:nomeCabo
+  
   const caboDoLink = params.get('cabo') ?? ''
 
-  const [form, setForm] = useState<FormState>({ ...VAZIO, cabo_id: caboDoLink })
+  // Encontra o cabo se vier pelo query param antigo, OU pelo novo slug
+  const caboEncontrado = useMemo(() => {
+    if (caboDoLink) {
+      return cabos.find((c) => c.id === caboDoLink) || null
+    }
+    if (nomeCabo) {
+      return cabos.find((c) => generateSlug(c.nome) === nomeCabo) || null
+    }
+    return null
+  }, [cabos, caboDoLink, nomeCabo])
+
+  const [form, setForm] = useState<FormState>(VAZIO)
   const [website, setWebsite] = useState('') // honeypot (anti-robô)
   const [bairros, setBairros] = useState<string[]>([])
   const [consentimento, setConsentimento] = useState(false)
@@ -57,11 +70,15 @@ export function CadastroPage() {
     api.getBairros().then(setBairros).catch(() => {})
   }, [])
 
-  const nomeCaboDoLink = useMemo(
-    () => cabos.find((c) => c.id === caboDoLink)?.nome ?? null,
-    [cabos, caboDoLink],
-  )
-  const caboTravado = Boolean(caboDoLink && nomeCaboDoLink)
+  // Inicializa o form com o id do cabo
+  useEffect(() => {
+    if (caboEncontrado) {
+      setForm(f => ({ ...f, cabo_id: caboEncontrado.id }))
+    }
+  }, [caboEncontrado])
+
+  const nomeCaboDoLink = caboEncontrado?.nome || null
+  const caboTravado = Boolean(caboEncontrado)
 
   function atualizar<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((f) => ({ ...f, [campo]: valor }))
@@ -156,14 +173,14 @@ export function CadastroPage() {
   }
 
   function novoCadastro() {
-    setForm({ ...VAZIO, cabo_id: caboDoLink })
+    setForm({ ...VAZIO, cabo_id: caboEncontrado?.id || '' })
     setConsentimento(false)
     setSucesso(false)
   }
 
   return (
     // Fundo da página (tela toda)
-    <div className="flex min-h-[100dvh] items-start justify-center bg-slate-50 py-6 sm:py-12 sm:px-4">
+    <div className="flex min-h-[100dvh] min-h-safe items-start justify-center bg-slate-50 py-6 pb-safe pt-safe sm:py-12 sm:px-4">
       <div className="w-full max-w-lg overflow-hidden sm:rounded-2xl bg-white shadow-2xl dark:bg-slate-900 border-x border-y sm:border border-slate-200 dark:border-slate-800">
         
         {/* Cover Image & Avatar */}

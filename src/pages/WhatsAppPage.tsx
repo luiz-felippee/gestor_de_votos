@@ -18,19 +18,6 @@ export function WhatsAppPage() {
   const [botStatus, setBotStatus] = useState<string>('desconectado')
   const [botQrCode, setBotQrCode] = useState<string | null>(null)
 
-  useEffect(() => {
-    carregar()
-
-    const socket = getSocket()
-    socket.on('whatsapp:status', (st: string) => setBotStatus(st))
-    socket.on('whatsapp:qr', (qr: string) => setBotQrCode(qr))
-
-    return () => {
-      socket.off('whatsapp:status')
-      socket.off('whatsapp:qr')
-    }
-  }, [])
-
   async function carregar() {
     try {
       const data = await api.getConfigWhatsApp()
@@ -81,8 +68,26 @@ export function WhatsAppPage() {
       const data = await res.json()
       setBotStatus(data.status)
       if (data.qr) setBotQrCode(data.qr)
-    } catch (e) {}
+    } catch (e) {
+      console.error(e)
+    }
   }
+
+  useEffect(() => {
+    carregar()
+
+    const socket = getSocket()
+    socket.on('whatsapp:status', (st: string) => setBotStatus(st))
+    socket.on('whatsapp:qr', (qr: string) => setBotQrCode(qr))
+
+    return () => {
+      socket.off('whatsapp:status')
+      socket.off('whatsapp:qr')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+
 
   if (loading) {
     return <div className="p-8 text-center text-slate-500">Carregando...</div>

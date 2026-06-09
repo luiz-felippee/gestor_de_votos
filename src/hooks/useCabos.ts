@@ -2,14 +2,20 @@ import { useEffect, useState, useCallback } from 'react'
 import { api } from '../lib/api'
 import type { CaboEleitoral } from '../lib/types'
 
+let CACHE_CABOS: CaboEleitoral[] = []
+let CACHE_TIMESTAMP = 0
+const CACHE_TTL = 1000 * 60 * 5 // 5 minutos
+
 export function useCabos() {
-  const [cabos, setCabos] = useState<CaboEleitoral[]>([])
-  const [loading, setLoading] = useState(true)
+  const [cabos, setCabos] = useState<CaboEleitoral[]>(CACHE_CABOS)
+  const [loading, setLoading] = useState(CACHE_CABOS.length === 0)
   const [erro, setErro] = useState<string | null>(null)
 
   const recarregar = useCallback(async () => {
     try {
       const data = await api.getCabos()
+      CACHE_CABOS = data
+      CACHE_TIMESTAMP = Date.now()
       setCabos(data)
       setErro(null)
     } catch (err: any) {
@@ -21,12 +27,21 @@ export function useCabos() {
   }, [])
 
   useEffect(() => {
-    recarregar()
-    // Como tiramos os websockets do supabase,
-    // podemos usar polling se for necessário tempo real,
-    // ou apenas recarregar quando voltar à janela
-    const interval = setInterval(recarregar, 10000)
-    return () => clearInterval(interval)
+    let ativo = true
+    
+    if (CACHE_CABOS.length === 0 || Date.now() - CACHE_TIMESTAMP > CACHE_TTL) {
+      if (CACHE_CABOS.length === 0) setLoading(true)
+      recarregar().finally(() => ativo && setLoading(false))
+    } else {
+      setLoading(false)
+      recarregar() // Atualiza cache em background
+    }
+
+    const interval = setInterval(() => ativo && recarregar(), 10000)
+    return () => {
+      ativo = false
+      clearInterval(interval)
+    }
   }, [recarregar])
 
   return { cabos, loading, erro, recarregar }

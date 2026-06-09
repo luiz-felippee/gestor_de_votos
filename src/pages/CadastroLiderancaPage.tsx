@@ -3,6 +3,7 @@ import { CheckCircle2, Users } from 'lucide-react'
 import { api } from '../lib/api'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido } from '../lib/format'
+import { compressImage } from '../lib/imageOptimization'
 
 interface FormState {
   nome: string
@@ -58,7 +59,8 @@ export function CadastroLiderancaPage() {
 
     setEnviando(true)
     try {
-      const { url } = await api.uploadArquivo(arquivoFoto!)
+      const compressed = await compressImage(arquivoFoto!)
+      const { url } = await api.uploadArquivo(compressed)
       await api.createCaboPublic({
         nome: form.nome.trim(),
         telefone: form.telefone,
@@ -88,7 +90,7 @@ export function CadastroLiderancaPage() {
   }
 
   return (
-    <div className="flex min-h-[100dvh] items-start justify-center bg-slate-50 py-6 sm:py-12 sm:px-4">
+    <div className="flex min-h-[100dvh] min-h-safe items-start justify-center bg-slate-50 py-6 pb-safe pt-safe sm:py-12 sm:px-4">
       <div className="w-full max-w-lg overflow-hidden sm:rounded-2xl bg-white shadow-2xl dark:bg-slate-900 border-x border-y sm:border border-slate-200 dark:border-slate-800">
         
         {/* Cover Image & Avatar */}
