@@ -20,8 +20,20 @@ enum StatusEleitor {
   pendente
 }
 
+// Cada campanha (candidato) é um "inquilino" isolado: vê só os próprios dados.
+model Campanha {
+  id         String   @id @default(uuid())
+  nome       String
+  slug       String?  @unique
+  ativa      Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  @@map("campanhas")
+}
+
 model CaboEleitoral {
   id             String    @id @default(uuid())
+  campanha_id    String?
   nome           String
   telefone       String
   bairro_atuacao String?
@@ -37,11 +49,13 @@ model CaboEleitoral {
   eleitores      Eleitor[]
   usuarios       Usuario[]
 
+  @@index([campanha_id])
   @@map("cabos")
 }
 
 model Eleitor {
   id            String         @id @default(uuid())
+  campanha_id   String?
   nome          String
   telefone      String
   local_votacao String
@@ -65,6 +79,7 @@ model Eleitor {
 
   @@unique([nome_busca, zona, secao])
   // Índices para acelerar filtros/ordenação da planilha, dashboard e mapa
+  @@index([campanha_id])
   @@index([cidade])
   @@index([bairro])
   @@index([cabo_id])
@@ -74,25 +89,29 @@ model Eleitor {
 }
 
 model Usuario {
-  id         String         @id @default(uuid())
-  nome       String
-  email      String         @unique
-  senha_hash String
-  role       PerfilAcesso   @default(visualizador)
-  cabo_id    String?
-  created_at DateTime       @default(now())
-  cabo       CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
+  id          String         @id @default(uuid())
+  campanha_id String?
+  super_admin Boolean        @default(false)
+  nome        String
+  email       String         @unique
+  senha_hash  String
+  role        PerfilAcesso   @default(visualizador)
+  cabo_id     String?
+  created_at  DateTime       @default(now())
+  cabo        CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
 
+  @@index([campanha_id])
   @@map("usuarios")
 }
 
 model ConfiguracaoWhatsApp {
   id               String   @id @default("singleton")
+  campanha_id      String?
   modo             String   @default("nenhum") // nenhum, interno, zapi, evolution
   api_url          String?
   api_token        String?
   api_instancia_id String?
-  
+
   updated_at       DateTime @updatedAt
 
   @@map("configuracao_whatsapp")
@@ -100,6 +119,7 @@ model ConfiguracaoWhatsApp {
 
 model Evento {
   id        String   @id @default(uuid())
+  campanha_id String?
   titulo    String
   descricao String?
   data_hora DateTime
@@ -108,11 +128,13 @@ model Evento {
   cidade    String?
   created_at DateTime @default(now())
 
+  @@index([campanha_id])
   @@map("eventos")
 }
 
 model LogAuditoria {
   id           String   @id @default(uuid())
+  campanha_id  String?
   usuario_id   String?
   usuario_nome String?
   acao         String // criar, editar, excluir, anonimizar

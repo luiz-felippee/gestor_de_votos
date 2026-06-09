@@ -151,7 +151,7 @@ function registrarLog(
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-09-geocode2', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-09-multitenant1', runtime: 'node-dist' }),
 );
 
 // --- Autenticação ---
@@ -1068,6 +1068,31 @@ async function bootstrap() {
     } else {
       console.log(`✓ Admin já existe: ${email} (senha preservada)`);
     }
+    // O admin definido por env vira super-admin (gerencia as campanhas)
+    await prisma.usuario.updateMany({ where: { email }, data: { super_admin: true } });
+  }
+
+  // --- Multi-campanha: garante uma campanha padrão e adota os dados sem dono ---
+  let campanhaPadrao = await prisma.campanha.findFirst();
+  if (!campanhaPadrao) {
+    campanhaPadrao = await prisma.campanha.create({
+      data: { nome: 'Campanha Principal', slug: 'principal' },
+    });
+    console.log('✓ Campanha padrão criada:', campanhaPadrao.id);
+  }
+  const cid = campanhaPadrao.id;
+  // Backfill: tudo que ainda não tem campanha vai para a campanha padrão
+  const [e, c, u, ev, lg] = await Promise.all([
+    prisma.eleitor.updateMany({ where: { campanha_id: null }, data: { campanha_id: cid } }),
+    prisma.caboEleitoral.updateMany({ where: { campanha_id: null }, data: { campanha_id: cid } }),
+    prisma.usuario.updateMany({ where: { campanha_id: null }, data: { campanha_id: cid } }),
+    prisma.evento.updateMany({ where: { campanha_id: null }, data: { campanha_id: cid } }),
+    prisma.logAuditoria.updateMany({ where: { campanha_id: null }, data: { campanha_id: cid } }),
+  ]);
+  if (e.count + c.count + u.count + ev.count + lg.count > 0) {
+    console.log(
+      `✓ Backfill de campanha: eleitores=${e.count} cabos=${c.count} usuarios=${u.count} eventos=${ev.count} logs=${lg.count}`,
+    );
   }
 }
 
