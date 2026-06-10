@@ -89,6 +89,8 @@ model Eleitor {
   @@index([cabo_id])
   @@index([status])
   @@index([created_at])
+  @@index([nome_busca])
+  @@index([telefone])
   @@map("eleitores")
 }
 

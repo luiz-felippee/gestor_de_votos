@@ -1,0 +1,121 @@
+import { Router } from 'express';
+import bcrypt from 'bcryptjs';
+import { prisma } from '../prismaClient';
+import { requireAuth, requireSuperAdmin, wrap, gerarSlug } from '../server';
+
+const campanhasRouter = Router();
+
+// --- Campanhas (provisionamento — somente super-admin) ---
+campanhasRouter.get(
+  '/campanhas',
+  requireAuth,
+  requireSuperAdmin,
+  wrap(async (_req, res) => {
+    const campanhas = await prisma.campanha.findMany({ orderBy: { created_at: 'asc' } });
+    // Anexa a contagem de eleitores e usuários de cada campanha
+    const comContagem = await Promise.all(
+      campanhas.map(async (c) => ({
+        ...c,
+        total_eleitores: await prisma.eleitor.count({ where: { campanha_id: c.id } }),
+        total_usuarios: await prisma.usuario.count({ where: { campanha_id: c.id } }),
+      })),
+    );
+    res.json(comContagem);
+  }),
+);
+
+// Cria uma campanha + o primeiro admin dela (login do candidato)
+campanhasRouter.post(
+  '/campanhas',
+  requireAuth,
+  requireSuperAdmin,
+  wrap(async (req, res) => {
+    const { nome, admin_nome, admin_email, admin_senha, foto_url, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
+    if (!nome || !admin_email || !admin_senha) {
+      return res
+        .status(400)
+        .json({ error: 'Nome da campanha + e-mail e senha do admin são obrigatórios.' });
+    }
+    try {
+      const campanha = await prisma.campanha.create({
+        data: { 
+          nome: String(nome).trim(), 
+          slug: gerarSlug(String(nome)),
+          foto_url: foto_url ? String(foto_url) : null,
+          cargo_ultima_eleicao: cargo_ultima_eleicao ? String(cargo_ultima_eleicao).trim() : null,
+          ano_ultima_eleicao: ano_ultima_eleicao ? String(ano_ultima_eleicao).trim() : null,
+          votos_ultima_eleicao: votos_ultima_eleicao ? parseInt(votos_ultima_eleicao, 10) : null
+        },
+      });
+      await prisma.usuario.create({
+        data: {
+          campanha_id: campanha.id,
+          nome: admin_nome ? String(admin_nome).trim() : 'Administrador',
+          email: String(admin_email).toLowerCase().trim(),
+          senha_hash: await bcrypt.hash(String(admin_senha), 10),
+          role: 'admin',
+        },
+      });
+      res.status(201).json(campanha);
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        return res
+          .status(409)
+          .json({ error: 'Já existe uma campanha com esse nome ou um usuário com esse e-mail.' });
+      }
+      throw err;
+    }
+  }),
+);
+
+// Atualiza dados da campanha
+campanhasRouter.put(
+  '/campanhas/:id',
+  requireAuth,
+  requireSuperAdmin,
+  wrap(async (req, res) => {
+    const { nome, slug, foto_url, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
+    try {
+      const campanha = await prisma.campanha.update({
+        where: { id: String(req.params.id) },
+        data: {
+          nome: nome ? String(nome).trim() : undefined,
+          slug: slug ? gerarSlug(String(slug)) : undefined,
+          foto_url: foto_url ? String(foto_url) : null,
+          cargo_ultima_eleicao: cargo_ultima_eleicao ? String(cargo_ultima_eleicao).trim() : null,
+          ano_ultima_eleicao: ano_ultima_eleicao ? String(ano_ultima_eleicao).trim() : null,
+          votos_ultima_eleicao: votos_ultima_eleicao ? parseInt(votos_ultima_eleicao, 10) : null
+        },
+      });
+      res.json(campanha);
+    } catch (err: any) {
+      if (err?.code === 'P2002') {
+        return res.status(409).json({ error: 'Já existe uma campanha com esse slug.' });
+      }
+      throw err;
+    }
+  }),
+);
+
+// Excluir uma campanha e TODOS os dados dela (super-admin)
+campanhasRouter.delete(
+  '/campanhas/:id',
+  requireAuth,
+  requireSuperAdmin,
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    if (id === req.user!.campanha_id) {
+      return res.status(400).json({ error: 'Você não pode excluir a sua própria campanha.' });
+    }
+    // Apaga os filhos antes dos pais (eleitores/usuários referenciam cabos)
+    await prisma.eleitor.deleteMany({ where: { campanha_id: id } });
+    await prisma.usuario.deleteMany({ where: { campanha_id: id } });
+    await prisma.caboEleitoral.deleteMany({ where: { campanha_id: id } });
+    await prisma.evento.deleteMany({ where: { campanha_id: id } });
+    await prisma.logAuditoria.deleteMany({ where: { campanha_id: id } });
+    await prisma.campanha.delete({ where: { id } });
+    res.status(204).send();
+  }),
+);
+
+export default campanhasRouter;

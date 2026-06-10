@@ -218,45 +218,42 @@ export function PlanilhaPage() {
       </div>
 
       {/* Filtros */}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto_auto] items-center rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+      <div className="mb-6 flex flex-wrap lg:flex-nowrap items-center gap-3 rounded-2xl border border-slate-200/60 bg-white/50 p-3 shadow-sm backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/50">
+        <div className="relative flex-1 min-w-[250px]">
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           <input
             type="search"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
             placeholder="Buscar nome, bairro, cidade, cabo..."
-            className="w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:placeholder:text-slate-500"
+            className="w-full rounded-xl border-none bg-slate-100 pl-10 pr-4 py-2.5 text-sm font-medium outline-none ring-1 ring-transparent transition-all focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:bg-slate-950"
           />
         </div>
+        <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 hidden lg:block mx-1"></div>
         <select
           value={filtroCidade}
           onChange={(e) => setFiltroCidade(e.target.value)}
-          className="w-full lg:w-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+          className="w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950"
         >
-          <option value="">Todas as cidades</option>
+          <option value="">Cidades (Todas)</option>
           {CIDADES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
         <select
           value={filtroStatus}
           onChange={(e) => setFiltroStatus(e.target.value)}
-          className="w-full lg:w-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+          className="w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950"
         >
-          <option value="">Todos os status</option>
+          <option value="">Status (Todos)</option>
           {STATUS_OPTIONS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
+            <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
         <select
           value={filtroBairro}
           onChange={(e) => setFiltroBairro(e.target.value)}
-          className="w-full lg:w-[150px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+          className="w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950 max-w-[160px]"
         >
           <option value="">Bairros</option>
           {bairrosUnicos.map((b) => (
@@ -266,7 +263,7 @@ export function PlanilhaPage() {
         <select
           value={filtroZona}
           onChange={(e) => setFiltroZona(e.target.value)}
-          className="w-full lg:w-[100px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium outline-none transition-all focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+          className="w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950 max-w-[120px]"
         >
           <option value="">Zonas</option>
           {zonasUnicas.map((z) => (
@@ -313,30 +310,30 @@ export function PlanilhaPage() {
       )}
 
       {/* Tabela com Scroll */}
-      <div className="flex-1 min-h-[400px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex-1 overflow-auto relative">
-          <table className="w-full min-w-[1000px] text-left text-sm">
-            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/95 backdrop-blur-sm text-xs font-semibold uppercase tracking-wider text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-800/95 dark:text-slate-400">
+      <div className="flex-1 min-h-[400px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-md flex flex-col dark:border-slate-800/80 dark:bg-slate-900/90">
+        <div className="flex-1 overflow-auto relative custom-scrollbar">
+          <table className="w-full min-w-[1000px] text-left text-sm border-collapse">
+            <thead className="sticky top-0 z-20 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
               <tr>
-                <th className="px-4 py-3 w-10">
+                <th className="px-5 py-4 w-10 border-b border-slate-200 dark:border-slate-800">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-transform hover:scale-110"
                     checked={listaPaginada.length > 0 && selecionados.size === listaPaginada.length}
                     onChange={handleSelecionarTodos}
                   />
                 </th>
-                <Th col="nome" ordem={ordem} onClick={ordenarPor}>Nome</Th>
-                <Th col="telefone" ordem={ordem} onClick={ordenarPor}>Telefone</Th>
-                <Th col="local_votacao" ordem={ordem} onClick={ordenarPor}>Local / Zona / Seç.</Th>
-                <Th col="bairro" ordem={ordem} onClick={ordenarPor}>Endereço</Th>
-                <th className="px-3 py-3 font-semibold select-none">Indicação</th>
-                <Th col="status" ordem={ordem} onClick={ordenarPor}>Status</Th>
-                <Th col="created_at" ordem={ordem} onClick={ordenarPor}>Data Cad.</Th>
-                <th className="px-3 py-3 text-right">Ações</th>
+                <Th col="nome" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Nome</Th>
+                <Th col="telefone" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Telefone</Th>
+                <Th col="local_votacao" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Local / Zona / Seç.</Th>
+                <Th col="bairro" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Endereço</Th>
+                <th className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 select-none">Indicação</th>
+                <Th col="status" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Status</Th>
+                <Th col="created_at" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Data Cad.</Th>
+                <th className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="px-3 py-12 text-center">
@@ -398,56 +395,61 @@ export function PlanilhaPage() {
                       </Td>
                     </tr>
                   ) : (
-                    <tr key={e.id} className="group transition hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
-                      <td className="px-4 py-3">
+                    <tr key={e.id} className="group transition-all hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td className="px-5 py-4">
                         <input
                           type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                          className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-transform hover:scale-110"
                           checked={selecionados.has(e.id)}
                           onChange={() => handleSelecionar(e.id)}
                         />
                       </td>
-                      <Td className="font-semibold text-slate-800 dark:text-slate-200">{e.nome}</Td>
+                      <Td className="font-bold text-slate-900 dark:text-slate-100">{e.nome}</Td>
                       <Td>
-                        <div className="flex items-center gap-2 font-medium text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300">
                           {e.telefone}
                           {e.telefone && (
                             <WhatsAppMenu eleitor={e} />
                           )}
                         </div>
-                        {e.cpf && <p className="text-[11px] text-slate-500 mt-0.5">CPF: {e.cpf}</p>}
-                        {e.titulo_eleitor && <p className="text-[11px] text-slate-500 mt-0.5">Tít: {e.titulo_eleitor}</p>}
+                        {e.cpf && <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wider font-medium">CPF: {e.cpf}</p>}
+                        {e.titulo_eleitor && <p className="text-[11px] text-slate-500 mt-0.5 uppercase tracking-wider font-medium">TÍT: {e.titulo_eleitor}</p>}
                       </Td>
                       <Td className="dark:text-slate-300">
-                        <p className="font-medium">{e.local_votacao}</p>
-                        <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wide">Z: {e.zona} • S: {e.secao}</p>
+                        <p className="font-semibold">{e.local_votacao}</p>
+                        <p className="text-[11px] text-brand-600 dark:text-brand-400 font-bold uppercase tracking-widest mt-0.5">Z: {e.zona} • S: {e.secao}</p>
                       </Td>
                       <Td className="dark:text-slate-300">
-                        <p className="font-medium">{e.bairro}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="font-semibold">{e.bairro}</p>
+                        <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide mt-0.5">
                           {e.cidade}
-                          {e.data_nascimento && ` • Nasc: ${e.data_nascimento.split('-').reverse().join('/')}`}
+                          {e.data_nascimento && ` • NASC: ${e.data_nascimento.split('-').reverse().join('/')}`}
                         </p>
                       </Td>
                       <Td>
-                        <span className="inline-flex px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-semibold dark:bg-slate-800 dark:text-slate-300">
-                          {e.cabo?.nome ?? 'Sem Indicação'}
-                        </span>
+                        {e.cabo?.nome ? (
+                          <span className="inline-flex items-center px-2.5 py-1 bg-indigo-50/80 border border-indigo-100 text-indigo-700 rounded-lg text-[11px] font-bold uppercase tracking-wider dark:bg-indigo-900/30 dark:border-indigo-800/50 dark:text-indigo-300">
+                            <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            {e.cabo.nome}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider italic">Sem Indicação</span>
+                        )}
                       </Td>
                       <Td>
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_STYLES[e.status]}`}>
+                        <span className={`rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider shadow-sm ${STATUS_STYLES[e.status]}`}>
                           {e.status}
                         </span>
                       </Td>
-                      <Td className="whitespace-nowrap text-slate-500 text-xs font-medium">
+                      <Td className="whitespace-nowrap text-slate-400 text-xs font-semibold">
                         {formatDataHora(e.created_at)}
                       </Td>
-                      <Td className="whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => iniciarEdicao(e)} className="p-2 text-brand-600 hover:bg-brand-50 rounded-lg transition dark:hover:bg-brand-900/40" title="Editar Eleitor">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      <Td className="whitespace-nowrap px-5">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                          <button onClick={() => iniciarEdicao(e)} className="p-2 text-brand-600 hover:bg-brand-100 hover:text-brand-700 rounded-xl transition-colors dark:text-brand-400 dark:hover:bg-brand-900/50" title="Editar Eleitor">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                           </button>
-                          <button onClick={() => anonimizar(e)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition dark:hover:bg-amber-900/40" title="Anonimizar (Apagar dados pessoais para LGPD)">
+                          <button onClick={() => anonimizar(e)} className="p-2 text-amber-500 hover:bg-amber-100 hover:text-amber-700 rounded-xl transition-colors dark:text-amber-400 dark:hover:bg-amber-900/50" title="Anonimizar (LGPD)">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
                           </button>
                           <button onClick={() => excluir(e)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition dark:hover:bg-red-900/40" title="Excluir Definitivamente">
@@ -506,14 +508,31 @@ export function PlanilhaPage() {
 const editInput =
   'w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm font-medium outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 placeholder:text-slate-400'
 
-function Th({ col, ordem, onClick, children }: { col: Coluna, ordem: Ordenacao, onClick: (c: Coluna) => void, children: React.ReactNode }) {
+function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-5 py-4 ${className}`}>{children}</td>
+}
+
+function Th({
+  col,
+  ordem,
+  onClick,
+  children,
+  className = '',
+}: {
+  col: Coluna
+  ordem: Ordenacao
+  onClick: (c: Coluna) => void
+  children: React.ReactNode
+  className?: string
+}) {
   const ativo = ordem.campo === col
+
   return (
     <th
+      className={`px-5 py-4 cursor-pointer hover:bg-slate-100 transition-colors select-none dark:hover:bg-slate-900 ${className}`}
       onClick={() => onClick(col)}
-      className="cursor-pointer select-none px-3 py-3 hover:text-slate-700 hover:bg-slate-100/50 transition-colors dark:hover:text-slate-200 dark:hover:bg-slate-700/50"
     >
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 font-bold">
         {children}
         <span className="text-[10px] text-brand-500">
           {ativo ? (ordem.dir === 'asc' ? '▲' : '▼') : <span className="opacity-0 group-hover:opacity-30">▲</span>}
@@ -523,6 +542,3 @@ function Th({ col, ordem, onClick, children }: { col: Coluna, ordem: Ordenacao, 
   )
 }
 
-function Td({ children, className = '' }: { children: React.ReactNode, className?: string }) {
-  return <td className={`px-3 py-3 ${className}`}>{children}</td>
-}
