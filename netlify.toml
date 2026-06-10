@@ -9,3 +9,17 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# O index.html nunca fica preso em cache: o navegador sempre revalida e
+# pega a versão nova logo após cada deploy (evita ter de usar janela anônima).
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Os arquivos em /assets têm hash no nome (mudam a cada build), então podem
+# ser cacheados "para sempre" com segurança — deixa o site rápido.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
