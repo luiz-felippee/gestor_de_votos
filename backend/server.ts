@@ -255,7 +255,7 @@ app.use('/api', require('./routes/eleitores').default);
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-10-routers', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-10-routers2', runtime: 'node-dist' }),
 );
 
 // --- Upload Genérico ---

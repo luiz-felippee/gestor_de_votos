@@ -15,5 +15,5 @@
   "ts-node": {
     "transpileOnly": true
   },
-  "include": ["server.ts", "whatsapp.ts", "src/**/*.ts"]
+  "include": ["server.ts", "whatsapp.ts", "prismaClient.ts", "routes/**/*.ts", "src/**/*.ts"]
 }
