@@ -71,16 +71,25 @@ export function LoginPage() {
           <rect width="100%" height="100%" fill="url(#grid-pattern)"></rect>
         </svg>
 
-        <div className="absolute inset-0 flex flex-col justify-between p-12 lg:p-20">
-          <div className="flex items-center gap-3">
-            <Logo className="h-12 w-auto" iconClassName="h-12 w-12" />
-            <span className="text-2xl font-bold tracking-tight text-white">Gestor de Votos</span>
-          </div>
+        {/* Logo fixo no topo */}
+        <div className="absolute top-12 left-12 lg:top-20 lg:left-20 flex items-center gap-3 animate-fade-in">
+          <Logo className="h-12 w-auto" iconClassName="h-12 w-12" />
+          <span className="text-2xl font-bold tracking-tight text-white">Gestor de Votos</span>
+        </div>
+
+        {/* Texto principal — subido para o centro com animação de entrada escalonada */}
+        <div className="absolute inset-0 flex flex-col justify-center p-12 lg:p-20">
           <div className="max-w-xl">
-            <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl mb-6 leading-tight">
+            <h1
+              className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl mb-6 leading-tight animate-slide-up"
+              style={{ animationDelay: '120ms', animationFillMode: 'both' }}
+            >
               A inteligência por trás de campanhas vitoriosas.
             </h1>
-            <p className="text-lg text-slate-300 font-medium">
+            <p
+              className="text-lg text-slate-300 font-medium animate-slide-up"
+              style={{ animationDelay: '300ms', animationFillMode: 'both' }}
+            >
               Gestor de Votos é a plataforma completa para gerenciamento de lideranças, eleitores e comunicação via WhatsApp.
             </p>
           </div>
