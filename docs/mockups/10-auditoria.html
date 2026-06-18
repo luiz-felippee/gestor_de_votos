@@ -1,0 +1,34 @@
+<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo.css"></head>
+<body><div class="app">
+<div class="header"><div class="header-inner">
+  <div class="brand"><span class="brand-ico"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+    <span style="display:flex;flex-direction:column;line-height:1.15"><span>Gestor de Votos</span><span class="brand-sub">★ Campanha Miguel Coelho</span></span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <nav class="nav"><a href="#">Painel</a><a href="#">Eleitores</a><a href="#">Mapa</a><a href="#">Agenda</a>
+      <a href="#">Lideranças</a><a href="#">Campanhas</a><a href="#">Usuários</a><a class="active" href="#">Auditoria</a><a href="#">WhatsApp</a></nav>
+    <div class="user-box"><div><div class="user-name">Miguel Coelho</div><div class="user-role">admin</div></div>
+      <button class="icon-btn"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg></button>
+      <button class="btn-sair">Sair</button></div>
+  </div>
+</div></div>
+
+<div class="page-narrow">
+  <h1 class="title">Log de Auditoria</h1>
+  <p class="subtitle" style="margin-bottom:28px">Registro das últimas 300 ações (criação, edição, exclusão e anonimização) — para rastreabilidade e conformidade com a LGPD.</p>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Data / Hora</th><th>Usuário</th><th>Ação</th><th>Item</th><th>Detalhe</th></tr></thead>
+      <tbody>
+        <tr><td class="muted">15/06 14:22</td><td class="name">Maria Souza</td><td><span class="chip" style="background:#dcfce7;color:#15803d">criar</span></td><td style="text-transform:capitalize">eleitor</td><td class="muted">José da Silva</td></tr>
+        <tr><td class="muted">15/06 11:48</td><td class="name">Miguel Coelho</td><td><span class="chip" style="background:#dbeafe;color:#1d4ed8">editar</span></td><td style="text-transform:capitalize">eleitor</td><td class="muted">Fernanda Rocha — status: pendente → ativo</td></tr>
+        <tr><td class="muted">15/06 10:15</td><td class="name">Ana Lima</td><td><span class="chip" style="background:#fef3c7;color:#b45309">anonimizar</span></td><td style="text-transform:capitalize">eleitor</td><td class="muted">Titular #1042 (LGPD)</td></tr>
+        <tr><td class="muted">14/06 17:40</td><td class="name">Miguel Coelho</td><td><span class="chip" style="background:#fee2e2;color:#b91c1c">excluir</span></td><td style="text-transform:capitalize">cabo</td><td class="muted">Cabo duplicado removido</td></tr>
+        <tr><td class="muted">14/06 09:18</td><td class="name">João Pereira</td><td><span class="chip" style="background:#dcfce7;color:#15803d">criar</span></td><td style="text-transform:capitalize">eleitor</td><td class="muted">Patrícia Gomes</td></tr>
+        <tr><td class="muted">13/06 20:51</td><td class="name">Miguel Coelho</td><td><span class="chip" style="background:#dcfce7;color:#15803d">criar</span></td><td style="text-transform:capitalize">evento</td><td class="muted">Reunião de Mobilização</td></tr>
+        <tr><td class="muted">13/06 15:02</td><td class="name">Ana Lima</td><td><span class="chip" style="background:#dbeafe;color:#1d4ed8">editar</span></td><td style="text-transform:capitalize">cabo</td><td class="muted">Maria Souza — meta: 120 → 150</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div></body></html>

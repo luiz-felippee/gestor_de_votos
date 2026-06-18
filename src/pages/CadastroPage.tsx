@@ -6,6 +6,7 @@ import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
 import { LocalVotacaoAutocomplete } from '../components/LocalVotacaoAutocomplete'
+import type { Campanha } from '../lib/types'
 
 interface FormState {
   nome: string
@@ -42,9 +43,17 @@ const VAZIO: FormState = {
 export function CadastroPage() {
   const { cabos } = useCabos()
   const [params] = useSearchParams()
-  const { nomeCabo } = useParams() // Pega da rota amigável /edsonviera/:nomeCabo
+  const { campanhaSlug, nomeCabo } = useParams() // Rota: /c/:campanhaSlug/:nomeCabo
   
   const caboDoLink = params.get('cabo') ?? ''
+
+  // Busca dados públicos da campanha
+  const [campanha, setCampanha] = useState<Partial<Campanha> | null>(null)
+  useEffect(() => {
+    if (campanhaSlug) {
+      api.getCampanhaPublic(campanhaSlug).then(setCampanha).catch(() => {})
+    }
+  }, [campanhaSlug])
 
   // Encontra o cabo se vier pelo query param antigo, OU pelo novo slug
   const caboEncontrado = useMemo(() => {
@@ -162,6 +171,7 @@ export function CadastroPage() {
         observacoes: form.observacoes.trim() || null,
         status: 'ativo',
         website, // honeypot: humanos deixam vazio
+        campanha_slug: campanhaSlug, // <-- Adicionando o slug da campanha para o backend
       })
     } catch (err) {
       setEnviando(false)
@@ -185,18 +195,24 @@ export function CadastroPage() {
         
         {/* Cover Image & Avatar */}
         <div className="relative h-32 w-full bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-700 sm:h-40">
+          {campanha?.foto_url && (
+            <img src={campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`} alt="Capa" className="absolute inset-0 h-full w-full object-cover opacity-50 mix-blend-overlay" />
+          )}
           <div className="absolute inset-0 bg-black/20" />
           <div className="absolute -bottom-10 left-6">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800">
-              <UserPlus className="h-10 w-10 text-brand-600 dark:text-brand-400" />
+            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800">
+              {campanha?.foto_url ? (
+                <img src={campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`} alt="Candidato" className="h-full w-full object-cover" />
+              ) : (
+                <UserPlus className="h-10 w-10 text-brand-600 dark:text-brand-400" />
+              )}
             </div>
           </div>
         </div>
 
-        {/* Cabeçalho do modal */}
         <div className="px-6 pb-6 pt-12">
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            {sucesso ? 'Cadastro realizado!' : 'Apoio à Campanha'}
+            {sucesso ? 'Cadastro realizado!' : (campanha?.nome ? `Apoio: ${campanha.nome}` : 'Apoio à Campanha')}
           </h1>
           <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
             {sucesso
@@ -383,7 +399,7 @@ export function CadastroPage() {
                   disabled={caboTravado}
                 >
                   <option value="">Selecione...</option>
-                  {cabos.map((c) => (
+                  {cabos.filter((c) => campanha ? c.campanha_id === campanha.id : true).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.nome}
                     </option>

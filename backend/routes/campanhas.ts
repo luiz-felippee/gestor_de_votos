@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../prismaClient';
-import { requireAuth, requireSuperAdmin, wrap, gerarSlug } from '../server';
+import { requireAuth, requireSuperAdmin, wrap, gerarSlug } from '../middlewares';
 
 const campanhasRouter = Router();
 
@@ -21,6 +21,27 @@ campanhasRouter.get(
       })),
     );
     res.json(comContagem);
+  }),
+);
+
+// --- Rotas Públicas ---
+// Busca dados básicos da campanha para montar a Landing Page ou formulários públicos
+campanhasRouter.get(
+  '/campanhas-public/:slug',
+  wrap(async (req, res) => {
+    const campanha = await prisma.campanha.findUnique({
+      where: { slug: String(req.params.slug) },
+      select: {
+        id: true,
+        nome: true,
+        slug: true,
+        foto_url: true,
+      },
+    });
+    if (!campanha) {
+      return res.status(404).json({ error: 'Campanha não encontrada.' });
+    }
+    res.json(campanha);
   }),
 );
 

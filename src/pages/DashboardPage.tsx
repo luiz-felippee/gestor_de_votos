@@ -12,8 +12,27 @@ export function DashboardPage() {
 
   if (loading || !stats) {
     return (
-      <div className="flex h-[60vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+      <div className="mx-auto max-w-7xl px-4 py-8 animate-pulse">
+        {/* Skeleton do header */}
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="h-9 w-48 rounded-lg bg-slate-200 dark:bg-slate-800" />
+          <div className="h-10 w-48 rounded-lg bg-slate-200 dark:bg-slate-800" />
+        </div>
+        {/* Skeleton dos KPIs */}
+        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+              <div className="h-4 w-28 rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="mt-3 h-8 w-20 rounded bg-slate-200 dark:bg-slate-700" />
+            </div>
+          ))}
+        </div>
+        {/* Skeleton dos gráficos */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-[320px] rounded-2xl border border-slate-200 bg-slate-100/60 dark:border-slate-800 dark:bg-slate-800/40" />
+          ))}
+        </div>
       </div>
     )
   }

@@ -1,0 +1,103 @@
+<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo.css"></head>
+<body><div class="app">
+<div class="header"><div class="header-inner">
+  <div class="brand"><span class="brand-ico"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+    <span style="display:flex;flex-direction:column;line-height:1.15"><span>Gestor de Votos</span><span class="brand-sub">★ Campanha Miguel Coelho</span></span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <nav class="nav">
+      <a class="active" href="#">Painel</a><a href="#">Eleitores</a><a href="#">Mapa</a><a href="#">Agenda</a>
+      <a href="#">Lideranças</a><a href="#">Campanhas</a><a href="#">Usuários</a><a href="#">WhatsApp</a><a href="#">Cadastro</a></nav>
+    <div class="user-box"><div><div class="user-name">Miguel Coelho</div><div class="user-role">admin</div></div>
+      <button class="icon-btn"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg></button>
+      <button class="btn-sair">Sair</button></div>
+  </div>
+</div></div>
+
+<div class="page">
+  <div class="row-between"><h1 class="title">Dashboard</h1>
+    <select class="select" style="background:#fff;border:1px solid var(--slate-300)"><option>Todas as cidades</option></select></div>
+
+  <!-- Perfil da campanha -->
+  <div class="panel" style="display:flex;align-items:center;gap:24px;margin-bottom:28px">
+    <div class="avatar" style="height:104px;width:104px;font-size:34px;border:4px solid var(--brand-100)">MC</div>
+    <div>
+      <h2 style="font-size:28px;font-weight:900;color:var(--slate-800)">Miguel Coelho</h2>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="chip chip-brand">Governador</span>
+        <span class="chip chip-slate">Última Eleição: 2022</span>
+        <span class="chip chip-green">Votos: 884.941</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid g4" style="margin-bottom:24px">
+    <div class="kpi"><div class="k-t">Total de eleitores</div><div class="k-v">2.847</div></div>
+    <div class="kpi"><div class="k-t">Cidades alcançadas</div><div class="k-v">12</div></div>
+    <div class="kpi"><div class="k-t">Bairros alcançados</div><div class="k-v">68</div></div>
+    <div class="kpi"><div class="k-t">Cabos ativos</div><div class="k-v">34</div></div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="grid g2" style="margin-bottom:24px">
+    <div class="panel"><h2>Eleitores por cidade</h2>
+      <div class="chartbox">
+        <div class="bar" style="height:90%"><span>980</span><small>Recife</small></div>
+        <div class="bar" style="height:64%"><span>700</span><small>Olinda</small></div>
+        <div class="bar" style="height:48%"><span>520</span><small>Jaboatão</small></div>
+        <div class="bar" style="height:33%"><span>360</span><small>Paulista</small></div>
+        <div class="bar" style="height:26%"><span>287</span><small>Igarassu</small></div>
+      </div>
+    </div>
+    <div class="panel"><h2>Distribuição por zona eleitoral</h2>
+      <div style="display:flex;gap:24px;align-items:center"><div class="donut"></div>
+        <div class="legend">
+          <div><span class="dot" style="background:var(--brand-600)"></span> Zona 003 — 38%</div>
+          <div><span class="dot" style="background:var(--brand-400)"></span> Zona 012 — 24%</div>
+          <div><span class="dot" style="background:var(--brand-300)"></span> Zona 021 — 18%</div>
+          <div><span class="dot" style="background:var(--slate-200)"></span> Outras — 20%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-bottom:24px">
+    <div class="panel"><h2>Top bairros</h2>
+      <div class="chartbox" style="height:200px">
+        <div class="bar" style="height:88%;background:linear-gradient(to top,#f97316,#fbbf24)"><span>210</span><small>Boa Viagem</small></div>
+        <div class="bar" style="height:70%;background:linear-gradient(to top,#f97316,#fbbf24)"><span>168</span><small>Várzea</small></div>
+        <div class="bar" style="height:55%;background:linear-gradient(to top,#f97316,#fbbf24)"><span>132</span><small>Casa Amarela</small></div>
+        <div class="bar" style="height:40%;background:linear-gradient(to top,#f97316,#fbbf24)"><span>96</span><small>Ibura</small></div>
+      </div>
+    </div>
+    <div class="panel"><h2>Cadastros por dia (últimos dias)</h2>
+      <div class="chartbox" style="height:200px">
+        <div class="bar" style="height:30%;background:linear-gradient(to top,#16a34a,#4ade80)"><small>Seg</small></div>
+        <div class="bar" style="height:55%;background:linear-gradient(to top,#16a34a,#4ade80)"><small>Ter</small></div>
+        <div class="bar" style="height:42%;background:linear-gradient(to top,#16a34a,#4ade80)"><small>Qua</small></div>
+        <div class="bar" style="height:78%;background:linear-gradient(to top,#16a34a,#4ade80)"><small>Qui</small></div>
+        <div class="bar" style="height:95%;background:linear-gradient(to top,#16a34a,#4ade80)"><small>Sex</small></div>
+        <div class="bar" style="height:60%;background:linear-gradient(to top,#16a34a,#4ade80)"><small>Sáb</small></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ranking -->
+  <div class="panel" style="margin-bottom:24px"><h2>Ranking de cabos (meta vs. realizado)</h2>
+    <div class="rank-row"><div class="rank-pos">1º</div><div class="rank-main"><div class="rank-top"><span class="rank-name">Maria Souza</span><span class="rank-val">142 / 150 <b style="color:var(--slate-400)">95%</b></span></div><div class="track"><div class="fill" style="width:95%"></div></div></div></div>
+    <div class="rank-row"><div class="rank-pos">2º</div><div class="rank-main"><div class="rank-top"><span class="rank-name">João Pereira</span><span class="rank-val">118 / 150 <b style="color:var(--slate-400)">79%</b></span></div><div class="track"><div class="fill" style="width:79%"></div></div></div></div>
+    <div class="rank-row"><div class="rank-pos">3º</div><div class="rank-main"><div class="rank-top"><span class="rank-name">Ana Lima</span><span class="rank-val">96 / 120 <b style="color:var(--slate-400)">80%</b></span></div><div class="track"><div class="fill" style="width:80%"></div></div></div></div>
+    <div class="rank-row"><div class="rank-pos">4º</div><div class="rank-main"><div class="rank-top"><span class="rank-name">Carlos Dias</span><span class="rank-val">61 / 100 <b style="color:var(--slate-400)">61%</b></span></div><div class="track"><div class="fill" style="width:61%"></div></div></div></div>
+  </div>
+
+  <!-- Aniversariantes -->
+  <div class="panel"><h2>Próximos Aniversariantes (30 dias)</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--slate-100)">
+      <div><p style="font-weight:700;color:var(--slate-700)">José da Silva <span class="chip" style="background:#ffedd5;color:#ea580c">🎁 Hoje!</span></p><p class="muted">Dia 15/06 - É HOJE!</p></div>
+      <button class="btn" style="background:var(--brand-50);color:var(--brand-600);font-size:13px">Enviar Parabéns</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0">
+      <div><p style="font-weight:700;color:var(--slate-700)">Fernanda Rocha</p><p class="muted">Dia 18/06 - Em 3 dias</p></div>
+      <button class="btn" style="background:var(--slate-100);color:var(--slate-600);font-size:13px">Enviar Parabéns</button></div>
+  </div>
+</div>
+</div></body></html>

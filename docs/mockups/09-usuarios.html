@@ -1,0 +1,42 @@
+<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo.css"></head>
+<body><div class="app">
+<div class="header"><div class="header-inner">
+  <div class="brand"><span class="brand-ico"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+    <span style="display:flex;flex-direction:column;line-height:1.15"><span>Gestor de Votos</span><span class="brand-sub">★ Campanha Miguel Coelho</span></span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <nav class="nav"><a href="#">Painel</a><a href="#">Eleitores</a><a href="#">Mapa</a><a href="#">Agenda</a>
+      <a href="#">Lideranças</a><a href="#">Campanhas</a><a class="active" href="#">Usuários</a><a href="#">WhatsApp</a><a href="#">Cadastro</a></nav>
+    <div class="user-box"><div><div class="user-name">Miguel Coelho</div><div class="user-role">admin</div></div>
+      <button class="icon-btn"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg></button>
+      <button class="btn-sair">Sair</button></div>
+  </div>
+</div></div>
+
+<div class="page-narrow">
+  <h1 class="title">Gestão de Usuários</h1>
+  <p class="subtitle" style="margin-bottom:28px">Cadastre os acessos da equipe e defina o perfil de cada um.</p>
+
+  <div class="panel" style="margin-bottom:28px">
+    <h2 style="margin-bottom:18px">Novo usuário</h2>
+    <div class="grid g2">
+      <div class="field"><label>Nome completo</label><input class="input" value="Ana Lima"></div>
+      <div class="field"><label>E-mail (login)</label><input class="input" value="ana@campanha.com.br"></div>
+      <div class="field"><label>Senha inicial</label><input class="input" value="••••••••"></div>
+      <div class="field"><label>Perfil de acesso</label><input class="input" value="Coordenador"></div>
+    </div>
+    <button class="btn btn-primary">Adicionar usuário</button>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Cabo</th><th style="text-align:right">Ações</th></tr></thead>
+      <tbody>
+        <tr><td class="name">Miguel Coelho <span class="chip chip-brand" style="font-size:10px">VOCÊ</span></td><td>miguel@campanha.com.br</td><td><span class="chip chip-slate">Administrador</span></td><td class="muted">—</td><td style="text-align:right"><span style="color:var(--brand-600);font-weight:600">Editar</span></td></tr>
+        <tr><td class="name">Ana Lima</td><td>ana@campanha.com.br</td><td><span class="chip chip-slate">Coordenador</span></td><td class="muted">—</td><td style="text-align:right"><span style="color:var(--brand-600);font-weight:600">Editar</span> &nbsp;<span style="color:var(--red-600);font-weight:600">Excluir</span></td></tr>
+        <tr><td class="name">Maria Souza</td><td>maria@campanha.com.br</td><td><span class="chip chip-slate">Cabo eleitoral</span></td><td>Maria Souza</td><td style="text-align:right"><span style="color:var(--brand-600);font-weight:600">Editar</span> &nbsp;<span style="color:var(--red-600);font-weight:600">Excluir</span></td></tr>
+        <tr><td class="name">Pedro Alves</td><td>pedro@campanha.com.br</td><td><span class="chip chip-slate">Visualizador</span></td><td class="muted">—</td><td style="text-align:right"><span style="color:var(--brand-600);font-weight:600">Editar</span> &nbsp;<span style="color:var(--red-600);font-weight:600">Excluir</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div></body></html>

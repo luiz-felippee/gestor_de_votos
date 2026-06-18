@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { ThemeProvider, useTheme } from './components/ThemeProvider'
 import { Logo } from './components/Logo'
+import { ToastProvider } from './components/Toast'
 // Leves / críticas: carregam de imediato (formulário público e login)
 import { CadastroPage } from './pages/CadastroPage'
 import { LoginPage } from './pages/LoginPage'
@@ -28,6 +29,8 @@ const CadastroLiderancaPage = lazyPage(
 const EventosPage = lazyPage(() => import('./pages/EventosPage'), 'EventosPage')
 const AuditoriaPage = lazyPage(() => import('./pages/AuditoriaPage'), 'AuditoriaPage')
 const CampanhasPage = lazyPage(() => import('./pages/CampanhasPage'), 'CampanhasPage')
+const BillingPage = lazyPage(() => import('./pages/BillingPage').then(m => ({ BillingPage: m.BillingPage })), 'BillingPage')
+const WhatsAppInboxPage = lazyPage(() => import('./pages/WhatsAppInboxPage').then(m => ({ WhatsAppInboxPage: m.WhatsAppInboxPage })), 'WhatsAppInboxPage')
 
 function CarregandoPagina() {
   return (
@@ -40,6 +43,7 @@ function CarregandoPagina() {
 export default function App() {
   return (
     <ThemeProvider>
+      <ToastProvider>
       <AuthProvider>
       <BrowserRouter>
         <div className="flex min-h-full flex-col">
@@ -51,9 +55,11 @@ export default function App() {
 
               {/* Públicas */}
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/cadastro" element={<CadastroPage />} />
-              <Route path="/edsonviera/:nomeCabo" element={<CadastroPage />} />
-              <Route path="/cadastro-lideranca" element={<CadastroLiderancaPage />} />
+              <Route path="/cadastro" element={<Navigate to="/login" replace />} />
+              {/* Rotas Públicas com Roteamento Dinâmico por Campanha */}
+              <Route path="/c/:campanhaSlug" element={<CadastroPage />} />
+              <Route path="/c/:campanhaSlug/:nomeCabo" element={<CadastroPage />} />
+              <Route path="/c/:campanhaSlug/cadastro-lideranca" element={<CadastroLiderancaPage />} />
               <Route path="/privacidade" element={<PrivacidadePage />} />
 
               {/* Protegidas */}
@@ -129,6 +135,22 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/whatsapp/inbox"
+                element={
+                  <ProtectedRoute roles={['admin', 'coordenador']}>
+                    <WhatsAppInboxPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/assinatura"
+                element={
+                  <ProtectedRoute roles={['admin', 'coordenador']}>
+                    <BillingPage />
+                  </ProtectedRoute>
+                }
+              />
 
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
@@ -137,6 +159,7 @@ export default function App() {
         </div>
       </BrowserRouter>
     </AuthProvider>
+    </ToastProvider>
     </ThemeProvider>
   )
 }
@@ -176,6 +199,8 @@ function Header() {
               {role === 'admin' && <Item to="/usuarios">Usuários</Item>}
               {role === 'admin' && <Item to="/auditoria">Auditoria</Item>}
               {role === 'admin' && <Item to="/whatsapp">WhatsApp</Item>}
+              {(role === 'admin' || role === 'coordenador') && <Item to="/whatsapp/inbox">Atendimento (CRM)</Item>}
+              {(role === 'admin' || role === 'coordenador') && <Item to="/assinatura">Assinatura</Item>}
               <Item to="/cadastro">Cadastro</Item>
             </nav>
             <div className="flex items-center gap-3 border-l border-slate-200 pl-5 dark:border-slate-700">
@@ -242,14 +267,18 @@ function Header() {
             <MobileItem to="/" onClick={() => setMenuOpen(false)}>Painel Geral</MobileItem>
             <MobileItem to="/planilha" onClick={() => setMenuOpen(false)}>Eleitores</MobileItem>
             <MobileItem to="/mapa" onClick={() => setMenuOpen(false)}>Mapa de Força</MobileItem>
-            <MobileItem to="/eventos" onClick={() => setMenuOpen(false)}>Agenda</MobileItem>
+            <MobileItem to="/eventos" onClick={() => setMenuOpen(false)}>Agenda & Eventos</MobileItem>
             {(role === 'admin' || role === 'coordenador') && (
-              <MobileItem to="/cabos" onClick={() => setMenuOpen(false)}>Gestão de Liderança</MobileItem>
+              <MobileItem to="/cabos" onClick={() => setMenuOpen(false)}>Lideranças</MobileItem>
+            )}
+            {(role === 'admin' || role === 'coordenador') && (
+              <MobileItem to="/assinatura" onClick={() => setMenuOpen(false)}>Assinatura</MobileItem>
             )}
             {usuario?.super_admin && <MobileItem to="/campanhas" onClick={() => setMenuOpen(false)}>Campanhas</MobileItem>}
             {role === 'admin' && <MobileItem to="/usuarios" onClick={() => setMenuOpen(false)}>Usuários</MobileItem>}
             {role === 'admin' && <MobileItem to="/auditoria" onClick={() => setMenuOpen(false)}>Auditoria</MobileItem>}
             {role === 'admin' && <MobileItem to="/whatsapp" onClick={() => setMenuOpen(false)}>WhatsApp</MobileItem>}
+            {(role === 'admin' || role === 'coordenador') && <MobileItem to="/whatsapp/inbox" onClick={() => setMenuOpen(false)}>Atendimento (CRM)</MobileItem>}
             <MobileItem to="/cadastro" onClick={() => setMenuOpen(false)}>Novo Cadastro</MobileItem>
           </nav>
         </div>

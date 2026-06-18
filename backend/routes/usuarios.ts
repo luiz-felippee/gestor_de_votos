@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../prismaClient';
-import { requireAuth, requireRole, wrap, escopoCampanha, registrarLog } from '../server';
+import { requireAuth, requireRole, wrap, escopoCampanha, registrarLog } from '../middlewares';
 import { PerfilAcesso } from '@prisma/client';
 
 const usuariosRouter = Router();

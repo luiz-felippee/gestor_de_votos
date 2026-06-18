@@ -18,7 +18,7 @@ export function useEleitores() {
 
   const recarregar = useCallback(async () => {
     try {
-      const data = await api.getEleitores()
+      const data = await api.getAllEleitores()
       CACHE_ELEITORES = data
       CACHE_TIMESTAMP = Date.now()
       setEleitores(data)

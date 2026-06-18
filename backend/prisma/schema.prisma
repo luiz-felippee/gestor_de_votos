@@ -32,6 +32,13 @@ model Campanha {
   votos_ultima_eleicao Int?
   created_at           DateTime @default(now())
 
+  // --- SaaS Multi-Contas ---
+  plano                  String   @default("gratis") // gratis, basico, pro
+  stripe_customer_id     String?  @unique
+  stripe_subscription_id String?  @unique
+  assinatura_status      String   @default("ativa") // ativa, inadimplente, cancelada
+  assinatura_expira_em   DateTime?
+
   @@map("campanhas")
 }
 
@@ -111,16 +118,35 @@ model Usuario {
 }
 
 model ConfiguracaoWhatsApp {
-  id               String   @id @default("singleton")
-  campanha_id      String?
+  id               String   @id @default(uuid())
+  campanha_id      String?  @unique
   modo             String   @default("nenhum") // nenhum, interno, zapi, evolution
   api_url          String?
   api_token        String?
   api_instancia_id String?
 
+  // Funcionalidades CRM / Chatbot
+  msg_boas_vindas  String?
+  ativar_chatbot   Boolean  @default(false)
+  fluxo_chatbot    Json?    // Estrutura do menu de opções do chatbot
+
   updated_at       DateTime @updatedAt
 
   @@map("configuracao_whatsapp")
+}
+
+model MensagemWhatsApp {
+  id          String   @id @default(uuid())
+  campanha_id String
+  numero      String   // Número do contato no formato DDI+DDD+NUMERO (ex: 558199999999)
+  texto       String
+  is_from_me  Boolean  @default(false) // true se foi enviado pelo sistema/chatbot, false se foi recebida do eleitor
+  lida        Boolean  @default(false) // Para a caixa de entrada (inbox)
+  created_at  DateTime @default(now())
+
+  @@index([campanha_id, numero])
+  @@index([created_at])
+  @@map("mensagens_whatsapp")
 }
 
 model Evento {

@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { prisma } from '../prismaClient';
-import { requireAuth, requireRole, optionalAuth, wrap, escopoCampanha, eleitorNaCampanha, registrarLog, notificarMudanca, cadastroLimiter } from '../server';
+import { requireAuth, requireRole, optionalAuth, wrap, escopoCampanha, eleitorNaCampanha, registrarLog, cadastroLimiter, requirePlanLimit } from '../middlewares';
+import { notificarMudanca } from '../server';
 import { StatusEleitor } from '@prisma/client';
+import { sendWhatsAppMessage } from '../whatsapp';
 
 const eleitoresRouter = Router();
 
@@ -31,10 +33,11 @@ async function geocodeAddress(bairro: string, cidade: string): Promise<{ lat: nu
   return null;
 }
 
-// Criar: público (formulário) — com limite anti-spam por IP
+// Criar: público (formulário) — com limite anti-spam por IP e verificação de plano
 eleitoresRouter.post(
   '/eleitores',
   cadastroLimiter,
+  requirePlanLimit('eleitores'),
   wrap(async (req, res) => {
     const b = req.body ?? {};
     // Honeypot: campo invisível que só robôs preenchem. Finge sucesso e ignora.
@@ -46,6 +49,7 @@ eleitoresRouter.post(
     const cidadeStr = String(b.cidade).trim();
 
     // O eleitor herda a campanha do cabo que o indicou (isolamento)
+    // Se não tiver cabo, herda do slug da URL
     let campanhaId: string | null = null;
     if (b.cabo_id) {
       const cabo = await prisma.caboEleitoral.findUnique({
@@ -53,6 +57,12 @@ eleitoresRouter.post(
         select: { campanha_id: true },
       });
       campanhaId = cabo?.campanha_id ?? null;
+    } else if (b.campanha_slug) {
+      const campanha = await prisma.campanha.findUnique({
+        where: { slug: String(b.campanha_slug) },
+        select: { id: true },
+      });
+      campanhaId = campanha?.id ?? null;
     }
 
     try {
@@ -79,6 +89,22 @@ eleitoresRouter.post(
           observacoes: b.observacoes?.trim() || null,
         },
       });
+
+      // Disparar Boas-Vindas se ativado
+      if (campanhaId && b.telefone) {
+        prisma.configuracaoWhatsApp.findUnique({
+          where: { campanha_id: campanhaId }
+        }).then((config) => {
+          if (config && config.msg_boas_vindas) {
+            // Pode haver variáveis de substituição, ex: {{nome}}
+            const texto = config.msg_boas_vindas.replace(/\{\{nome\}\}/g, String(b.nome).trim());
+            sendWhatsAppMessage(campanhaId, String(b.telefone), texto).catch((err) => {
+               console.error('Falha silenciosa ao enviar boas vindas:', err.message);
+            });
+          }
+        }).catch(console.error);
+      }
+
       notificarMudanca();
       res.status(201).json(eleitor);
     } catch (err: any) {
@@ -98,20 +124,54 @@ eleitoresRouter.post(
 );
 
 // Listar: autenticado; perfil 'cabo' vê só os próprios
+// Suporta paginação (?page=1&limit=50), busca (?busca=) e filtros (?cidade=&bairro=&status=&cabo_id=&zona=)
 eleitoresRouter.get(
   '/eleitores',
   requireAuth,
   wrap(async (req, res) => {
-    const where = {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
+    const skip = (page - 1) * limit;
+
+    const where: Record<string, unknown> = {
       ...escopoCampanha(req),
       ...(req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : {}),
     };
-    const eleitores = await prisma.eleitor.findMany({
-      where,
-      include: { cabo: { select: { id: true, nome: true } } },
-      orderBy: { created_at: 'desc' },
+
+    // Filtros opcionais
+    if (req.query.cidade) where.cidade = String(req.query.cidade);
+    if (req.query.bairro) where.bairro = String(req.query.bairro);
+    if (req.query.status) where.status = String(req.query.status);
+    if (req.query.cabo_id) where.cabo_id = String(req.query.cabo_id);
+    if (req.query.zona) where.zona = Number(req.query.zona);
+
+    // Busca textual (nome ou telefone)
+    if (req.query.busca) {
+      const termo = String(req.query.busca).toLowerCase().trim();
+      where.OR = [
+        { nome_busca: { contains: termo } },
+        { telefone: { contains: termo } },
+      ];
+    }
+
+    const [eleitores, total] = await Promise.all([
+      prisma.eleitor.findMany({
+        where,
+        include: { cabo: { select: { id: true, nome: true } } },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.eleitor.count({ where }),
+    ]);
+
+    res.json({
+      data: eleitores,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     });
-    res.json(eleitores);
   }),
 );
 
@@ -200,7 +260,7 @@ eleitoresRouter.delete(
   }),
 );
 
-// Anonimizar (LGPD): apaga dados pessoais, mantém estatística (zona/seção/cidade)
+// Anonimizar (LGPD): apaga TODOS os dados pessoais, mantém apenas estatística (zona/seção/cidade)
 eleitoresRouter.post(
   '/eleitores/:id/anonimizar',
   requireAuth,
@@ -214,6 +274,11 @@ eleitoresRouter.post(
         nome: '[anonimizado]',
         nome_busca: `anon-${req.params.id}`,
         telefone: '',
+        cpf: null,
+        titulo_eleitor: null,
+        data_nascimento: null,
+        lat: null,
+        lng: null,
         observacoes: null,
         status: 'inativo',
       },

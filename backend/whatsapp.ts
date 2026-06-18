@@ -3,24 +3,37 @@ import QRCode from 'qrcode';
 import pino from 'pino';
 import { Server } from 'socket.io';
 import path from 'path';
+import fs from 'fs';
+import { prisma } from './prismaClient';
 
-let sock: any = null;
+interface WsInstance {
+  sock: any;
+  currentQr: string | null;
+}
+
+const instances = new Map<string, WsInstance>();
 let ioInstance: Server | null = null;
-let currentQr: string | null = null;
 
-export async function initWhatsApp(io: Server) {
+export async function initWhatsApp(io: Server, campanhaId: string) {
   ioInstance = io;
   
-  // Em produção, aponte WHATSAPP_AUTH_DIR para um Disco Persistente (ex.: /data/whatsapp)
-  // para a sessão do WhatsApp sobreviver a deploys/reinícios.
-  const authFolder = process.env.WHATSAPP_AUTH_DIR || path.join(__dirname, 'baileys_auth_info');
+  const baseAuthFolder = process.env.WHATSAPP_AUTH_DIR || path.join(__dirname, 'baileys_auth_info');
+  const authFolder = path.join(baseAuthFolder, campanhaId);
+  
+  if (!fs.existsSync(authFolder)) {
+    fs.mkdirSync(authFolder, { recursive: true });
+  }
+
   const { state, saveCreds } = await useMultiFileAuthState(authFolder);
 
-  sock = makeWASocket({
+  const sock = makeWASocket({
     auth: state,
     printQRInTerminal: false,
     logger: pino({ level: 'silent' }) as any,
   });
+
+  const instance: WsInstance = { sock, currentQr: null };
+  instances.set(campanhaId, instance);
 
   sock.ev.on('creds.update', saveCreds);
 
@@ -28,67 +41,180 @@ export async function initWhatsApp(io: Server) {
     const { connection, lastDisconnect, qr } = update;
     
     if (qr) {
-      currentQr = await QRCode.toDataURL(qr);
-      io.emit('whatsapp:qr', currentQr);
+      instance.currentQr = await QRCode.toDataURL(qr);
+      io.to(campanhaId).emit('whatsapp:qr', instance.currentQr);
     }
 
     if (connection === 'close') {
       const shouldReconnect = (lastDisconnect?.error as any)?.output?.statusCode !== DisconnectReason.loggedOut;
-      currentQr = null;
-      io.emit('whatsapp:status', 'desconectado');
-      if (shouldReconnect) {
-        initWhatsApp(io);
+      instance.currentQr = null;
+      io.to(campanhaId).emit('whatsapp:status', 'desconectado');
+      
+      if (!shouldReconnect) {
+         // Se fez logout de verdade, apagar a pasta
+         fs.rmSync(authFolder, { recursive: true, force: true });
+         instances.delete(campanhaId);
+      } else {
+         initWhatsApp(io, campanhaId);
       }
     } else if (connection === 'open') {
-      currentQr = null;
-      io.emit('whatsapp:status', 'conectado');
+      instance.currentQr = null;
+      io.to(campanhaId).emit('whatsapp:status', 'conectado');
+    }
+  });
+
+  sock.ev.on('messages.upsert', async ({ messages, type }: any) => {
+    if (type !== 'notify') return;
+    for (const msg of messages) {
+      if (!msg.message || msg.key.remoteJid === 'status@broadcast') continue;
+      
+      const isFromMe = msg.key.fromMe || false;
+      // Mensagens enviadas pelo sistema já são gravadas em sendWhatsAppMessage /
+      // sendWhatsAppMediaFile. Ignoramos aqui para não duplicar no histórico.
+      if (isFromMe) continue;
+      const jid = msg.key.remoteJid as string;
+      const numero = jid.split('@')[0];
+      
+      // Extrai o texto da mensagem
+      const texto = msg.message.conversation || 
+                    msg.message.extendedTextMessage?.text || 
+                    msg.message.imageMessage?.caption || 
+                    msg.message.videoMessage?.caption || 
+                    '[Mídia/Áudio/Arquivo]';
+
+      if (!texto) continue;
+
+      try {
+        // 1. Salvar no Banco (CRM Caixa de Entrada)
+        const msgDb = await prisma.mensagemWhatsApp.create({
+          data: {
+            campanha_id: campanhaId,
+            numero,
+            texto,
+            is_from_me: isFromMe,
+            lida: isFromMe // se fui eu que mandei, já tá lida
+          }
+        });
+
+        // 2. Emitir via Socket para a UI atualizar em tempo real
+        io.to(campanhaId).emit('whatsapp:mensagem', msgDb);
+
+        // 3. Lógica do Chatbot (Apenas se a msg for do Eleitor)
+        if (!isFromMe) {
+          const config = await prisma.configuracaoWhatsApp.findUnique({
+            where: { campanha_id: campanhaId }
+          });
+
+          if (config?.ativar_chatbot) {
+            // Verifica se é a primeira mensagem (não há msg enviada por nós nas últimas X horas)
+            // Aqui faremos um fluxo simples: se o eleitor disser algo e o chatbot tá ativo,
+            // poderíamos responder um menu. Para não entrar em loop infinito, validaremos.
+            
+            // Checa mensagens recentes enviadas pelo bot para não flodar
+            const mensagensRecentes = await prisma.mensagemWhatsApp.findFirst({
+              where: {
+                campanha_id: campanhaId,
+                numero,
+                is_from_me: true,
+                created_at: { gte: new Date(Date.now() - 30 * 60 * 1000) } // últimos 30 min
+              }
+            });
+
+            if (!mensagensRecentes) {
+              const resposta = config.msg_boas_vindas || 'Olá! Como podemos ajudar sua comunidade hoje?';
+              await sendWhatsAppMessage(campanhaId, numero, resposta);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao processar mensagem recebida:', err);
+      }
     }
   });
 }
 
-export function getWhatsAppStatus() {
-  if (sock?.user) return { status: 'conectado' };
-  if (currentQr) return { status: 'aguardando_qr', qr: currentQr };
+export function getWhatsAppStatus(campanhaId: string) {
+  const instance = instances.get(campanhaId);
+  if (!instance) return { status: 'desconectado' };
+  
+  if (instance.sock?.user) return { status: 'conectado' };
+  if (instance.currentQr) return { status: 'aguardando_qr', qr: instance.currentQr };
   return { status: 'desconectado' };
 }
 
-export async function sendWhatsAppMessage(number: string, text: string, tipo: string = 'text', url_midia?: string) {
-  if (!sock?.user) throw new Error("WhatsApp não está conectado.");
+export async function sendWhatsAppMessage(campanhaId: string, number: string, text: string, tipo: string = 'text', url_midia?: string) {
+  const instance = instances.get(campanhaId);
+  if (!instance || !instance.sock?.user) throw new Error("WhatsApp não está conectado para esta campanha.");
   
   const jid = `${number}@s.whatsapp.net`;
   
   if (tipo === 'image' && url_midia) {
-    await sock.sendMessage(jid, { image: { url: url_midia }, caption: text });
+    await instance.sock.sendMessage(jid, { image: { url: url_midia }, caption: text });
   } else if (tipo === 'video' && url_midia) {
-    await sock.sendMessage(jid, { video: { url: url_midia }, caption: text });
+    await instance.sock.sendMessage(jid, { video: { url: url_midia }, caption: text });
   } else if (tipo === 'audio' && url_midia) {
-    await sock.sendMessage(jid, { audio: { url: url_midia }, mimetype: 'audio/mp4', ptt: true });
+    await instance.sock.sendMessage(jid, { audio: { url: url_midia }, mimetype: 'audio/mp4', ptt: true });
   } else {
-    await sock.sendMessage(jid, { text });
+    await instance.sock.sendMessage(jid, { text });
+  }
+
+  // Salvar no Histórico do CRM
+  try {
+    const msgDb = await prisma.mensagemWhatsApp.create({
+      data: {
+        campanha_id: campanhaId,
+        numero: number,
+        texto: tipo === 'text' ? text : `[Mídia: ${tipo}] ${text || ''}`,
+        is_from_me: true,
+        lida: true
+      }
+    });
+    // Avisar o frontend caso a caixa de entrada esteja aberta
+    if (ioInstance) {
+      ioInstance.to(campanhaId).emit('whatsapp:mensagem', msgDb);
+    }
+  } catch (err) {
+    console.error('Erro ao salvar mensagem no histórico:', err);
   }
 }
 
 /** Envia mídia a partir de um arquivo local (buffer) */
 export async function sendWhatsAppMediaFile(
+  campanhaId: string,
   number: string,
   filePath: string,
   mimetype: string,
   caption: string,
   tipo: string
 ) {
-  if (!sock?.user) throw new Error("WhatsApp não está conectado.");
+  const instance = instances.get(campanhaId);
+  if (!instance || !instance.sock?.user) throw new Error("WhatsApp não está conectado para esta campanha.");
   
-  const fs = await import('fs');
   const buffer = fs.readFileSync(filePath);
   const jid = `${number}@s.whatsapp.net`;
   
   if (tipo === 'image') {
-    await sock.sendMessage(jid, { image: buffer, mimetype, caption: caption || undefined });
+    await instance.sock.sendMessage(jid, { image: buffer, mimetype, caption: caption || undefined });
   } else if (tipo === 'video') {
-    await sock.sendMessage(jid, { video: buffer, mimetype, caption: caption || undefined });
+    await instance.sock.sendMessage(jid, { video: buffer, mimetype, caption: caption || undefined });
   } else if (tipo === 'audio') {
-    await sock.sendMessage(jid, { audio: buffer, mimetype: mimetype || 'audio/mp4', ptt: true });
+    await instance.sock.sendMessage(jid, { audio: buffer, mimetype: mimetype || 'audio/mp4', ptt: true });
   } else {
-    await sock.sendMessage(jid, { document: buffer, mimetype, fileName: `arquivo.${mimetype.split('/')[1] || 'bin'}` });
+    await instance.sock.sendMessage(jid, { document: buffer, mimetype, fileName: `arquivo.${mimetype.split('/')[1] || 'bin'}` });
+  }
+
+  try {
+    const msgDb = await prisma.mensagemWhatsApp.create({
+      data: {
+        campanha_id: campanhaId,
+        numero: number,
+        texto: `[Mídia: ${tipo}] ${caption || ''}`,
+        is_from_me: true,
+        lida: true
+      }
+    });
+    if (ioInstance) ioInstance.to(campanhaId).emit('whatsapp:mensagem', msgDb);
+  } catch (err) {
+    console.error('Erro ao salvar mídia enviada no histórico', err);
   }
 }

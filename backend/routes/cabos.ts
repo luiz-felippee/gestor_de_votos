@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../prismaClient';
-import { requireAuth, requireRole, optionalAuth, wrap, escopoCampanha, registrarLog, cadastroLimiter } from '../server';
+import { requireAuth, requireRole, optionalAuth, wrap, escopoCampanha, registrarLog, cadastroLimiter, requirePlanLimit } from '../middlewares';
 
 const cabosRouter = Router();
 
@@ -23,6 +23,7 @@ cabosRouter.post(
   '/cabos',
   requireAuth,
   requireRole('admin', 'coordenador'),
+  requirePlanLimit('cabos'),
   wrap(async (req, res) => {
     const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao, foto_url } = req.body ?? {};
     if (!nome || !telefone) return res.status(400).json({ error: 'Nome e telefone são obrigatórios.' });
@@ -52,6 +53,7 @@ cabosRouter.post(
 cabosRouter.post(
   '/cabos-public',
   cadastroLimiter,
+  requirePlanLimit('cabos'),
   wrap(async (req, res) => {
     const b = req.body ?? {};
     if (b.website) return res.status(201).json({ ok: true }); // honeypot

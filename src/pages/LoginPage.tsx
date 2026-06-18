@@ -97,7 +97,7 @@ export function LoginPage() {
       </div>
 
       {/* Lado Direito - Formulário */}
-      <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:w-[480px] xl:w-[560px] bg-white dark:bg-slate-950">
+      <div className="flex flex-1 flex-col justify-center px-6 py-12 sm:px-8 lg:flex-none lg:w-[480px] xl:w-[560px] bg-white dark:bg-slate-950">
         <div className="mx-auto w-full max-w-sm lg:w-[380px]">
           <div className="text-center lg:text-left mb-10">
             <div className="lg:hidden mb-8 flex items-center justify-center gap-3">
@@ -168,7 +168,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full justify-center rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-70 dark:focus:ring-offset-slate-950"
+                className="flex w-full justify-center rounded-xl bg-brand-600 px-4 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-70 dark:focus:ring-offset-slate-950"
               >
                 {loading ? 'Entrando...' : 'Entrar na Plataforma'}
               </button>
@@ -181,7 +181,7 @@ export function LoginPage() {
                 type="button"
                 onClick={handleSignup}
                 disabled={loading}
-                className="w-full justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80"
+                className="w-full justify-center rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80"
               >
                 Criar Nova Conta
               </button>

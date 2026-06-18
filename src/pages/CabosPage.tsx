@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { Copy, Link as LinkIcon, CheckCircle2 } from 'lucide-react'
+import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { useEleitores } from '../hooks/useEleitores'
@@ -187,13 +188,13 @@ export function CabosPage() {
       {/* Formulário de criação/edição */}
       <form
         onSubmit={salvar}
-        className="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        className="mb-8 rounded-xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
       >
         <h2 className="mb-5 text-lg font-bold text-slate-800 dark:text-slate-100">
           {editId ? 'Editar cabo' : 'Novo cabo'}
         </h2>
         
-        <div className="mb-6 flex items-start gap-4">
+        <div className="mb-6 flex flex-col sm:flex-row items-start gap-4">
           <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
             {arquivoFoto ? (
               <img src={URL.createObjectURL(arquivoFoto)} alt="Preview" className="h-full w-full object-cover" />
@@ -346,18 +347,18 @@ export function CabosPage() {
       </form>
 
       {/* Lista de cabos */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
           Lideranças Cadastradas ({cabos.length})
         </h2>
         
         {cabos.length > 0 && (
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <span className="text-slate-500">Organizar por:</span>
+          <div className="flex w-full sm:w-auto items-center gap-2 text-sm font-medium">
+            <span className="text-slate-500 whitespace-nowrap">Organizar por:</span>
             <select
               value={ordenacao}
               onChange={(e) => setOrdenacao(e.target.value as 'nome' | 'ranking')}
-              className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="w-full sm:w-auto rounded-lg border border-slate-200 bg-white px-2 py-1.5 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             >
               <option value="ranking">🏆 Mais Eleitores (Ranking)</option>
               <option value="nome">🔤 Ordem Alfabética</option>
@@ -403,10 +404,12 @@ function CardCabo({
 }) {
   const [copiado, setCopiado] = useState(false)
   const [mostrarQR, setMostrarQR] = useState(false)
+  const { usuario } = useAuth()
   
-  // Cria a url amigavel: dominio.com/edsonviera/joao-silva
+  // Cria a url amigavel: dominio.com/c/nome-campanha/joao-silva
   const slugLideranca = generateSlug(cabo.nome)
-  const link = `${window.location.origin}/edsonviera/${slugLideranca}`
+  const slugCampanha = usuario?.campanha_slug || 'gestor'
+  const link = `${window.location.origin}/c/${slugCampanha}/${slugLideranca}`
   
   const meta = cabo.meta_eleitores || 0
   const pct = meta > 0 ? Math.min(100, Math.round((realizado / meta) * 100)) : 0

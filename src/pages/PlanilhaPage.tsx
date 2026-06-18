@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { api } from '../lib/api'
 import { useEleitores } from '../hooks/useEleitores'
+import { useToast } from '../components/Toast'
 import { CIDADES, STATUS_OPTIONS, STATUS_STYLES } from '../lib/constants'
 import { formatDataHora, maskTelefone } from '../lib/format'
 import { exportarCSV, exportarXLSX } from '../lib/export'
@@ -26,6 +27,7 @@ interface Ordenacao {
 
 export function PlanilhaPage() {
   const { eleitores, loading, erro, recarregar } = useEleitores()
+  const { toast } = useToast()
 
   const [busca, setBusca] = useState('')
   const [filtroCidade, setFiltroCidade] = useState('')
@@ -119,9 +121,10 @@ export function PlanilhaPage() {
         titulo_eleitor: editForm.titulo_eleitor,
         data_nascimento: editForm.data_nascimento,
       })
+      toast('Eleitor atualizado com sucesso!', 'success')
       recarregar()
     } catch (err) {
-      alert(`Erro ao salvar: ${(err as Error).message}`)
+      toast(`Erro ao salvar: ${(err as Error).message}`, 'error')
       return
     }
     setEditId(null)
@@ -131,25 +134,27 @@ export function PlanilhaPage() {
   async function anonimizar(e: EleitorComCabo) {
     if (
       !confirm(
-        `Anonimizar "${e.nome}"?\nOs dados pessoais (nome, telefone) serão apagados permanentemente, mantendo apenas a estatística (LGPD).`
+        `Anonimizar "${e.nome}"?\nOs dados pessoais (nome, telefone, CPF, título, nascimento) serão apagados permanentemente, mantendo apenas a estatística (LGPD).`
       )
     )
       return
     try {
       await api.anonimizarEleitor(e.id)
+      toast('Dados anonimizados com sucesso (LGPD)', 'success')
       recarregar()
     } catch (err) {
-      alert(`Erro ao anonimizar: ${(err as Error).message}`)
+      toast(`Erro ao anonimizar: ${(err as Error).message}`, 'error')
     }
   }
 
   async function excluir(e: EleitorComCabo) {
-    if (!confirm(`Excluir o cadastro de "${e.nome}"?`)) return
+    if (!confirm(`Excluir o cadastro de "${e.nome}"? Esta ação é irreversível.`)) return
     try {
       await api.deleteEleitor(e.id)
+      toast('Eleitor excluído com sucesso', 'success')
       recarregar()
     } catch (err) {
-      alert(`Erro ao excluir: ${(err as Error).message}`)
+      toast(`Erro ao excluir: ${(err as Error).message}`, 'error')
     }
   }
 

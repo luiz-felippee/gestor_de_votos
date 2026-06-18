@@ -1,0 +1,76 @@
+<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo.css"></head>
+<body><div class="app">
+<div class="header"><div class="header-inner">
+  <div class="brand"><span class="brand-ico"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+    <span style="display:flex;flex-direction:column;line-height:1.15"><span>Gestor de Votos</span><span class="brand-sub">★ Campanha Miguel Coelho</span></span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <nav class="nav"><a href="#">Painel</a><a class="active" href="#">Eleitores</a><a href="#">Mapa</a><a href="#">Agenda</a>
+      <a href="#">Lideranças</a><a href="#">Campanhas</a><a href="#">Usuários</a><a href="#">WhatsApp</a><a href="#">Cadastro</a></nav>
+    <div class="user-box"><div><div class="user-name">Miguel Coelho</div><div class="user-role">admin</div></div>
+      <button class="icon-btn"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg></button>
+      <button class="btn-sair">Sair</button></div>
+  </div>
+</div></div>
+
+<div class="page">
+  <div class="row-between">
+    <div><h1 class="title">Planilha de Votação</h1>
+      <p class="subtitle">Exibindo 2.847 de 2.847 eleitores cadastrados &nbsp;<span class="live"><i></i> Sincronizado</span></p></div>
+    <div style="display:flex;gap:12px"><button class="btn btn-ghost">Exportar Excel</button><button class="btn btn-ghost">Exportar CSV</button></div>
+  </div>
+
+  <div class="filters">
+    <input class="search" value="Buscar nome, bairro, cidade, cabo..." style="color:var(--slate-400)">
+    <select class="select"><option>Cidades (Todas)</option></select>
+    <select class="select"><option>Status (Todos)</option></select>
+    <select class="select"><option>Bairros</option></select>
+    <select class="select"><option>Zonas</option></select>
+  </div>
+
+  <!-- barra de seleção -->
+  <div style="display:flex;justify-content:space-between;align-items:center;border:1px solid var(--brand-200);background:var(--brand-50);border-radius:12px;padding:12px 18px;margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:12px"><span style="display:flex;height:24px;width:24px;align-items:center;justify-content:center;border-radius:50%;background:var(--brand-500);color:#fff;font-size:12px;font-weight:700">3</span>
+      <span style="font-size:13.5px;font-weight:700;color:var(--brand-900)">eleitores selecionados</span></div>
+    <button class="btn btn-primary" style="font-size:13px">📣 Disparar WhatsApp</button>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th style="width:30px"><input type="checkbox"></th><th>Nome ▾</th><th>Telefone</th><th>Local / Zona / Seç.</th>
+        <th>Endereço</th><th>Indicação</th><th>Status</th><th>Data Cad.</th><th style="text-align:right">Ações</th></tr></thead>
+      <tbody>
+        <tr><td><input type="checkbox" checked></td><td class="name">José da Silva</td>
+          <td><b style="color:var(--slate-700)">(81) 99812-3344</b><div class="muted">CPF: 042.***.***-10</div></td>
+          <td><b style="color:var(--slate-700)">E.E. Pres. Kennedy</b><div class="zs">Z: 003 • S: 0142</div></td>
+          <td><b style="color:var(--slate-700)">Boa Viagem</b><div class="muted">RECIFE • NASC: 15/06/1979</div></td>
+          <td><span class="badge b-indic">👤 Maria Souza</span></td><td><span class="badge b-ativo">ativo</span></td><td class="muted">15/06 14:22</td><td style="text-align:right">✎ 🛡 🗑</td></tr>
+        <tr><td><input type="checkbox" checked></td><td class="name">Fernanda Rocha</td>
+          <td><b style="color:var(--slate-700)">(81) 98711-2090</b></td>
+          <td><b style="color:var(--slate-700)">Col. Estadual Centro</b><div class="zs">Z: 012 • S: 0098</div></td>
+          <td><b style="color:var(--slate-700)">Casa Amarela</b><div class="muted">RECIFE</div></td>
+          <td><span class="badge b-indic">👤 João Pereira</span></td><td><span class="badge b-pend">pendente</span></td><td class="muted">15/06 11:05</td><td style="text-align:right">✎ 🛡 🗑</td></tr>
+        <tr><td><input type="checkbox" checked></td><td class="name">Carlos Antônio</td>
+          <td><b style="color:var(--slate-700)">(81) 99654-7781</b></td>
+          <td><b style="color:var(--slate-700)">E.M. Olinda</b><div class="zs">Z: 021 • S: 0231</div></td>
+          <td><b style="color:var(--slate-700)">Várzea</b><div class="muted">OLINDA</div></td>
+          <td><span class="badge b-indic">👤 Ana Lima</span></td><td><span class="badge b-prov">provável</span></td><td class="muted">14/06 17:40</td><td style="text-align:right">✎ 🛡 🗑</td></tr>
+        <tr><td><input type="checkbox"></td><td class="name">Patrícia Gomes</td>
+          <td><b style="color:var(--slate-700)">(81) 99001-2233</b></td>
+          <td><b style="color:var(--slate-700)">E.E. Jaboatão</b><div class="zs">Z: 045 • S: 0512</div></td>
+          <td><b style="color:var(--slate-700)">Centro</b><div class="muted">JABOATÃO</div></td>
+          <td><span class="badge b-indic">👤 Carlos Dias</span></td><td><span class="badge b-ativo">ativo</span></td><td class="muted">14/06 09:18</td><td style="text-align:right">✎ 🛡 🗑</td></tr>
+        <tr><td><input type="checkbox"></td><td class="name">Roberto Nunes</td>
+          <td><b style="color:var(--slate-700)">(81) 98123-4567</b></td>
+          <td><b style="color:var(--slate-700)">Col. Paulista</b><div class="zs">Z: 067 • S: 0077</div></td>
+          <td><b style="color:var(--slate-700)">Janga</b><div class="muted">PAULISTA</div></td>
+          <td><span class="muted" style="font-style:italic">Sem Indicação</span></td><td><span class="badge b-ativo">ativo</span></td><td class="muted">13/06 20:51</td><td style="text-align:right">✎ 🛡 🗑</td></tr>
+      </tbody>
+    </table>
+    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--slate-200);background:var(--slate-50);padding:12px 18px">
+      <span class="muted">Página <b style="color:var(--slate-900)">1</b> de 57</span>
+      <div style="display:flex;gap:8px"><button class="btn btn-ghost" style="padding:6px 14px;font-size:13px;opacity:.5">Anterior</button><button class="btn btn-ghost" style="padding:6px 14px;font-size:13px">Próxima</button></div>
+    </div>
+  </div>
+</div>
+</div></body></html>

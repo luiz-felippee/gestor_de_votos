@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestor de Votos — A inteligência por trás de campanhas vitoriosas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --brand-300:#a5b4fc;--brand-400:#818cf8;--brand-500:#6366f1;--brand-600:#4f46e5;--brand-700:#4338ca;
+  --bg:#0b1020;--bg2:#0f172a;--card:#111a30;--line:rgba(148,163,184,.12);
+  --txt:#e7ecf6;--mut:#94a3b8;--mut2:#64748b;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+.grad-text{background:linear-gradient(120deg,#a5b4fc,#818cf8 40%,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* glow backgrounds */
+.glow{position:absolute;border-radius:50%;filter:blur(120px);opacity:.5;pointer-events:none;z-index:0}
+
+/* NAV */
+header.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,16,32,.7);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:11px;font-weight:800;font-size:19px;letter-spacing:-.02em}
+.logo .ico{height:38px;width:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--brand-500),var(--brand-700));box-shadow:0 10px 24px -8px rgba(99,102,241,.7)}
+.nav-links{display:flex;gap:30px;font-size:14.5px;font-weight:500;color:var(--mut)}
+.nav-links a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:11px;padding:11px 20px;font-weight:700;font-size:14.5px;cursor:pointer;border:0;transition:.2s;font-family:inherit}
+.btn-primary{background:linear-gradient(135deg,var(--brand-500),var(--brand-600));color:#fff;box-shadow:0 12px 30px -10px rgba(79,70,229,.8)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 38px -10px rgba(79,70,229,.9)}
+.btn-ghost{background:rgba(148,163,184,.08);color:var(--txt);border:1px solid var(--line)}
+.btn-ghost:hover{background:rgba(148,163,184,.16)}
+@media(max-width:860px){.nav-links{display:none}}
+
+/* HERO */
+.hero{position:relative;padding:96px 0 60px;text-align:center;overflow:hidden}
+.hero .glow.g1{top:-120px;left:50%;transform:translateX(-50%);width:680px;height:520px;background:#4f46e5}
+.hero .glow.g2{top:140px;right:-120px;width:420px;height:420px;background:#7c3aed;opacity:.35}
+.badge{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:var(--brand-300);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);padding:7px 16px;border-radius:99px;position:relative;z-index:2}
+.badge i{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.2)}
+h1.hero-t{position:relative;z-index:2;font-size:64px;line-height:1.05;font-weight:900;letter-spacing:-.03em;margin:26px auto 0;max-width:900px}
+.hero-sub{position:relative;z-index:2;max-width:620px;margin:24px auto 0;font-size:19px;line-height:1.6;color:var(--mut);font-weight:400}
+.hero-cta{position:relative;z-index:2;display:flex;gap:14px;justify-content:center;margin-top:36px;flex-wrap:wrap}
+.hero-shot{position:relative;z-index:2;margin:64px auto 0;max-width:1060px}
+@media(max-width:760px){h1.hero-t{font-size:40px}.hero-sub{font-size:17px}.hero{padding:64px 0 40px}}
+
+/* browser frame */
+.frame{border-radius:16px;overflow:hidden;border:1px solid rgba(148,163,184,.18);background:#0d1426;box-shadow:0 40px 90px -30px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.03)}
+.frame .bar{display:flex;align-items:center;gap:7px;padding:12px 16px;background:#0a1120;border-bottom:1px solid var(--line)}
+.frame .bar span{width:11px;height:11px;border-radius:50%;background:#283349}
+.frame .bar .url{margin-left:14px;flex:1;background:#11192c;border-radius:7px;height:24px;display:flex;align-items:center;padding:0 12px;font-size:12px;color:var(--mut2)}
+.frame img{display:block;width:100%;height:auto}
+
+/* stats */
+.stats{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;max-width:880px;margin:70px auto 0;text-align:center}
+.stats .n{font-size:38px;font-weight:900;letter-spacing:-.02em}
+.stats .l{font-size:13.5px;color:var(--mut);margin-top:4px;font-weight:500}
+@media(max-width:680px){.stats{grid-template-columns:repeat(2,1fr);gap:30px 16px}}
+
+/* sections */
+section{position:relative;padding:70px 0}
+.sec-head{text-align:center;max-width:680px;margin:0 auto 56px}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--brand-400)}
+.sec-head h2{font-size:40px;font-weight:800;letter-spacing:-.02em;margin-top:14px;line-height:1.12}
+.sec-head p{margin-top:16px;font-size:17px;color:var(--mut);line-height:1.6}
+@media(max-width:760px){.sec-head h2{font-size:30px}}
+
+/* feature rows */
+.feat{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;margin-bottom:96px}
+.feat:last-child{margin-bottom:0}
+.feat.rev .ftext{order:2}
+.feat .pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--brand-300);background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);padding:6px 13px;border-radius:99px}
+.feat h3{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:18px 0 16px;line-height:1.15}
+.feat p.lead{font-size:16.5px;color:var(--mut);line-height:1.65}
+.feat ul{list-style:none;margin-top:22px;display:flex;flex-direction:column;gap:13px}
+.feat li{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:#cbd5e1;line-height:1.5}
+.feat li svg{flex-shrink:0;margin-top:2px;color:#34d399}
+.feat .shot{position:relative}
+.feat .shot .glow{width:80%;height:70%;top:15%;left:10%;background:#4f46e5;opacity:.28}
+@media(max-width:860px){.feat{grid-template-columns:1fr;gap:34px;margin-bottom:64px}.feat.rev .ftext{order:0}.feat h3{font-size:25px}}
+
+/* grid de funcionalidades */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(255,255,255,0));border:1px solid var(--line);border-radius:18px;padding:26px;transition:.25s}
+.card:hover{border-color:rgba(99,102,241,.4);transform:translateY(-4px);background:linear-gradient(180deg,rgba(99,102,241,.08),rgba(255,255,255,0))}
+.card .ci{height:46px;width:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,.14);color:var(--brand-300);margin-bottom:18px}
+.card h4{font-size:18px;font-weight:700;margin-bottom:9px}
+.card p{font-size:14.5px;color:var(--mut);line-height:1.55}
+@media(max-width:860px){.cards{grid-template-columns:1fr}}
+
+/* perfis */
+.roles{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:10px}
+.role{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px}
+.role .rt{font-size:17px;font-weight:800;margin-bottom:10px}
+.role .rd{font-size:14px;color:var(--mut);line-height:1.55}
+.role.adm{border-color:rgba(99,102,241,.4);background:linear-gradient(180deg,rgba(99,102,241,.12),rgba(255,255,255,0))}
+@media(max-width:860px){.roles{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.roles{grid-template-columns:1fr}}
+
+/* CTA */
+.cta{position:relative;margin:30px 0 90px;border-radius:28px;overflow:hidden;border:1px solid rgba(99,102,241,.3);background:linear-gradient(135deg,#1a1b4b,#0f172a);padding:72px 32px;text-align:center}
+.cta .glow{top:-60px;left:50%;transform:translateX(-50%);width:560px;height:360px;background:#6366f1;opacity:.4}
+.cta h2{position:relative;z-index:2;font-size:42px;font-weight:900;letter-spacing:-.02em;line-height:1.1}
+.cta p{position:relative;z-index:2;color:var(--mut);font-size:18px;margin:18px auto 32px;max-width:540px}
+.cta .hero-cta{margin-top:0}
+@media(max-width:760px){.cta h2{font-size:30px}.cta{padding:52px 22px}}
+
+/* footer */
+footer{border-top:1px solid var(--line);padding:40px 0;color:var(--mut2);font-size:14px}
+.foot-in{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.tech{display:flex;gap:10px;flex-wrap:wrap}
+.tech span{font-size:12px;color:var(--mut);background:rgba(148,163,184,.08);border:1px solid var(--line);padding:5px 11px;border-radius:8px}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header class="nav"><div class="wrap nav-in">
+  <div class="logo"><span class="ico"><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>Gestor de Votos</div>
+  <nav class="nav-links"><a href="#recursos">Recursos</a><a href="#painel">Painel</a><a href="#mapa">Mapa</a><a href="#liderancas">Lideranças</a><a href="#whatsapp">WhatsApp</a><a href="#perfis">Perfis</a></nav>
+  <a class="btn btn-primary js-login" href="#cta">Entrar na Plataforma</a>
+</div></header>
+
+<!-- HERO -->
+<section class="hero"><div class="wrap">
+  <span class="glow g1"></span><span class="glow g2"></span>
+  <span class="badge"><i></i> Plataforma completa para campanhas políticas</span>
+  <h1 class="hero-t">A inteligência por trás de <span class="grad-text">campanhas vitoriosas</span>.</h1>
+  <p class="hero-sub">Cadastre eleitores em tempo real, organize suas lideranças, visualize sua força no mapa e converse pelo WhatsApp — tudo em um só lugar.</p>
+  <div class="hero-cta">
+    <a class="btn btn-primary js-login" href="#cta">Começar agora</a>
+    <a class="btn btn-ghost" href="#recursos">Ver recursos &nbsp;↓</a>
+  </div>
+
+  <div class="hero-shot">
+    <div class="frame">
+      <div class="bar"><span></span><span></span><span></span><div class="url">app.gestordevotos.com/dashboard</div></div>
+      <img src="imagens/01-dashboard.png" alt="Painel do Gestor de Votos">
+    </div>
+  </div>
+
+  <div class="stats">
+    <div><div class="n grad-text">Tempo&nbsp;real</div><div class="l">Cada cadastro aparece na hora</div></div>
+    <div><div class="n grad-text">100%</div><div class="l">Dados isolados por campanha</div></div>
+    <div><div class="n grad-text">LGPD</div><div class="l">Consentimento e auditoria</div></div>
+    <div><div class="n grad-text">WhatsApp</div><div class="l">Disparos individuais e em massa</div></div>
+  </div>
+</div></section>
+
+<!-- RECURSOS HEAD -->
+<section id="recursos" style="padding-bottom:20px"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">Tudo o que a campanha precisa</div>
+    <h2>Da captação do eleitor à apuração da força no mapa</h2>
+    <p>Um sistema pensado para o dia a dia de candidatos, coordenadores e cabos eleitorais — simples para quem está na rua, poderoso para quem comanda.</p>
+  </div>
+</div></section>
+
+<!-- FEATURE: PAINEL -->
+<section id="painel" style="padding-top:10px"><div class="wrap">
+  <div class="feat">
+    <div class="ftext">
+      <span class="pill">📊 Painel de comando</span>
+      <h3>Toda a campanha em uma única tela</h3>
+      <p class="lead">Indicadores, gráficos e ranking atualizados automaticamente. Saiba quantos eleitores você tem, onde eles estão e quais lideranças mais produzem.</p>
+      <ul>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Total de eleitores, cidades, bairros e cabos ativos</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Gráficos por cidade, zona, bairros e cadastros por dia</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Ranking de cabos (meta × realizado) e aniversariantes</li>
+      </ul>
+    </div>
+    <div class="shot"><span class="glow"></span>
+      <div class="frame"><div class="bar"><span></span><span></span><span></span><div class="url">/dashboard</div></div>
+        <img src="imagens/01-dashboard.png" alt="Painel"></div>
+    </div>
+  </div>
+
+  <!-- FEATURE: ELEITORES -->
+  <div class="feat rev">
+    <div class="ftext">
+      <span class="pill">🗂️ Base de eleitores</span>
+      <h3>Planilha viva, atualizada em tempo real</h3>
+      <p class="lead">Toda a sua base em uma planilha que sincroniza sozinha. Busque, filtre, edite e exporte sem sair da tela.</p>
+      <ul>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Busca e filtros por cidade, status, bairro e zona</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Edição inline, exportação em Excel e CSV</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> WhatsApp individual ou disparo em massa selecionando vários</li>
+      </ul>
+    </div>
+    <div class="shot"><span class="glow"></span>
+      <div class="frame"><div class="bar"><span></span><span></span><span></span><div class="url">/planilha</div></div>
+        <img src="imagens/03-planilha.png" alt="Planilha de eleitores"></div>
+    </div>
+  </div>
+
+  <!-- FEATURE: MAPA -->
+  <div class="feat" id="mapa">
+    <div class="ftext">
+      <span class="pill">🗺️ Mapa de força</span>
+      <h3>Veja onde sua campanha é forte</h3>
+      <p class="lead">Mapa de calor e mapa pintado de Pernambuco mostram a concentração de eleitores por município e bairro. Filtre por cabo e por período.</p>
+      <ul>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Mapa de calor e coroplético (mapa pintado)</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Ranking de municípios e bairros quentes com drill-down</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Exportação do mapa como imagem para apresentações</li>
+      </ul>
+    </div>
+    <div class="shot"><span class="glow"></span>
+      <div class="frame"><div class="bar"><span></span><span></span><span></span><div class="url">/mapa</div></div>
+        <img src="imagens/04-mapa.png" alt="Mapa de força"></div>
+    </div>
+  </div>
+
+  <!-- FEATURE: LIDERANÇAS -->
+  <div class="feat rev" id="liderancas">
+    <div class="ftext">
+      <span class="pill">🤝 Lideranças</span>
+      <h3>Cada cabo com sua meta e seu link próprio</h3>
+      <p class="lead">Cadastre seus cabos eleitorais, defina metas e dê a cada um um link e QR Code personalizados. Todo cadastro feito por ele já entra vinculado automaticamente.</p>
+      <ul>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Ranking com medalhas e barra de progresso da meta</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Link amigável + QR Code para compartilhar e imprimir</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Link público para novas lideranças se cadastrarem sozinhas</li>
+      </ul>
+    </div>
+    <div class="shot"><span class="glow"></span>
+      <div class="frame"><div class="bar"><span></span><span></span><span></span><div class="url">/cabos</div></div>
+        <img src="imagens/05-cabos.png" alt="Gestão de lideranças"></div>
+    </div>
+  </div>
+
+  <!-- FEATURE: CADASTRO -->
+  <div class="feat">
+    <div class="ftext">
+      <span class="pill">📝 Cadastro público</span>
+      <h3>Captação de eleitores feita para o celular</h3>
+      <p class="lead">Um formulário leve e seguro que seus cabos compartilham no WhatsApp. Preenche bairro e cidade pelo CEP e já vincula a indicação automaticamente.</p>
+      <ul>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Máscaras, validação e busca de endereço por CEP</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Indicação travada quando aberto pelo link do cabo</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Anti-robô, rejeição de duplicados e consentimento LGPD</li>
+      </ul>
+    </div>
+    <div class="shot"><span class="glow"></span>
+      <div class="frame"><div class="bar"><span></span><span></span><span></span><div class="url">/cadastro</div></div>
+        <img src="imagens/06-cadastro.png" alt="Cadastro público de eleitor"></div>
+    </div>
+  </div>
+
+  <!-- FEATURE: WHATSAPP -->
+  <div class="feat rev" id="whatsapp">
+    <div class="ftext">
+      <span class="pill">💬 WhatsApp automático</span>
+      <h3>Fale com seus eleitores em escala</h3>
+      <p class="lead">Conecte um robô e envie mensagens, fotos, vídeos e áudios reais direto pelo sistema — por API externa ou pelo seu próprio servidor via QR Code.</p>
+      <ul>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> API externa (Z-API, Evolution) para alto volume</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Robô interno gratuito conectado por QR Code</li>
+        <li><svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Convites por bairro a partir da agenda de eventos</li>
+      </ul>
+    </div>
+    <div class="shot"><span class="glow"></span>
+      <div class="frame"><div class="bar"><span></span><span></span><span></span><div class="url">/whatsapp</div></div>
+        <img src="imagens/11-whatsapp.png" alt="Central de WhatsApp"></div>
+    </div>
+  </div>
+</div></section>
+
+<!-- GRID DE FUNCIONALIDADES -->
+<section><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">E ainda mais</div>
+    <h2>Recursos para organizar e proteger a campanha</h2>
+  </div>
+  <div class="cards">
+    <div class="card"><div class="ci">📅</div><h4>Agenda de Reuniões</h4><p>Cadastre eventos e convide automaticamente todos os eleitores de um bairro pelo WhatsApp.</p></div>
+    <div class="card"><div class="ci">🏛️</div><h4>Multi-campanha</h4><p>Cada candidato é uma campanha isolada, com seus próprios eleitores, cabos e usuários totalmente separados.</p></div>
+    <div class="card"><div class="ci">👥</div><h4>Gestão de Usuários</h4><p>Crie acessos para a equipe com perfis de permissão e vincule cabos aos seus próprios eleitores.</p></div>
+    <div class="card"><div class="ci">🛡️</div><h4>Auditoria & LGPD</h4><p>Registro das ações do sistema e anonimização de dados pessoais para conformidade legal.</p></div>
+    <div class="card"><div class="ci">⭐</div><h4>Cadastro de Lideranças</h4><p>Página pública onde novas lideranças se cadastram e já recebem seu link de indicação na hora.</p></div>
+    <div class="card"><div class="ci">🌗</div><h4>Modo claro e escuro</h4><p>Interface moderna e responsável que funciona perfeitamente no computador e no celular.</p></div>
+  </div>
+</div></section>
+
+<!-- PERFIS -->
+<section id="perfis"><div class="wrap">
+  <div class="sec-head">
+    <div class="eyebrow">Controle de acesso</div>
+    <h2>Cada pessoa vê exatamente o que precisa</h2>
+    <p>Permissões validadas no servidor e refletidas na interface, do candidato ao cabo na rua.</p>
+  </div>
+  <div class="roles">
+    <div class="role adm"><div class="rt">Administrador</div><div class="rd">Acesso total: painel, eleitores, mapa, lideranças, usuários, auditoria e WhatsApp.</div></div>
+    <div class="role"><div class="rt">Coordenador</div><div class="rd">Painel, eleitores (ler e editar), mapa, agenda e gestão de lideranças.</div></div>
+    <div class="role"><div class="rt">Cabo eleitoral</div><div class="rd">Vê apenas os próprios eleitores indicados, com seu link de captação.</div></div>
+    <div class="role"><div class="rt">Visualizador</div><div class="rd">Painel e planilha em modo somente leitura, sem editar nada.</div></div>
+  </div>
+</div></section>
+
+<!-- CTA -->
+<div class="wrap"><div class="cta" id="cta">
+  <span class="glow"></span>
+  <h2>Pronto para organizar sua campanha?</h2>
+  <p>Centralize eleitores, lideranças e comunicação em uma plataforma feita para vencer.</p>
+  <div class="hero-cta">
+    <a class="btn btn-primary js-login" href="#cta">Entrar na Plataforma</a>
+    <a class="btn btn-ghost" href="#recursos">Conhecer os recursos</a>
+  </div>
+</div></div>
+
+<!-- FOOTER -->
+<footer><div class="wrap foot-in">
+  <div class="logo" style="font-size:17px"><span class="ico" style="height:32px;width:32px"><svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>Gestor de Votos</div>
+  <div class="tech"><span>React</span><span>TypeScript</span><span>Node + Express</span><span>PostgreSQL</span><span>Socket.io</span><span>Tailwind</span></div>
+  <div>© 2026 Gestor de Votos</div>
+</div></footer>
+
+<script>
+  /* =========================================================
+     >>> ÚNICA LINHA PARA EDITAR <<<
+     Troque o endereço abaixo pela URL real do seu app no Netlify.
+     Exemplos: "https://gestordevotos.netlify.app"
+               "https://app.seudominio.com.br"
+     ========================================================= */
+  var APP_URL = "https://gestordevotos.netlify.app";
+
+  var destinoLogin = APP_URL.replace(/\/$/, "") + "/login";
+  document.querySelectorAll(".js-login").forEach(function (a) {
+    a.setAttribute("href", destinoLogin);
+  });
+</script>
+</body>
+</html>

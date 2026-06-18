@@ -1,0 +1,51 @@
+<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo.css"></head>
+<body><div class="app">
+<div class="header"><div class="header-inner">
+  <div class="brand"><span class="brand-ico"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+    <span style="display:flex;flex-direction:column;line-height:1.15"><span>Gestor de Votos</span><span class="brand-sub">★ Super Admin</span></span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <nav class="nav"><a href="#">Painel</a><a href="#">Eleitores</a><a href="#">Mapa</a><a href="#">Agenda</a>
+      <a href="#">Lideranças</a><a class="active" href="#">Campanhas</a><a href="#">Usuários</a><a href="#">WhatsApp</a><a href="#">Cadastro</a></nav>
+    <div class="user-box"><div><div class="user-name">Super Admin</div><div class="user-role">admin</div></div>
+      <button class="icon-btn"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg></button>
+      <button class="btn-sair">Sair</button></div>
+  </div>
+</div></div>
+
+<div class="page-narrow">
+  <h1 class="title">Campanhas</h1>
+  <p class="subtitle" style="margin-bottom:28px">Cada campanha é um candidato isolado — vê apenas os próprios dados. Crie a campanha e o login do administrador dela aqui.</p>
+
+  <div class="panel" style="margin-bottom:28px">
+    <h2 style="margin-bottom:18px">Nova campanha (candidato)</h2>
+    <div style="display:flex;gap:16px;align-items:center;margin-bottom:18px">
+      <div style="height:80px;width:80px;border-radius:50%;border:2px solid var(--slate-200);background:var(--slate-50);display:flex;align-items:center;justify-content:center;color:var(--slate-300);font-size:26px">🖼</div>
+      <div class="field" style="flex:1;margin:0"><label>Foto do Candidato</label><span style="display:inline-block;background:var(--brand-50);color:var(--brand-700);font-weight:700;font-size:13px;padding:8px 14px;border-radius:9px">Escolher arquivo</span></div>
+    </div>
+    <div class="grid g2">
+      <div class="field"><label>Nome da campanha / candidato *</label><input class="input" value="Miguel Coelho"></div>
+      <div class="field"><label>Cargo na Última Eleição</label><input class="input" value="Governador"></div>
+      <div class="field"><label>Ano da Última Eleição</label><input class="input" value="2022"></div>
+      <div class="field"><label>Quantidade de Votos na Última</label><input class="input" value="884941"></div>
+    </div>
+    <h3 style="margin:18px 0 12px;font-size:13.5px;font-weight:700;color:var(--slate-800);border-bottom:1px solid var(--slate-200);padding-bottom:8px">Dados de Acesso (Administrador)</h3>
+    <div class="grid g3">
+      <div class="field"><label>Nome do administrador</label><input class="input" value="Miguel Coelho"></div>
+      <div class="field"><label>E-mail de login *</label><input class="input" value="miguel@campanha.com.br"></div>
+      <div class="field"><label>Senha inicial *</label><input class="input" value="senha-forte-2026"></div>
+    </div>
+    <button class="btn btn-primary">Criar campanha</button>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Campanha</th><th>Eleitores</th><th>Usuários</th><th>Criada em</th><th style="text-align:right">Ações</th></tr></thead>
+      <tbody>
+        <tr><td class="name">Miguel Coelho <span class="chip chip-brand" style="font-size:10px">A SUA</span></td><td><b style="color:var(--brand-600)">2.847</b></td><td>8</td><td class="muted">10/01/2026 09:30</td><td style="text-align:right"></td></tr>
+        <tr><td class="name">Ana Carolina Prefeita</td><td><b style="color:var(--brand-600)">1.204</b></td><td>5</td><td class="muted">22/02/2026 14:10</td><td style="text-align:right"><span style="color:var(--red-600);font-weight:600">Excluir</span></td></tr>
+        <tr><td class="name">Dr. Paulo Deputado</td><td><b style="color:var(--brand-600)">5.910</b></td><td>14</td><td class="muted">05/03/2026 11:45</td><td style="text-align:right"><span style="color:var(--red-600);font-weight:600">Excluir</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div></body></html>

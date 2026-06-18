@@ -15,6 +15,10 @@ export function WhatsAppPage() {
   const [apiToken, setApiToken] = useState('')
   const [apiInstanciaId, setApiInstanciaId] = useState('')
 
+  // Campos do Chatbot / CRM
+  const [msgBoasVindas, setMsgBoasVindas] = useState('')
+  const [ativarChatbot, setAtivarChatbot] = useState(false)
+
   const [botStatus, setBotStatus] = useState<string>('desconectado')
   const [botQrCode, setBotQrCode] = useState<string | null>(null)
 
@@ -25,6 +29,8 @@ export function WhatsAppPage() {
       setApiUrl(data.api_url || '')
       setApiToken(data.api_token || '')
       setApiInstanciaId(data.api_instancia_id || '')
+      setMsgBoasVindas(data.msg_boas_vindas || '')
+      setAtivarChatbot(data.ativar_chatbot || false)
       
       if (data.modo === 'interno') {
         fetchStatusInterno()
@@ -45,6 +51,8 @@ export function WhatsAppPage() {
         api_url: apiUrl,
         api_token: apiToken,
         api_instancia_id: apiInstanciaId,
+        msg_boas_vindas: msgBoasVindas,
+        ativar_chatbot: ativarChatbot
       }
       const data = await api.updateConfigWhatsApp(payload)
       setConfig(data)
@@ -207,6 +215,51 @@ export function WhatsAppPage() {
               </button>
             </div>
           )}
+        </div>
+      </div>
+      
+      {/* SEÇÃO CHATBOT E CRM */}
+      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-lg font-bold text-slate-800 mb-2 dark:text-slate-200">🤖 Chatbot & Atendimento</h2>
+        <p className="text-sm text-slate-600 mb-6 dark:text-slate-400">Configure automações e mensagens automáticas para os eleitores.</p>
+        
+        <div className="grid gap-6 md:grid-cols-2">
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Mensagem de Boas-vindas (Cadastro)</span>
+            <p className="text-xs text-slate-500 mb-2">Enviada automaticamente quando um novo eleitor é cadastrado. Use {'{{nome}}'} para personalizar.</p>
+            <textarea 
+              rows={4}
+              className={inputClass} 
+              value={msgBoasVindas} 
+              onChange={e => setMsgBoasVindas(e.target.value)} 
+              placeholder="Olá {{nome}}! Seja bem-vindo à nossa base." 
+            />
+          </label>
+
+          <div>
+            <label className="flex items-center gap-3 cursor-pointer p-4 border border-slate-200 rounded-lg dark:border-slate-700">
+              <input 
+                type="checkbox" 
+                className="w-5 h-5 rounded text-brand-600 focus:ring-brand-500 bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-600" 
+                checked={ativarChatbot}
+                onChange={e => setAtivarChatbot(e.target.checked)}
+              />
+              <div>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">Ativar Autoatendimento (Chatbot)</span>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Responde automaticamente quando o eleitor puxar assunto com seu número.
+                </p>
+              </div>
+            </label>
+            
+            <button
+              onClick={() => salvar(config?.modo || 'nenhum')}
+              disabled={saving}
+              className="mt-4 w-full py-2.5 rounded-lg bg-slate-800 text-white font-semibold text-sm hover:bg-slate-900 transition dark:bg-slate-700 dark:hover:bg-slate-600"
+            >
+              Salvar Automações
+            </button>
+          </div>
         </div>
       </div>
       

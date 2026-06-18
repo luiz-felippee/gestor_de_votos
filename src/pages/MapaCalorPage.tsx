@@ -311,7 +311,7 @@ export function MapaCalorPage() {
         </p>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total de Eleitores" value={totalEleitores} />
         <StatCard label="Municípios Alcançados" value={contagemPorCidade.size} />
         <StatCard label="Bairros Mapeados" value={bairrosList.length} />

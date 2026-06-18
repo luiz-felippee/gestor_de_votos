@@ -1,0 +1,87 @@
+<!doctype html><html lang="pt-br"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo.css"></head>
+<body><div class="app">
+<div class="header"><div class="header-inner">
+  <div class="brand"><span class="brand-ico"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+    <span style="display:flex;flex-direction:column;line-height:1.15"><span>Gestor de Votos</span><span class="brand-sub">★ Campanha Miguel Coelho</span></span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <nav class="nav"><a href="#">Painel</a><a href="#">Eleitores</a><a href="#">Mapa</a><a href="#">Agenda</a>
+      <a class="active" href="#">Lideranças</a><a href="#">Campanhas</a><a href="#">Usuários</a><a href="#">WhatsApp</a><a href="#">Cadastro</a></nav>
+    <div class="user-box"><div><div class="user-name">Miguel Coelho</div><div class="user-role">admin</div></div>
+      <button class="icon-btn"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg></button>
+      <button class="btn-sair">Sair</button></div>
+  </div>
+</div></div>
+
+<div class="page-narrow">
+  <div class="row-between">
+    <div><h1 class="title">Gestão de Liderança</h1><p class="subtitle">Cadastre cabos, defina metas e compartilhe o link personalizado de cadastro.</p></div>
+    <div style="display:flex;align-items:center;gap:12px;border:1px solid var(--brand-200);background:var(--brand-50);border-radius:12px;padding:10px 16px">
+      <div style="height:40px;width:40px;border-radius:9px;background:var(--brand-100);display:flex;align-items:center;justify-content:center;color:var(--brand-600);font-size:18px">🔗</div>
+      <div><p style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--brand-600)">Link Público</p><p style="font-size:13px;font-weight:600;color:var(--brand-900)">Convide novas lideranças</p></div>
+      <button class="btn btn-ghost" style="padding:8px 14px;font-size:13px">📋 Copiar Link</button></div>
+  </div>
+
+  <!-- Formulário -->
+  <div class="panel" style="margin-bottom:28px">
+    <h2 style="margin-bottom:18px">Novo cabo</h2>
+    <div style="display:flex;gap:16px;align-items:flex-start;margin-bottom:18px">
+      <div style="height:80px;width:80px;border-radius:50%;border:2px solid var(--slate-200);background:var(--slate-50);display:flex;align-items:center;justify-content:center;color:var(--slate-300);font-size:26px">🖼</div>
+      <div style="flex:1"><div class="field"><label>Foto da Liderança (Obrigatório)</label>
+        <span style="display:inline-block;background:var(--brand-50);color:var(--brand-700);font-weight:700;font-size:13px;padding:8px 14px;border-radius:9px">Escolher arquivo</span>
+        <p class="muted" style="margin-top:6px">Envie uma foto clara do rosto (JPG ou PNG).</p></div></div>
+    </div>
+    <div class="grid g2">
+      <div class="field"><label>Nome completo</label><input class="input" value="Maria Souza"></div>
+      <div class="field"><label>Telefone / WhatsApp</label><input class="input" value="(81) 99988-7766"></div>
+      <div class="field"><label>Bairro de atuação</label><input class="input" value="Boa Viagem"></div>
+      <div class="field"><label>Cidade</label><input class="input" value="Recife"></div>
+      <div class="field"><label>Meta de eleitores</label><input class="input" value="150"></div>
+      <div class="field"><label>Data de Nascimento (Opcional)</label><input class="input" value="12/03/1985"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:6px">Adicionar cabo</button>
+  </div>
+
+  <div class="row-between" style="margin-bottom:16px"><h2 style="font-size:17px;font-weight:700;color:var(--slate-800)">Lideranças Cadastradas (34)</h2>
+    <select class="select" style="background:#fff;border:1px solid var(--slate-200)"><option>🏆 Mais Eleitores (Ranking)</option></select></div>
+
+  <div class="cardgrid">
+    <!-- card 1 -->
+    <div class="cabo-card"><div class="cabo-top">
+      <div style="display:flex;justify-content:space-between">
+        <div style="display:flex;gap:14px;align-items:center">
+          <div style="position:relative"><div class="avatar">MS</div>
+            <div style="position:absolute;bottom:-4px;right:-4px;height:20px;width:20px;border-radius:50%;background:#facc15;color:#713f12;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">1</div></div>
+          <div><h3 style="font-size:15px;font-weight:700;color:var(--slate-800)">Maria Souza <span class="chip" style="background:#ccfbf1;color:#0f766e">Vereadora (2020) - 820 votos</span></h3>
+            <p class="muted" style="margin-top:3px">📞 (81) 99988-7766</p></div></div>
+      </div>
+      <p style="margin-top:16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--slate-400)">📍 Boa Viagem · Recife</p>
+      <div style="margin-top:20px;border-radius:12px;background:var(--slate-50);padding:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px">
+          <div><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--slate-400)">Progresso</span><br><b style="color:var(--slate-700)">142 <span class="muted">/ 150 eleitores</span></b></div>
+          <b style="color:var(--brand-500)">95%</b></div>
+        <div class="track"><div class="fill" style="width:95%"></div></div></div>
+    </div>
+    <div class="cabo-foot"><div class="linkbox"><div class="linkfield">gestordevotos.app/miguelcoelho/maria-souza</div>
+      <button class="btn btn-ghost" style="padding:8px 12px;font-size:12px">Copiar</button><button class="btn btn-ghost" style="padding:8px 11px;font-size:12px">▦</button></div></div></div>
+
+    <!-- card 2 -->
+    <div class="cabo-card"><div class="cabo-top">
+      <div style="display:flex;justify-content:space-between">
+        <div style="display:flex;gap:14px;align-items:center">
+          <div style="position:relative"><div class="avatar" style="background:linear-gradient(135deg,#818cf8,#4f46e5)">JP</div>
+            <div style="position:absolute;bottom:-4px;right:-4px;height:20px;width:20px;border-radius:50%;background:#cbd5e1;color:#334155;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900">2</div></div>
+          <div><h3 style="font-size:15px;font-weight:700;color:var(--slate-800)">João Pereira</h3>
+            <p class="muted" style="margin-top:3px">📞 (81) 98822-1100</p></div></div>
+      </div>
+      <p style="margin-top:16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--slate-400)">📍 Casa Amarela · Recife</p>
+      <div style="margin-top:20px;border-radius:12px;background:var(--slate-50);padding:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px">
+          <div><span style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--slate-400)">Progresso</span><br><b style="color:var(--slate-700)">118 <span class="muted">/ 150 eleitores</span></b></div>
+          <b style="color:var(--brand-500)">79%</b></div>
+        <div class="track"><div class="fill" style="width:79%"></div></div></div>
+    </div>
+    <div class="cabo-foot"><div class="linkbox"><div class="linkfield">gestordevotos.app/miguelcoelho/joao-pereira</div>
+      <button class="btn btn-ghost" style="padding:8px 12px;font-size:12px">Copiar</button><button class="btn btn-ghost" style="padding:8px 11px;font-size:12px">▦</button></div></div></div>
+  </div>
+</div>
+</div></body></html>

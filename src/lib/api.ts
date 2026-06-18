@@ -9,6 +9,7 @@ import type {
   Evento,
   LogAuditoria,
   Campanha,
+  MensagemWhatsApp,
 } from './types'
 
 export const API_BASE =
@@ -88,7 +89,7 @@ export const api = {
     request<CaboEleitoral>(`/cabos/${id}`, { method: 'PUT', body: data }),
   deleteCabo: (id: string) =>
     request<void>(`/cabos/${id}`, { method: 'DELETE' }),
-  createCaboPublic: async (dados: Partial<CaboEleitoral> & { website?: string }) => {
+  createCaboPublic: async (dados: Partial<CaboEleitoral> & { website?: string; campanha_slug?: string }) => {
     const res = await fetch(`${API_BASE}/api/cabos-public`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,6 +120,11 @@ export const api = {
 
   // ---- Campanhas (super-admin) ----
   getCampanhas: () => request<Campanha[]>('/campanhas'),
+  getCampanhaPublic: async (slug: string) => {
+    const res = await fetch(`${API_BASE}/api/campanhas-public/${slug}`)
+    if (!res.ok) throw new Error('Campanha não encontrada')
+    return res.json() as Promise<Partial<Campanha>>
+  },
   createCampanha: (data: unknown) =>
     request<Campanha>('/campanhas', { method: 'POST', body: data }),
   updateCampanha: (id: string, data: Partial<Campanha>) =>
@@ -136,7 +142,36 @@ export const api = {
     request<void>(`/usuarios/${id}`, { method: 'DELETE' }),
 
   // ---- Eleitores ----
-  getEleitores: () => request<EleitorComCabo[]>('/eleitores'),
+  getEleitores: async (params?: { page?: number; limit?: number; busca?: string; cidade?: string; bairro?: string; status?: string; cabo_id?: string; zona?: number }) => {
+    const query = new URLSearchParams()
+    if (params?.page) query.set('page', String(params.page))
+    if (params?.limit) query.set('limit', String(params.limit))
+    if (params?.busca) query.set('busca', params.busca)
+    if (params?.cidade) query.set('cidade', params.cidade)
+    if (params?.bairro) query.set('bairro', params.bairro)
+    if (params?.status) query.set('status', params.status)
+    if (params?.cabo_id) query.set('cabo_id', params.cabo_id)
+    if (params?.zona) query.set('zona', String(params.zona))
+    const qs = query.toString()
+    const res = await request<{ data: EleitorComCabo[]; total: number; page: number; limit: number; totalPages: number }>(`/eleitores${qs ? `?${qs}` : ''}`)
+    return res
+  },
+  /** Busca TODOS os eleitores (sem paginação), para páginas que precisam da lista completa (mapa, cabos, eventos). */
+  getAllEleitores: async () => {
+    const res = await request<{ data: EleitorComCabo[]; total: number }>('/eleitores?limit=200&page=1')
+    // Se houver mais que 200, busca em lotes
+    const all = [...res.data]
+    if (res.total > 200) {
+      const totalPages = Math.ceil(res.total / 200)
+      const promises = []
+      for (let p = 2; p <= totalPages; p++) {
+        promises.push(request<{ data: EleitorComCabo[] }>(`/eleitores?limit=200&page=${p}`))
+      }
+      const results = await Promise.all(promises)
+      for (const r of results) all.push(...r.data)
+    }
+    return all
+  },
   getDashboardStats: (query: string = '') => request<any>(`/dashboard/stats${query}`),
   createEleitor: (data: unknown) =>
     request<EleitorComCabo>('/eleitores', { method: 'POST', body: data }),
@@ -153,9 +188,15 @@ export const api = {
   getBairros: () => request<string[]>('/bairros'),
 
   // ---- Configurações WhatsApp ----
-  getConfigWhatsApp: () => request<ConfiguracaoWhatsApp>('/config/whatsapp'),
+  getConfigWhatsApp: () => request<ConfiguracaoWhatsApp>('/whatsapp/config'),
   updateConfigWhatsApp: (data: Partial<ConfiguracaoWhatsApp>) =>
-    request<ConfiguracaoWhatsApp>('/config/whatsapp', { method: 'PUT', body: data }),
+    request<ConfiguracaoWhatsApp>('/whatsapp/config', { method: 'POST', body: data }),
+  
+  // ---- CRM Inbox WhatsApp ----
+  fetchWhatsAppChats: () => request<any[]>('/whatsapp/chats'),
+  fetchWhatsAppChatHistory: (numero: string) => request<MensagemWhatsApp[]>(`/whatsapp/chats/${numero}`),
+  sendWhatsApp: (numero: string, texto: string) =>
+    request<{ success: boolean }>('/whatsapp/send', { method: 'POST', body: { numero, texto, tipo: 'text' } }),
 
   // ---- Eventos ----
   getEventos: () => request<Evento[]>('/eventos'),
@@ -165,4 +206,8 @@ export const api = {
     request<Evento>(`/eventos/${id}`, { method: 'PUT', body: data }),
   deleteEvento: (id: string) =>
     request<void>(`/eventos/${id}`, { method: 'DELETE' }),
+
+  // ---- Assinaturas (Billing) ----
+  billingCheckout: (planoId: string) => request<{ url: string }>('/billing/checkout', { method: 'POST', body: { planoId } }),
+  billingPortal: () => request<{ url: string }>('/billing/portal', { method: 'POST' }),
 }

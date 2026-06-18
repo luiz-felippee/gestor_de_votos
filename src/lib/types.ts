@@ -11,6 +11,7 @@ export interface Usuario {
   campanha_id?: string | null
   super_admin?: boolean
   campanha_nome?: string | null
+  campanha_slug?: string | null
 }
 
 /** Campanha (candidato) — visão do super-admin. */
@@ -62,6 +63,7 @@ export interface Eleitor {
 
 export interface CaboEleitoral {
   id: string
+  campanha_id?: string | null
   nome: string
   telefone: string
   bairro_atuacao?: string
@@ -87,7 +89,20 @@ export interface ConfiguracaoWhatsApp {
   api_url: string | null
   api_token: string | null
   api_instancia_id: string | null
+  msg_boas_vindas: string | null
+  ativar_chatbot: boolean
+  fluxo_chatbot: any | null
   updated_at: string
+}
+
+export interface MensagemWhatsApp {
+  id: string
+  campanha_id: string
+  numero: string
+  texto: string
+  is_from_me: boolean
+  lida: boolean
+  created_at: string
 }
 
 export interface LogAuditoria {

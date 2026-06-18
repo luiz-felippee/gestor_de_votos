@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { CheckCircle2, Users } from 'lucide-react'
+import { useParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { CIDADES } from '../lib/constants'
-import { maskTelefone, isTelefoneValido } from '../lib/format'
+import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
 import { compressImage } from '../lib/imageOptimization'
+import type { Campanha } from '../lib/types'
 
 interface FormState {
   nome: string
@@ -30,12 +32,22 @@ const VAZIO: FormState = {
 }
 
 export function CadastroLiderancaPage() {
+  const { campanhaSlug } = useParams() // Rota: /c/:campanhaSlug/cadastro-lideranca
   const [form, setForm] = useState<FormState>(VAZIO)
   const [website, setWebsite] = useState('') // honeypot (anti-robô)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState(false)
+  const [linkGerado, setLinkGerado] = useState<string | null>(null)
   const [arquivoFoto, setArquivoFoto] = useState<File | null>(null)
+
+  // Busca dados públicos da campanha
+  const [campanha, setCampanha] = useState<Partial<Campanha> | null>(null)
+  useEffect(() => {
+    if (campanhaSlug) {
+      api.getCampanhaPublic(campanhaSlug).then(setCampanha).catch(() => {})
+    }
+  }, [campanhaSlug])
 
   function atualizar<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((f) => ({ ...f, [campo]: valor }))
@@ -61,7 +73,7 @@ export function CadastroLiderancaPage() {
     try {
       const compressed = await compressImage(arquivoFoto!)
       const { url } = await api.uploadArquivo(compressed)
-      await api.createCaboPublic({
+      const novoCabo = await api.createCaboPublic({
         nome: form.nome.trim(),
         telefone: form.telefone,
         bairro_atuacao: form.bairro_atuacao.trim(),
@@ -73,7 +85,12 @@ export function CadastroLiderancaPage() {
         votacao: form.foi_candidato && form.votacao ? Number(form.votacao) : undefined,
         foto_url: url,
         website, // honeypot
+        campanha_slug: campanhaSlug, // Identifica para qual campanha vai este cabo
       })
+      
+      const slugLideranca = generateSlug(novoCabo.nome)
+      const link = `${window.location.origin}/c/${campanhaSlug}/${slugLideranca}`
+      setLinkGerado(link)
     } catch (err) {
       setEnviando(false)
       setErro('Erro ao cadastrar: ' + (err as Error).message)
@@ -87,21 +104,25 @@ export function CadastroLiderancaPage() {
     setForm(VAZIO)
     setArquivoFoto(null)
     setSucesso(false)
+    setLinkGerado(null)
   }
 
   return (
-    <div className="flex min-h-[100dvh] min-h-safe items-start justify-center bg-slate-50 py-6 pb-safe pt-safe sm:py-12 sm:px-4">
-      <div className="w-full max-w-lg overflow-hidden sm:rounded-2xl bg-white shadow-2xl dark:bg-slate-900 border-x border-y sm:border border-slate-200 dark:border-slate-800">
+    <div className="flex min-h-[100dvh] min-h-safe items-start justify-center bg-slate-50 py-0 sm:py-12 px-0 sm:px-4">
+      <div className="w-full max-w-lg overflow-hidden sm:rounded-2xl bg-white shadow-none sm:shadow-2xl dark:bg-slate-900 border-x-0 border-y-0 sm:border border-slate-200 dark:border-slate-800">
         
         {/* Cover Image & Avatar */}
         <div className="relative h-32 w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 sm:h-40">
+          {campanha?.foto_url && (
+            <img src={campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`} alt="Capa" className="absolute inset-0 h-full w-full object-cover opacity-50 mix-blend-overlay" />
+          )}
           <div className="absolute inset-0 bg-black/20" />
           <div className="absolute -bottom-10 left-6">
-            <div className="flex h-20 w-20 overflow-hidden items-center justify-center rounded-2xl border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800">
-              {arquivoFoto ? (
-                <img src={URL.createObjectURL(arquivoFoto)} alt="Preview" className="h-full w-full object-cover" />
+            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800">
+              {campanha?.foto_url ? (
+                <img src={campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`} alt="Candidato" className="h-full w-full object-cover" />
               ) : (
-                <Users className="h-10 w-10 text-teal-600 dark:text-teal-400" />
+                <Users className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
               )}
             </div>
           </div>
@@ -110,7 +131,7 @@ export function CadastroLiderancaPage() {
         {/* Cabeçalho do modal */}
         <div className="px-6 pb-6 pt-12">
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            {sucesso ? 'Cadastro recebido!' : 'Seja uma Liderança'}
+            {sucesso ? 'Cadastro realizado!' : (campanha?.nome ? `Liderança: ${campanha.nome}` : 'Cadastro de Liderança')}
           </h1>
           <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
             {sucesso
@@ -125,11 +146,40 @@ export function CadastroLiderancaPage() {
               <CheckCircle2 className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
             </div>
             <p className="mb-6 text-sm font-medium text-slate-600 dark:text-slate-300">
-              Obrigado! Seu perfil de liderança foi criado. Em breve a equipe entrará em contato ou você já pode começar a indicar eleitores usando seu link personalizado que a coordenação vai te mandar.
+              Obrigado! Seu perfil de liderança foi criado. Você já pode começar a indicar eleitores usando seu link exclusivo abaixo.
             </p>
+            
+            {linkGerado && (
+              <div className="mb-8 overflow-hidden rounded-xl border border-teal-200 bg-teal-50 dark:border-teal-900/50 dark:bg-teal-900/20">
+                <div className="px-4 py-3 bg-teal-100/50 dark:bg-teal-900/40 border-b border-teal-200 dark:border-teal-900/50">
+                  <p className="text-xs font-bold text-teal-800 dark:text-teal-400 uppercase tracking-wider text-left">
+                    Seu Link de Indicação
+                  </p>
+                </div>
+                <div className="p-4 flex items-center gap-3">
+                  <input
+                    type="text"
+                    readOnly
+                    value={linkGerado}
+                    className="flex-1 w-full truncate bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 rounded-lg py-2.5 px-3 text-sm font-medium text-slate-700 dark:text-slate-300 focus:ring-teal-500 focus:border-teal-500"
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(linkGerado);
+                      alert('Link copiado para a área de transferência!');
+                    }}
+                    className="shrink-0 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              </div>
+            )}
+
             <button
               onClick={novoCadastro}
-              className="w-full rounded-lg bg-teal-600 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-teal-700"
+              className="w-full rounded-lg bg-slate-800 px-5 py-3 font-bold text-white shadow-sm transition hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600"
             >
               Fazer outro cadastro
             </button>
