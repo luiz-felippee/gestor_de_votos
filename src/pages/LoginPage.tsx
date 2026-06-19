@@ -9,7 +9,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const destino =
-    (location.state as { from?: string } | null)?.from ?? '/dashboard'
+    (location.state as { from?: string } | null)?.from ?? '/'
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')

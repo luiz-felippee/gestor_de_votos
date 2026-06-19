@@ -55,8 +55,6 @@ export default function App() {
           <main className="flex-1">
             <Suspense fallback={<CarregandoPagina />}>
             <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
               {/* Públicas */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/c/:campanhaSlug" element={<CadastroPage />} />
