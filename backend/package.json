@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "ts-node server.ts",
     "build": "prisma generate && tsc",
-    "postinstall": "prisma generate && prisma db push --accept-data-loss || echo skip-dbpush",
+    "postinstall": "prisma generate",
     "prestart": "npm run build",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",

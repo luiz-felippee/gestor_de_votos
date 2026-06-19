@@ -101,7 +101,7 @@ export async function initWhatsApp(io: Server, campanhaId: string) {
 
         // 3. Lógica do Chatbot (Apenas se a msg for do Eleitor)
         if (!isFromMe) {
-          const config = await prisma.configuracaoWhatsApp.findUnique({
+          const config = await prisma.configuracaoWhatsApp.findFirst({
             where: { campanha_id: campanhaId }
           });
 

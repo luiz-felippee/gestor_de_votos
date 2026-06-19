@@ -92,7 +92,7 @@ eleitoresRouter.post(
 
       // Disparar Boas-Vindas se ativado
       if (campanhaId && b.telefone) {
-        prisma.configuracaoWhatsApp.findUnique({
+        prisma.configuracaoWhatsApp.findFirst({
           where: { campanha_id: campanhaId }
         }).then((config) => {
           if (config && config.msg_boas_vindas) {

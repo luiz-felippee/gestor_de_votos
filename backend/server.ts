@@ -143,7 +143,7 @@ app.get(
   '/api/whatsapp/config',
   requireAuth,
   wrap(async (req, res) => {
-    let config = await prisma.configuracaoWhatsApp.findUnique({
+    let config = await prisma.configuracaoWhatsApp.findFirst({
       where: { campanha_id: req.user!.campanha_id ?? 'global' }
     });
     res.json(config || { modo: 'nenhum' });
@@ -157,30 +157,20 @@ app.post(
     const b = req.body ?? {};
     const campanha_id = req.user!.campanha_id ?? 'global';
     
-    const config = await prisma.configuracaoWhatsApp.upsert({
-      where: { campanha_id },
-      update: {
-        modo: b.modo || 'nenhum',
-        api_url: b.api_url,
-        api_token: b.api_token,
-        api_instancia_id: b.api_instancia_id,
-        msg_boas_vindas: b.msg_boas_vindas ?? null,
-        ativar_chatbot: b.ativar_chatbot ?? false,
-        usar_ia: b.usar_ia ?? false,
-        ia_prompt: b.ia_prompt ?? null,
-      },
-      create: {
-        campanha_id,
-        modo: b.modo || 'nenhum',
-        api_url: b.api_url,
-        api_token: b.api_token,
-        api_instancia_id: b.api_instancia_id,
-        msg_boas_vindas: b.msg_boas_vindas ?? null,
-        ativar_chatbot: b.ativar_chatbot ?? false,
-        usar_ia: b.usar_ia ?? false,
-        ia_prompt: b.ia_prompt ?? null,
-      }
-    });
+    const dados = {
+      modo: b.modo || 'nenhum',
+      api_url: b.api_url,
+      api_token: b.api_token,
+      api_instancia_id: b.api_instancia_id,
+      msg_boas_vindas: b.msg_boas_vindas ?? null,
+      ativar_chatbot: b.ativar_chatbot ?? false,
+      usar_ia: b.usar_ia ?? false,
+      ia_prompt: b.ia_prompt ?? null,
+    };
+    const existente = await prisma.configuracaoWhatsApp.findFirst({ where: { campanha_id } });
+    const config = existente
+      ? await prisma.configuracaoWhatsApp.update({ where: { id: existente.id }, data: dados })
+      : await prisma.configuracaoWhatsApp.create({ data: { campanha_id, ...dados } });
     
     if (config.modo === 'interno') {
       initWhatsApp(io, campanha_id).catch(console.error);
@@ -195,7 +185,7 @@ app.get(
   requireAuth,
   wrap(async (req, res) => {
     const campanha_id = req.user!.campanha_id ?? 'global';
-    const config = await prisma.configuracaoWhatsApp.findUnique({ where: { campanha_id } });
+    const config = await prisma.configuracaoWhatsApp.findFirst({ where: { campanha_id } });
     if (config?.modo === 'interno') {
       return res.json(getWhatsAppStatus(campanha_id));
     }
@@ -217,7 +207,7 @@ app.post(
     if (tipo !== 'text' && !url_midia) return res.status(400).json({ error: 'URL da mídia é obrigatória.' });
 
     const campanha_id = req.user!.campanha_id ?? 'global';
-    const config = await prisma.configuracaoWhatsApp.findUnique({ where: { campanha_id } });
+    const config = await prisma.configuracaoWhatsApp.findFirst({ where: { campanha_id } });
     
     if (config?.modo === 'interno') {
       await sendWhatsAppMessage(campanha_id, numero, texto || '', tipo, url_midia);
@@ -268,7 +258,7 @@ app.post(
     if (!file) return res.status(400).json({ error: 'Arquivo é obrigatório.' });
 
     const campanha_id = req.user!.campanha_id ?? 'global';
-    const config = await prisma.configuracaoWhatsApp.findUnique({ where: { campanha_id } });
+    const config = await prisma.configuracaoWhatsApp.findFirst({ where: { campanha_id } });
 
     try {
       if (config?.modo === 'interno') {

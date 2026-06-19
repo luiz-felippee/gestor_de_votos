@@ -34,8 +34,8 @@ model Campanha {
 
   // --- SaaS Multi-Contas ---
   plano                  String   @default("gratis") // gratis, basico, pro
-  stripe_customer_id     String?  @unique
-  stripe_subscription_id String?  @unique
+  stripe_customer_id     String?
+  stripe_subscription_id String?
   assinatura_status      String   @default("ativa") // ativa, inadimplente, cancelada
   assinatura_expira_em   DateTime?
 
@@ -120,7 +120,7 @@ model Usuario {
 
 model ConfiguracaoWhatsApp {
   id               String   @id @default(uuid())
-  campanha_id      String?  @unique
+  campanha_id      String?
   modo             String   @default("nenhum") // nenhum, interno, zapi, evolution
   api_url          String?
   api_token        String?
