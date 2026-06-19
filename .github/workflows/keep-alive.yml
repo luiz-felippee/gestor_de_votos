@@ -1,10 +1,11 @@
 name: Manter API acordada
 
-# Pinga a API a cada ~14 min para o Render (plano grátis) não colocar
+# Pinga a API a cada ~10 min para o Render (plano grátis) não colocar
 # o servidor "para dormir" — evita a demora de ~50s na primeira visita.
+# (10 min dá margem porque o cron do GitHub costuma atrasar alguns minutos.)
 on:
   schedule:
-    - cron: '*/14 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch: {}
 
 jobs:

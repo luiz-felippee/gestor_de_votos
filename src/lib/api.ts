@@ -158,17 +158,20 @@ export const api = {
   },
   /** Busca TODOS os eleitores (sem paginação), para páginas que precisam da lista completa (mapa, cabos, eventos). */
   getAllEleitores: async () => {
-    const res = await request<{ data: EleitorComCabo[]; total: number }>('/eleitores?limit=200&page=1')
-    // Se houver mais que 200, busca em lotes
-    const all = [...res.data]
-    if (res.total > 200) {
-      const totalPages = Math.ceil(res.total / 200)
-      const promises = []
+    const res = await request<any>('/eleitores?limit=200&page=1')
+    // Compatibilidade: backend novo retorna { data, total }; backend antigo retorna um array.
+    if (Array.isArray(res)) return res as EleitorComCabo[]
+    const all: EleitorComCabo[] = [...(res?.data ?? [])]
+    const total: number = res?.total ?? all.length
+    // Se houver mais que 200, busca os demais lotes em paralelo
+    if (total > 200) {
+      const totalPages = Math.ceil(total / 200)
+      const promises: Promise<any>[] = []
       for (let p = 2; p <= totalPages; p++) {
-        promises.push(request<{ data: EleitorComCabo[] }>(`/eleitores?limit=200&page=${p}`))
+        promises.push(request<any>(`/eleitores?limit=200&page=${p}`))
       }
       const results = await Promise.all(promises)
-      for (const r of results) all.push(...r.data)
+      for (const r of results) all.push(...(Array.isArray(r) ? r : (r?.data ?? [])))
     }
     return all
   },
