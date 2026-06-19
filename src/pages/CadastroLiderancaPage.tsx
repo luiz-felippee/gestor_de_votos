@@ -319,13 +319,15 @@ export function CadastroLiderancaPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={enviando}
-              className="w-full rounded-lg bg-teal-600 px-5 py-3.5 font-bold text-white shadow-sm transition hover:bg-teal-700 disabled:opacity-60"
-            >
-              {enviando ? 'Enviando...' : 'Quero ser Liderança'}
-            </button>
+            <div className="sticky bottom-0 -mx-6 -mb-6 mt-6 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] sm:static sm:mx-0 sm:mb-0 sm:mt-0 sm:bg-transparent sm:border-0 sm:p-0 sm:shadow-none">
+              <button
+                type="submit"
+                disabled={enviando}
+                className="w-full rounded-xl bg-teal-600 px-5 py-4 font-bold text-white shadow-md transition hover:bg-teal-700 disabled:opacity-60 active:scale-[0.98] text-base"
+              >
+                {enviando ? 'Enviando...' : 'Quero ser Liderança'}
+              </button>
+            </div>
           </form>
         )}
       </div>

@@ -31,6 +31,7 @@ const AuditoriaPage = lazyPage(() => import('./pages/AuditoriaPage'), 'Auditoria
 const CampanhasPage = lazyPage(() => import('./pages/CampanhasPage'), 'CampanhasPage')
 const BillingPage = lazyPage(() => import('./pages/BillingPage').then(m => ({ BillingPage: m.BillingPage })), 'BillingPage')
 const WhatsAppInboxPage = lazyPage(() => import('./pages/WhatsAppInboxPage').then(m => ({ WhatsAppInboxPage: m.WhatsAppInboxPage })), 'WhatsAppInboxPage')
+const WhatsAppFunilPage = lazyPage(() => import('./pages/WhatsAppFunilPage').then(m => ({ WhatsAppFunilPage: m.WhatsAppFunilPage })), 'WhatsAppFunilPage')
 
 function CarregandoPagina() {
   return (
@@ -40,7 +41,10 @@ function CarregandoPagina() {
   )
 }
 
+import { useOfflineSync } from './hooks/useOfflineSync'
+
 export default function App() {
+  useOfflineSync()
   return (
     <ThemeProvider>
       <ToastProvider>
@@ -55,8 +59,6 @@ export default function App() {
 
               {/* Públicas */}
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/cadastro" element={<Navigate to="/login" replace />} />
-              {/* Rotas Públicas com Roteamento Dinâmico por Campanha */}
               <Route path="/c/:campanhaSlug" element={<CadastroPage />} />
               <Route path="/c/:campanhaSlug/:nomeCabo" element={<CadastroPage />} />
               <Route path="/c/:campanhaSlug/cadastro-lideranca" element={<CadastroLiderancaPage />} />
@@ -64,7 +66,7 @@ export default function App() {
 
               {/* Protegidas */}
               <Route
-                path="/dashboard"
+                path="/"
                 element={
                   <ProtectedRoute>
                     <DashboardPage />
@@ -144,6 +146,14 @@ export default function App() {
                 }
               />
               <Route
+                path="/whatsapp/funil"
+                element={
+                  <ProtectedRoute roles={['admin']}>
+                    <WhatsAppFunilPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/assinatura"
                 element={
                   <ProtectedRoute roles={['admin', 'coordenador']}>
@@ -152,10 +162,11 @@ export default function App() {
                 }
               />
 
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
             </Suspense>
           </main>
+          <BottomNavWrapper />
         </div>
       </BrowserRouter>
     </AuthProvider>
@@ -192,16 +203,27 @@ function Header() {
               <Item to="/planilha">Eleitores</Item>
               <Item to="/mapa">Mapa</Item>
               <Item to="/eventos">Agenda</Item>
-              {(role === 'admin' || role === 'coordenador') && (
-                <Item to="/cabos">Lideranças</Item>
-              )}
-              {usuario?.super_admin && <Item to="/campanhas">Campanhas</Item>}
-              {role === 'admin' && <Item to="/usuarios">Usuários</Item>}
-              {role === 'admin' && <Item to="/auditoria">Auditoria</Item>}
-              {role === 'admin' && <Item to="/whatsapp">WhatsApp</Item>}
-              {(role === 'admin' || role === 'coordenador') && <Item to="/whatsapp/inbox">Atendimento (CRM)</Item>}
-              {(role === 'admin' || role === 'coordenador') && <Item to="/assinatura">Assinatura</Item>}
               <Item to="/cadastro">Cadastro</Item>
+
+              {(role === 'admin' || role === 'coordenador') && (
+                <Dropdown title="Comunicação">
+                  {role === 'admin' && <DropdownItem to="/whatsapp">WhatsApp</DropdownItem>}
+                  {role === 'admin' && <DropdownItem to="/whatsapp/funil">Automações & Funis</DropdownItem>}
+                  <DropdownItem to="/whatsapp/inbox">Atendimento (CRM)</DropdownItem>
+                </Dropdown>
+              )}
+
+              {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
+                <Dropdown title="Administração">
+                  {(role === 'admin' || role === 'coordenador') && (
+                    <DropdownItem to="/cabos">Lideranças</DropdownItem>
+                  )}
+                  {usuario?.super_admin && <DropdownItem to="/campanhas">Campanhas</DropdownItem>}
+                  {role === 'admin' && <DropdownItem to="/usuarios">Usuários</DropdownItem>}
+                  {role === 'admin' && <DropdownItem to="/auditoria">Auditoria</DropdownItem>}
+                  {(role === 'admin' || role === 'coordenador') && <DropdownItem to="/assinatura">Assinatura</DropdownItem>}
+                </Dropdown>
+              )}
             </nav>
             <div className="flex items-center gap-3 border-l border-slate-200 pl-5 dark:border-slate-700">
               <span className="hidden flex-col text-right sm:flex">
@@ -304,6 +326,39 @@ function Item({ to, children }: { to: string; children: React.ReactNode }) {
   )
 }
 
+function Dropdown({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="relative group">
+      <button className="flex items-center gap-1 rounded-lg px-2.5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200 transition-colors">
+        {title}
+        <svg className="h-4 w-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div className="absolute left-0 top-full mt-1 hidden w-48 flex-col rounded-xl bg-white shadow-xl border border-slate-200 p-1.5 group-hover:flex dark:bg-slate-900 dark:border-slate-800 z-50">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function DropdownItem({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `block rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${
+          isActive
+            ? 'bg-slate-100 text-brand-700 dark:bg-slate-800 dark:text-brand-300'
+            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+        }`
+      }
+    >
+      {children}
+    </NavLink>
+  )
+}
+
 function MobileItem({ to, onClick, children }: { to: string; onClick: () => void; children: React.ReactNode }) {
   return (
     <NavLink
@@ -320,4 +375,48 @@ function MobileItem({ to, onClick, children }: { to: string; onClick: () => void
       {children}
     </NavLink>
   )
+}
+
+function BottomNav() {
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-slate-200 bg-white px-2 pb-safe pt-1 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] dark:border-slate-800 dark:bg-slate-900 lg:hidden">
+      <BottomNavItem to="/" icon={<svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>} label="Início" />
+      <BottomNavItem to="/planilha" icon={<svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>} label="Eleitores" />
+      
+      {/* Central Floating Action Button Style for Add */}
+      <NavLink
+        to="/cadastro"
+        className="group relative flex h-12 w-12 -translate-y-4 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg transition-transform active:scale-95 dark:bg-brand-500"
+      >
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+      </NavLink>
+      
+      <BottomNavItem to="/eventos" icon={<svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} label="Agenda" />
+      <BottomNavItem to="/cabos" icon={<svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} label="Cabos" />
+    </nav>
+  )
+}
+
+function BottomNavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex flex-col items-center justify-center space-y-1 rounded-lg px-2 py-1 transition-colors ${
+          isActive
+            ? 'text-brand-600 dark:text-brand-400'
+            : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
+        }`
+      }
+    >
+      {icon}
+      <span className="text-[10px] font-semibold">{label}</span>
+    </NavLink>
+  )
+}
+
+function BottomNavWrapper() {
+  const { usuario } = useAuth()
+  if (!usuario) return null
+  return <BottomNav />
 }

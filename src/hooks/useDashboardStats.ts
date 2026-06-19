@@ -16,7 +16,7 @@ export interface DashboardStats {
   porBairro: { label: string; total: number }[]
   porLocalVotacao: { label: string; total: number }[]
   porDia: { label: string; total: number }[]
-  ranking: { nome: string; meta: number; total: number }[]
+  ranking: { id: string; nome: string; meta: number; total: number; foto_url?: string | null }[]
   aniversariantes: { id: string; nome: string; telefone: string | null; data_nascimento: string; diffDias: number; bairro: string | null; cidade: string | null }[]
 }
 

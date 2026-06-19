@@ -2,6 +2,7 @@ import { Suspense, lazy, useState } from 'react'
 import { useDashboardStats } from '../hooks/useDashboardStats'
 import { api } from '../lib/api'
 import { CIDADES } from '../lib/constants'
+import { RankingLiderancas } from '../components/RankingLiderancas'
 
 // Gráficos (recharts) em chunk separado — o painel pinta KPIs/perfil na hora.
 const DashboardCharts = lazy(() => import('../components/DashboardCharts'))
@@ -136,42 +137,7 @@ export function DashboardPage() {
       </Suspense>
 
       {/* Ranking de cabos */}
-      <Painel titulo="Ranking de cabos (meta vs. realizado)" className="mt-6">
-        {ranking.length === 0 ? (
-          <p className="text-sm text-slate-400">Nenhum cabo cadastrado.</p>
-        ) : (
-          <div className="space-y-3">
-            {ranking.map((r, i) => {
-              const pct =
-                r.meta > 0 ? Math.min(100, Math.round((r.total / r.meta) * 100)) : 0
-              return (
-                <div key={r.nome} className="flex items-center gap-3">
-                  <span className="w-6 text-sm font-semibold text-slate-400">
-                    {i + 1}º
-                  </span>
-                  <div className="flex-1">
-                    <div className="mb-1 flex justify-between text-sm">
-                      <span className="font-medium text-slate-700 dark:text-slate-300">{r.nome}</span>
-                      <span className="text-slate-500 dark:text-slate-400">
-                        {r.total} / {r.meta || '—'}
-                        {r.meta > 0 && (
-                          <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">{pct}%</span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-brand-500"
-                        style={{ width: `${r.meta > 0 ? pct : r.total > 0 ? 100 : 0}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </Painel>
+      <RankingLiderancas ranking={ranking} />
 
       {/* Aniversariantes do Mês */}
       <Painel titulo="Próximos Aniversariantes (30 dias)" className="mt-6">

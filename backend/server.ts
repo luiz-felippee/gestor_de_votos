@@ -103,10 +103,11 @@ app.use('/api', require('./routes/usuarios').default);
 app.use('/api', require('./routes/campanhas').default);
 app.use('/api', require('./routes/eleitores').default);
 app.use('/api', require('./routes/billing').default);
+app.use('/api', require('./routes/funis').default);
 
 // --- Saúde ---
 app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-17-refactored', runtime: 'node-dist' }),
+  res.json({ ok: true, version: '2026-06-18-funnels', runtime: 'node-dist' }),
 );
 
 // --- Upload Genérico (autenticado + validação de tipo) ---
@@ -162,14 +163,22 @@ app.post(
         modo: b.modo || 'nenhum',
         api_url: b.api_url,
         api_token: b.api_token,
-        api_instancia_id: b.api_instancia_id
+        api_instancia_id: b.api_instancia_id,
+        msg_boas_vindas: b.msg_boas_vindas ?? null,
+        ativar_chatbot: b.ativar_chatbot ?? false,
+        usar_ia: b.usar_ia ?? false,
+        ia_prompt: b.ia_prompt ?? null,
       },
       create: {
         campanha_id,
         modo: b.modo || 'nenhum',
         api_url: b.api_url,
         api_token: b.api_token,
-        api_instancia_id: b.api_instancia_id
+        api_instancia_id: b.api_instancia_id,
+        msg_boas_vindas: b.msg_boas_vindas ?? null,
+        ativar_chatbot: b.ativar_chatbot ?? false,
+        usar_ia: b.usar_ia ?? false,
+        ia_prompt: b.ia_prompt ?? null,
       }
     });
     
@@ -534,6 +543,68 @@ function startCronJobs() {
       console.error('[CRON] Erro na rotina de aniversários:', err);
     }
   });
+
+  // Funis de Automação do WhatsApp (Roda a cada hora)
+  cron.schedule('0 * * * *', async () => {
+    console.log('[CRON] Verificando Funis de WhatsApp pendentes...');
+    try {
+      const pendentes = await prisma.eleitorFunil.findMany({
+        where: { concluido: false, proxima_execucao: { lte: new Date() } },
+        include: {
+          funil: true,
+          etapa_atual: true,
+          eleitor: { select: { nome: true, telefone: true, campanha_id: true } }
+        }
+      });
+
+      for (const item of pendentes) {
+        if (!item.eleitor.telefone || !item.eleitor.campanha_id || !item.etapa_atual) continue;
+
+        const numero = item.eleitor.telefone.replace(/\D/g, '');
+        const texto = item.etapa_atual.mensagem_texto.replace(/\{\{nome\}\}/g, item.eleitor.nome.split(' ')[0]);
+        
+        try {
+          if (item.etapa_atual.tipo_midia !== 'text' && item.etapa_atual.mensagem_midia_url) {
+            // Em um sistema real, faríamos o download da URL e enviaríamos o arquivo,
+            // ou passaríamos a URL para sendWhatsAppMessage se for a Z-API.
+            // Para simplificar, enviaremos apenas o link no texto para o Robô Interno, ou chamamos sendWhatsAppMessage
+            await sendWhatsAppMessage(item.eleitor.campanha_id, numero, texto, item.etapa_atual.tipo_midia, item.etapa_atual.mensagem_midia_url);
+          } else {
+            await sendWhatsAppMessage(item.eleitor.campanha_id, numero, texto, 'text');
+          }
+
+          // Avançar para a próxima etapa
+          const proximaEtapa = await prisma.funilEtapa.findFirst({
+            where: { funil_id: item.funil_id, ordem: { gt: item.etapa_atual.ordem } },
+            orderBy: { ordem: 'asc' }
+          });
+
+          if (proximaEtapa) {
+            await prisma.eleitorFunil.update({
+              where: { id: item.id },
+              data: {
+                etapa_atual_id: proximaEtapa.id,
+                proxima_execucao: new Date(Date.now() + proximaEtapa.dias_espera * 24 * 60 * 60 * 1000)
+              }
+            });
+          } else {
+            await prisma.eleitorFunil.update({
+              where: { id: item.id },
+              data: { concluido: true, proxima_execucao: null }
+            });
+          }
+
+          // Sleep to avoid rate limits
+          await new Promise(r => setTimeout(r, 2000));
+        } catch (err) {
+          console.error(`[CRON Funil] Erro enviando para ${numero}:`, err);
+        }
+      }
+    } catch (err) {
+      console.error('[CRON Funil] Erro na rotina de funis:', err);
+    }
+  });
+
   console.log('✓ Cron jobs agendados.');
 }
 

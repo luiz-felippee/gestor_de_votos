@@ -50,11 +50,13 @@ export function PlanilhaPage() {
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [mostrarBulkModal, setMostrarBulkModal] = useState(false)
 
+  const [filtroMesAniversario, setFiltroMesAniversario] = useState('')
+
   // Reseta a página para 1 quando os filtros mudam
   useEffect(() => {
     setPaginaAtual(1)
     setSelecionados(new Set()) // Limpa seleção ao filtrar
-  }, [busca, filtroCidade, filtroStatus, filtroBairro, filtroZona])
+  }, [busca, filtroCidade, filtroStatus, filtroBairro, filtroZona, filtroMesAniversario])
 
   const listaFiltrada = useMemo(() => {
     const termo = busca.trim().toLowerCase()
@@ -70,7 +72,8 @@ export function PlanilhaPage() {
       const correspondeStatus = !filtroStatus || e.status === filtroStatus
       const correspondeBairro = !filtroBairro || e.bairro === filtroBairro
       const correspondeZona = !filtroZona || String(e.zona) === filtroZona
-      return correspondeBusca && correspondeCidade && correspondeStatus && correspondeBairro && correspondeZona
+      const correspondeMes = !filtroMesAniversario || (e.data_nascimento && e.data_nascimento.split('-')[1] === filtroMesAniversario)
+      return correspondeBusca && correspondeCidade && correspondeStatus && correspondeBairro && correspondeZona && correspondeMes
     })
 
     lista = [...lista].sort((a, b) => {
@@ -171,10 +174,10 @@ export function PlanilhaPage() {
 
   // Handlers de Seleção
   const handleSelecionarTodos = () => {
-    if (selecionados.size === listaPaginada.length && listaPaginada.length > 0) {
+    if (selecionados.size === listaFiltrada.length && listaFiltrada.length > 0) {
       setSelecionados(new Set())
     } else {
-      setSelecionados(new Set(listaPaginada.map(e => e.id)))
+      setSelecionados(new Set(listaFiltrada.map(e => e.id)))
     }
   }
 
@@ -275,6 +278,25 @@ export function PlanilhaPage() {
             <option key={z} value={z}>{z}</option>
           ))}
         </select>
+        <select
+          value={filtroMesAniversario}
+          onChange={(e) => setFiltroMesAniversario(e.target.value)}
+          className="w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950 max-w-[160px]"
+        >
+          <option value="">Aniversário (Mês)</option>
+          <option value="01">Janeiro</option>
+          <option value="02">Fevereiro</option>
+          <option value="03">Março</option>
+          <option value="04">Abril</option>
+          <option value="05">Maio</option>
+          <option value="06">Junho</option>
+          <option value="07">Julho</option>
+          <option value="08">Agosto</option>
+          <option value="09">Setembro</option>
+          <option value="10">Outubro</option>
+          <option value="11">Novembro</option>
+          <option value="12">Dezembro</option>
+        </select>
       </div>
 
       {/* Barra de Ação em Massa Flutuante */}
@@ -324,7 +346,7 @@ export function PlanilhaPage() {
                   <input
                     type="checkbox"
                     className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-transform hover:scale-110"
-                    checked={listaPaginada.length > 0 && selecionados.size === listaPaginada.length}
+                    checked={listaFiltrada.length > 0 && selecionados.size === listaFiltrada.length}
                     onChange={handleSelecionarTodos}
                   />
                 </th>

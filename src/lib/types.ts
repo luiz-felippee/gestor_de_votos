@@ -76,6 +76,7 @@ export interface CaboEleitoral {
   data_nascimento?: string | null
   foto_url?: string | null
   created_at?: string
+  _count?: { eleitores: number }
 }
 
 /** Eleitor com o nome do cabo já resolvido (join), usado na planilha. */
@@ -92,6 +93,8 @@ export interface ConfiguracaoWhatsApp {
   msg_boas_vindas: string | null
   ativar_chatbot: boolean
   fluxo_chatbot: any | null
+  usar_ia: boolean
+  ia_prompt: string | null
   updated_at: string
 }
 

@@ -6,6 +6,7 @@ import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
 import { LocalVotacaoAutocomplete } from '../components/LocalVotacaoAutocomplete'
+import { saveOffline } from '../hooks/useOfflineSync'
 import type { Campanha } from '../lib/types'
 
 interface FormState {
@@ -155,24 +156,34 @@ export function CadastroPage() {
     if (problema) return setErro(problema)
 
     setEnviando(true)
+    const payload = {
+      nome: form.nome.trim(),
+      telefone: form.telefone,
+      local_votacao: form.local_votacao.trim(),
+      zona: Number(form.zona),
+      secao: Number(form.secao),
+      bairro: form.bairro.trim(),
+      cidade: form.cidade,
+      data_nascimento: form.data_nascimento || null,
+      cpf: form.cpf || null,
+      titulo_eleitor: form.titulo_eleitor || null,
+      cabo_id: form.cabo_id || null,
+      observacoes: form.observacoes.trim() || null,
+      status: 'ativo',
+      website, // honeypot: humanos deixam vazio
+      campanha_slug: campanhaSlug, // <-- Adicionando o slug da campanha para o backend
+    }
+
+    if (!navigator.onLine) {
+      // Salva offline se não tiver internet
+      saveOffline('/eleitores-public', payload)
+      setEnviando(false)
+      setSucesso(true)
+      return
+    }
+
     try {
-      await api.createEleitor({
-        nome: form.nome.trim(),
-        telefone: form.telefone,
-        local_votacao: form.local_votacao.trim(),
-        zona: Number(form.zona),
-        secao: Number(form.secao),
-        bairro: form.bairro.trim(),
-        cidade: form.cidade,
-        data_nascimento: form.data_nascimento || null,
-        cpf: form.cpf || null,
-        titulo_eleitor: form.titulo_eleitor || null,
-        cabo_id: form.cabo_id || null,
-        observacoes: form.observacoes.trim() || null,
-        status: 'ativo',
-        website, // honeypot: humanos deixam vazio
-        campanha_slug: campanhaSlug, // <-- Adicionando o slug da campanha para o backend
-      })
+      await api.createEleitor(payload as any)
     } catch (err) {
       setEnviando(false)
       setErro('Erro ao cadastrar: ' + (err as Error).message)
@@ -226,7 +237,9 @@ export function CadastroPage() {
         {sucesso ? (
           <div className="px-6 py-10 text-center">
             <p className="mb-6 text-sm text-slate-500 dark:text-slate-400">
-              Obrigado! O eleitor foi adicionado à base da campanha.
+              {navigator.onLine 
+                ? 'Obrigado! O eleitor foi adicionado à base da campanha.'
+                : 'Você está offline! Seus dados foram salvos e serão sincronizados automaticamente quando houver conexão com a internet.'}
             </p>
             <button
               onClick={novoCadastro}

@@ -103,6 +103,24 @@ eleitoresRouter.post(
             });
           }
         }).catch(console.error);
+
+        // Gatilho de Funil (se houver funil ativo para novo_cadastro)
+        prisma.funilWhatsApp.findFirst({
+          where: { campanha_id: campanhaId, gatilho: 'novo_cadastro', ativo: true },
+          include: { etapas: { orderBy: { ordem: 'asc' }, take: 1 } }
+        }).then((funil) => {
+          if (funil && funil.etapas.length > 0) {
+            const primeiraEtapa = funil.etapas[0];
+            return prisma.eleitorFunil.create({
+              data: {
+                eleitor_id: eleitor.id,
+                funil_id: funil.id,
+                etapa_atual_id: primeiraEtapa.id,
+                proxima_execucao: new Date(Date.now() + primeiraEtapa.dias_espera * 24 * 60 * 60 * 1000)
+              }
+            });
+          }
+        }).catch(console.error);
       }
 
       notificarMudanca();

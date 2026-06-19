@@ -87,6 +87,7 @@ model Eleitor {
   // Normalizado (minúsculo, sem espaços nas pontas) p/ impedir duplicados
   nome_busca    String
   cabo          CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
+  funis         EleitorFunil[]
 
   @@unique([nome_busca, zona, secao])
   // Índices para acelerar filtros/ordenação da planilha, dashboard e mapa
@@ -125,10 +126,12 @@ model ConfiguracaoWhatsApp {
   api_token        String?
   api_instancia_id String?
 
-  // Funcionalidades CRM / Chatbot
+  // Funcionalidades CRM / Chatbot / IA
   msg_boas_vindas  String?
   ativar_chatbot   Boolean  @default(false)
   fluxo_chatbot    Json?    // Estrutura do menu de opções do chatbot
+  usar_ia          Boolean  @default(false)
+  ia_prompt        String?  @db.Text
 
   updated_at       DateTime @updatedAt
 
@@ -179,4 +182,54 @@ model LogAuditoria {
   @@index([created_at])
   @@index([entidade])
   @@map("logs_auditoria")
+}
+
+model FunilWhatsApp {
+  id          String       @id @default(uuid())
+  campanha_id String
+  nome        String
+  gatilho     String       @default("novo_cadastro") // novo_cadastro, manual, etc.
+  ativo       Boolean      @default(true)
+  created_at  DateTime     @default(now())
+  
+  etapas      FunilEtapa[]
+  eleitores   EleitorFunil[]
+
+  @@index([campanha_id])
+  @@map("funis_whatsapp")
+}
+
+model FunilEtapa {
+  id                 String   @id @default(uuid())
+  funil_id           String
+  ordem              Int      // 1, 2, 3...
+  dias_espera        Int      @default(0) // 0 = imediato, 1 = amanhã, etc.
+  mensagem_texto     String   @db.Text
+  mensagem_midia_url String?
+  tipo_midia         String   @default("text") // text, image, video, audio
+  
+  funil              FunilWhatsApp @relation(fields: [funil_id], references: [id], onDelete: Cascade)
+  eleitores_na_etapa EleitorFunil[]
+
+  @@index([funil_id])
+  @@map("funil_etapas")
+}
+
+model EleitorFunil {
+  id               String   @id @default(uuid())
+  eleitor_id       String
+  funil_id         String
+  etapa_atual_id   String?
+  proxima_execucao DateTime?
+  concluido        Boolean  @default(false)
+  created_at       DateTime @default(now())
+
+  funil            FunilWhatsApp @relation(fields: [funil_id], references: [id], onDelete: Cascade)
+  etapa_atual      FunilEtapa?   @relation(fields: [etapa_atual_id], references: [id], onDelete: SetNull)
+  eleitor          Eleitor       @relation(fields: [eleitor_id], references: [id], onDelete: Cascade)
+
+  @@index([eleitor_id])
+  @@index([funil_id])
+  @@index([proxima_execucao])
+  @@map("eleitores_funis")
 }

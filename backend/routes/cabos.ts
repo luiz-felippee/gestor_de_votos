@@ -13,6 +13,11 @@ cabosRouter.get(
     const where = req.user ? escopoCampanha(req) : {};
     const cabos = await prisma.caboEleitoral.findMany({
       where,
+      include: {
+        _count: {
+          select: { eleitores: true }
+        }
+      },
       orderBy: { nome: 'asc' },
     });
     res.json(cabos);

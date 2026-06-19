@@ -82,7 +82,7 @@ dashboardRouter.get(
       // 6. Lista de cabos (leve — só id, nome, meta)
       prisma.caboEleitoral.findMany({
         where: escopoCampanha(req),
-        select: { id: true, nome: true, meta_eleitores: true },
+        select: { id: true, nome: true, meta_eleitores: true, foto_url: true },
       }),
 
       // 7. Contagem de eleitores por cabo
@@ -170,9 +170,11 @@ dashboardRouter.get(
     }
 
     const rankingOriginal = cabos.map(c => ({
+      id: c.id,
       nome: c.nome,
       meta: c.meta_eleitores || 0,
       total: mapCabosCount.get(c.id) || 0,
+      foto_url: c.foto_url,
     })).sort((a, b) => b.total - a.total);
 
     const ranking = filtroCidade

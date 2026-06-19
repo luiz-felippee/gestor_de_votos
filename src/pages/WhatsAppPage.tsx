@@ -15,9 +15,11 @@ export function WhatsAppPage() {
   const [apiToken, setApiToken] = useState('')
   const [apiInstanciaId, setApiInstanciaId] = useState('')
 
-  // Campos do Chatbot / CRM
+  // Campos do Chatbot / CRM / IA
   const [msgBoasVindas, setMsgBoasVindas] = useState('')
   const [ativarChatbot, setAtivarChatbot] = useState(false)
+  const [usarIa, setUsarIa] = useState(false)
+  const [iaPrompt, setIaPrompt] = useState('')
 
   const [botStatus, setBotStatus] = useState<string>('desconectado')
   const [botQrCode, setBotQrCode] = useState<string | null>(null)
@@ -31,6 +33,8 @@ export function WhatsAppPage() {
       setApiInstanciaId(data.api_instancia_id || '')
       setMsgBoasVindas(data.msg_boas_vindas || '')
       setAtivarChatbot(data.ativar_chatbot || false)
+      setUsarIa(data.usar_ia || false)
+      setIaPrompt(data.ia_prompt || '')
       
       if (data.modo === 'interno') {
         fetchStatusInterno()
@@ -52,7 +56,9 @@ export function WhatsAppPage() {
         api_token: apiToken,
         api_instancia_id: apiInstanciaId,
         msg_boas_vindas: msgBoasVindas,
-        ativar_chatbot: ativarChatbot
+        ativar_chatbot: ativarChatbot,
+        usar_ia: usarIa,
+        ia_prompt: iaPrompt
       }
       const data = await api.updateConfigWhatsApp(payload)
       setConfig(data)
@@ -251,6 +257,36 @@ export function WhatsAppPage() {
                 </p>
               </div>
             </label>
+
+            {ativarChatbot && (
+              <div className="mt-4 animate-fade-in p-4 border border-slate-200 rounded-lg bg-slate-50 dark:bg-slate-800 dark:border-slate-700">
+                <label className="flex items-center gap-3 cursor-pointer mb-4">
+                  <input 
+                    type="checkbox" 
+                    className="w-5 h-5 rounded text-brand-600 focus:ring-brand-500 bg-white border-slate-300 dark:bg-slate-900 dark:border-slate-600" 
+                    checked={usarIa}
+                    onChange={e => setUsarIa(e.target.checked)}
+                  />
+                  <div>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">Usar Inteligência Artificial (ChatGPT)</span>
+                  </div>
+                </label>
+
+                {usarIa && (
+                  <label className="block animate-fade-in">
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Prompt do ChatGPT</span>
+                    <p className="text-xs text-slate-500 mb-2">Descreva como o assistente deve se comportar e o que deve responder.</p>
+                    <textarea 
+                      rows={4}
+                      className={inputClass} 
+                      value={iaPrompt} 
+                      onChange={e => setIaPrompt(e.target.value)} 
+                      placeholder="Você é um assistente da campanha do candidato X..." 
+                    />
+                  </label>
+                )}
+              </div>
+            )}
             
             <button
               onClick={() => salvar(config?.modo || 'nenhum')}

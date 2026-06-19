@@ -106,23 +106,54 @@ export async function initWhatsApp(io: Server, campanhaId: string) {
           });
 
           if (config?.ativar_chatbot) {
-            // Verifica se é a primeira mensagem (não há msg enviada por nós nas últimas X horas)
-            // Aqui faremos um fluxo simples: se o eleitor disser algo e o chatbot tá ativo,
-            // poderíamos responder um menu. Para não entrar em loop infinito, validaremos.
-            
-            // Checa mensagens recentes enviadas pelo bot para não flodar
-            const mensagensRecentes = await prisma.mensagemWhatsApp.findFirst({
-              where: {
-                campanha_id: campanhaId,
-                numero,
-                is_from_me: true,
-                created_at: { gte: new Date(Date.now() - 30 * 60 * 1000) } // últimos 30 min
-              }
-            });
+            if (config.usar_ia && process.env.OPENAI_API_KEY) {
+              try {
+                const { OpenAI } = require('openai');
+                const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+                
+                // Busca últimas 5 mensagens para contexto
+                const historico = await prisma.mensagemWhatsApp.findMany({
+                  where: { campanha_id: campanhaId, numero },
+                  orderBy: { created_at: 'asc' },
+                  take: 6 // 5 antigas + 1 atual
+                });
+                
+                const messagesContext = historico.slice(0, -1).map(m => ({
+                  role: m.is_from_me ? 'assistant' : 'user',
+                  content: m.texto
+                }));
+                
+                messagesContext.unshift({
+                  role: 'system',
+                  content: config.ia_prompt || 'Você é um assistente de campanha política prestativo e educado.'
+                });
+                messagesContext.push({ role: 'user', content: texto });
 
-            if (!mensagensRecentes) {
-              const resposta = config.msg_boas_vindas || 'Olá! Como podemos ajudar sua comunidade hoje?';
-              await sendWhatsAppMessage(campanhaId, numero, resposta);
+                const completion = await openai.chat.completions.create({
+                  messages: messagesContext,
+                  model: 'gpt-3.5-turbo'
+                });
+                
+                const resposta = completion.choices[0].message.content || '...';
+                await sendWhatsAppMessage(campanhaId, numero, resposta);
+              } catch (e) {
+                console.error('Erro na IA:', e);
+              }
+            } else {
+              // Checa mensagens recentes enviadas pelo bot para não flodar
+              const mensagensRecentes = await prisma.mensagemWhatsApp.findFirst({
+                where: {
+                  campanha_id: campanhaId,
+                  numero,
+                  is_from_me: true,
+                  created_at: { gte: new Date(Date.now() - 30 * 60 * 1000) } // últimos 30 min
+                }
+              });
+
+              if (!mensagensRecentes) {
+                const resposta = config.msg_boas_vindas || 'Olá! Como podemos ajudar sua comunidade hoje?';
+                await sendWhatsAppMessage(campanhaId, numero, resposta);
+              }
             }
           }
         }

@@ -210,4 +210,14 @@ export const api = {
   // ---- Assinaturas (Billing) ----
   billingCheckout: (planoId: string) => request<{ url: string }>('/billing/checkout', { method: 'POST', body: { planoId } }),
   billingPortal: () => request<{ url: string }>('/billing/portal', { method: 'POST' }),
+
+  // ---- Funis de Automação (WhatsApp Drip Campaigns) ----
+  getFunis: () => request<any[]>('/funis'),
+  getFunil: (id: string) => request<any>(`/funis/${id}`),
+  createFunil: (data: unknown) => request<any>('/funis', { method: 'POST', body: data }),
+  updateFunil: (id: string, data: unknown) => request<any>(`/funis/${id}`, { method: 'PUT', body: data }),
+  deleteFunil: (id: string) => request<void>(`/funis/${id}`, { method: 'DELETE' }),
+  createFunilEtapa: (funilId: string, data: unknown) => request<any>(`/funis/${funilId}/etapas`, { method: 'POST', body: data }),
+  updateFunilEtapa: (funilId: string, etapaId: string, data: unknown) => request<any>(`/funis/${funilId}/etapas/${etapaId}`, { method: 'PUT', body: data }),
+  deleteFunilEtapa: (funilId: string, etapaId: string) => request<void>(`/funis/${funilId}/etapas/${etapaId}`, { method: 'DELETE' }),
 }
