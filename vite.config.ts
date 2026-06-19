@@ -6,6 +6,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // Service Worker auto-destrutivo: limpa o cache antigo e se remove do
+      // navegador. Resolve a "tela azul em branco" causada por cache preso de
+      // deploys anteriores. (Pode reativar o PWA depois, configurado com cuidado.)
+      selfDestroying: true,
       registerType: 'autoUpdate',
       manifest: {
         name: 'Gestor de Votos',
