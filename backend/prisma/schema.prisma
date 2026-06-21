@@ -112,6 +112,9 @@ model Usuario {
   role        PerfilAcesso   @default(visualizador)
   cabo_id     String?
   created_at  DateTime       @default(now())
+  // Recuperação de senha ("esqueci minha senha")
+  reset_token         String?
+  reset_token_expires DateTime?
   cabo        CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
 
   @@index([campanha_id])

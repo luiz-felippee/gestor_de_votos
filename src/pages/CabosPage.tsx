@@ -4,7 +4,6 @@ import { Copy, Link as LinkIcon, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
-import { useEleitores } from '../hooks/useEleitores'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, generateSlug } from '../lib/format'
 import { compressImage } from '../lib/imageOptimization'
@@ -40,7 +39,6 @@ const VAZIO: FormState = {
 
 export function CabosPage() {
   const { cabos, loading, recarregar } = useCabos()
-  const { eleitores } = useEleitores()
 
   const [form, setForm] = useState<FormState>(VAZIO)
   const [editId, setEditId] = useState<string | null>(null)
@@ -49,19 +47,10 @@ export function CabosPage() {
   const [arquivoFoto, setArquivoFoto] = useState<File | null>(null)
   const [ordenacao, setOrdenacao] = useState<'nome' | 'ranking'>('ranking')
 
-  // Total de eleitores cadastrados por cabo (realizado).
-  const realizadoPorCabo = useMemo(() => {
-    const mapa = new Map<string, number>()
-    for (const e of eleitores) {
-      if (e.cabo_id) mapa.set(e.cabo_id, (mapa.get(e.cabo_id) ?? 0) + 1)
-    }
-    return mapa
-  }, [eleitores])
-
   const cabosOrdenados = useMemo(() => {
     const comRealizado = cabos.map(c => ({
       ...c,
-      realizado: realizadoPorCabo.get(c.id) ?? 0
+      realizado: c._count?.eleitores ?? 0
     }))
     
     if (ordenacao === 'ranking') {
@@ -70,7 +59,7 @@ export function CabosPage() {
     
     // ordenação por nome
     return comRealizado.sort((a, b) => a.nome.localeCompare(b.nome))
-  }, [cabos, realizadoPorCabo, ordenacao])
+  }, [cabos, ordenacao])
 
   function atualizar<K extends keyof FormState>(c: K, v: FormState[K]) {
     setForm((f) => ({ ...f, [c]: v }))

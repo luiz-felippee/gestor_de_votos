@@ -6,6 +6,16 @@ import path from 'path';
 import fs from 'fs';
 import { prisma } from './prismaClient';
 
+// Singleton lazy do OpenAI — instanciado uma única vez sob demanda
+let _openaiInstance: any = null;
+function getOpenAI() {
+  if (!_openaiInstance && process.env.OPENAI_API_KEY) {
+    const { OpenAI } = require('openai');
+    _openaiInstance = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openaiInstance;
+}
+
 interface WsInstance {
   sock: any;
   currentQr: string | null;
@@ -108,8 +118,8 @@ export async function initWhatsApp(io: Server, campanhaId: string) {
           if (config?.ativar_chatbot) {
             if (config.usar_ia && process.env.OPENAI_API_KEY) {
               try {
-                const { OpenAI } = require('openai');
-                const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+                const openai = getOpenAI();
+                if (!openai) throw new Error('OpenAI não disponível');
                 
                 // Busca últimas 5 mensagens para contexto
                 const historico = await prisma.mensagemWhatsApp.findMany({

@@ -306,39 +306,36 @@ app.post(
 
 // --- CRM WhatsApp: lista de conversas e histórico ---
 // Lista de conversas: agrupa por número, traz a última mensagem e quantas não lidas.
+// Usa uma ÚNICA query SQL ao invés de N+1 queries.
 app.get(
   '/api/whatsapp/chats',
   requireAuth,
   wrap(async (req, res) => {
     const campanha_id = req.user!.campanha_id ?? 'global';
-    const grupos = await prisma.mensagemWhatsApp.groupBy({
-      by: ['numero'],
-      where: { campanha_id },
-      _max: { created_at: true },
-    });
 
-    const chats = await Promise.all(
-      grupos.map(async (g) => {
-        const [ultima, naoLidas] = await Promise.all([
-          prisma.mensagemWhatsApp.findFirst({
-            where: { campanha_id, numero: g.numero },
-            orderBy: { created_at: 'desc' },
-          }),
-          prisma.mensagemWhatsApp.count({
-            where: { campanha_id, numero: g.numero, is_from_me: false, lida: false },
-          }),
-        ]);
-        return {
-          numero: g.numero,
-          ultima_mensagem: ultima?.texto ?? '',
-          data: ultima?.created_at ?? g._max.created_at,
-          nao_lidas: naoLidas,
-        };
-      }),
-    );
+    const chats = await prisma.$queryRaw<Array<{
+      numero: string;
+      ultima_mensagem: string;
+      data: Date;
+      nao_lidas: bigint;
+    }>>`
+      SELECT 
+        numero,
+        (SELECT texto FROM mensagens_whatsapp m2 
+         WHERE m2.numero = m.numero AND m2.campanha_id = ${campanha_id} 
+         ORDER BY created_at DESC LIMIT 1) as ultima_mensagem,
+        MAX(created_at) as data,
+        COUNT(*) FILTER (WHERE is_from_me = false AND lida = false) as nao_lidas
+      FROM mensagens_whatsapp m
+      WHERE campanha_id = ${campanha_id}
+      GROUP BY numero
+      ORDER BY data DESC
+    `;
 
-    chats.sort((a, b) => new Date(b.data as Date).getTime() - new Date(a.data as Date).getTime());
-    res.json(chats);
+    res.json(chats.map(c => ({
+      ...c,
+      nao_lidas: Number(c.nao_lidas),
+    })));
   }),
 );
 

@@ -80,6 +80,18 @@ export const api = {
       body: { email, senha },
     }),
   me: () => request<{ usuario: Usuario }>('/auth/me'),
+  async esqueciSenha(email: string) {
+    return request<{ message: string }>('/auth/esqueci-senha', {
+      method: 'POST',
+      body: { email },
+    })
+  },
+  async resetarSenha(token: string, senha: string) {
+    return request<{ message: string }>('/auth/resetar-senha', {
+      method: 'POST',
+      body: { token, senha },
+    })
+  },
 
   // ---- Cabos ----
   getCabos: () => request<CaboEleitoral[]>('/cabos'),

@@ -85,7 +85,7 @@ export function PlanilhaPage() {
       return ordem.dir === 'asc' ? cmp : -cmp
     })
     return lista
-  }, [eleitores, busca, filtroCidade, filtroStatus, ordem])
+  }, [eleitores, busca, filtroCidade, filtroStatus, filtroBairro, filtroZona, filtroMesAniversario, ordem])
 
   const totalPaginas = Math.ceil(listaFiltrada.length / itensPorPagina)
   

@@ -222,11 +222,7 @@ dashboardRouter.get(
     aniversariantes.sort((a, b) => a.diffDias - b.diffDias);
 
     const cidadesTodasCount = cidadesAgg.filter(c => c.cidade).length;
-    const bairrosTodosCount = await prisma.eleitor.groupBy({
-      by: ['bairro'],
-      where: whereFiltrado,
-      _count: { id: true },
-    }).then(r => r.filter(b => b.bairro).length);
+    const bairrosTodosCount = bairrosAgg.filter(b => b.bairro).length;
     const cabosAtivosCount = filtroCidade ? mapCabosCount.size : cabos.length;
 
     res.json({

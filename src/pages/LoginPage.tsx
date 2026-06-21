@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { Logo } from '../components/Logo'
@@ -17,19 +17,14 @@ export function LoginPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [msgSucesso, setMsgSucesso] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [acordando, setAcordando] = useState(false)
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
     setErro(null)
     setMsgSucesso(null)
     setLoading(true)
-    // Se demorar, avisa que o servidor (plano grátis) pode estar "acordando"
-    const aviso = setTimeout(() => setAcordando(true), 4000)
 
     const { error } = await signIn(email, senha)
-    clearTimeout(aviso)
-    setAcordando(false)
     setLoading(false)
     if (error) {
       setErro(error)
@@ -128,9 +123,14 @@ export function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                Senha
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
+                  Senha
+                </label>
+                <Link to="/esqueci-senha" className="text-sm font-medium text-brand-600 hover:text-brand-500 dark:text-brand-400">
+                  Esqueci minha senha
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   type={mostrarSenha ? "text" : "password"}
@@ -172,11 +172,6 @@ export function LoginPage() {
               >
                 {loading ? 'Entrando...' : 'Entrar na Plataforma'}
               </button>
-              {acordando && (
-                <p className="text-center text-xs font-medium text-slate-500 dark:text-slate-400">
-                  O servidor estava em repouso e está acordando — pode levar até 1 minuto. Aguarde...
-                </p>
-              )}
               <button
                 type="button"
                 onClick={handleSignup}

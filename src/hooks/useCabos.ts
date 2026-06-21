@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { api } from '../lib/api'
+import { getSocket } from '../lib/socket'
 import type { CaboEleitoral } from '../lib/types'
 
 let CACHE_CABOS: CaboEleitoral[] = []
@@ -34,15 +35,20 @@ export function useCabos() {
       recarregar().finally(() => ativo && setLoading(false))
     } else {
       setLoading(false)
-      recarregar() // Atualiza cache em background
+      recarregar() // Stale-while-revalidate
     }
 
-    const interval = setInterval(() => ativo && recarregar(), 10000)
+    // Recarrega via Socket.io apenas quando o backend notifica mudanças
+    const socket = getSocket()
+    const handler = () => recarregar()
+    socket.on('eleitores:changed', handler)
+
     return () => {
       ativo = false
-      clearInterval(interval)
+      socket.off('eleitores:changed', handler)
     }
   }, [recarregar])
 
   return { cabos, loading, erro, recarregar }
 }
+

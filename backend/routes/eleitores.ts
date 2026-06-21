@@ -66,8 +66,7 @@ eleitoresRouter.post(
     }
 
     try {
-      const coord = await geocodeAddress(bairroStr, cidadeStr);
-
+      // Cria o eleitor imediatamente (sem esperar geocode)
       const eleitor = await prisma.eleitor.create({
         data: {
           campanha_id: campanhaId,
@@ -83,12 +82,22 @@ eleitoresRouter.post(
           data_nascimento: b.data_nascimento || null,
           cpf: b.cpf ? String(b.cpf).replace(/\D/g, '') : null,
           titulo_eleitor: b.titulo_eleitor ? String(b.titulo_eleitor).replace(/\D/g, '') : null,
-          lat: coord?.lat || null,
-          lng: coord?.lng || null,
+          lat: null,
+          lng: null,
           status: (b.status as StatusEleitor) || 'ativo',
           observacoes: b.observacoes?.trim() || null,
         },
       });
+
+      // Geocode em background (fire-and-forget) — não bloqueia o response
+      geocodeAddress(bairroStr, cidadeStr).then(coord => {
+        if (coord) {
+          prisma.eleitor.update({
+            where: { id: eleitor.id },
+            data: { lat: coord.lat, lng: coord.lng },
+          }).catch(console.error);
+        }
+      }).catch(console.error);
 
       // Disparar Boas-Vindas se ativado
       if (campanhaId && b.telefone) {

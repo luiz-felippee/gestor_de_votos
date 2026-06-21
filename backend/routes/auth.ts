@@ -87,5 +87,77 @@ authRouter.get(
     });
   })
 );
+// --- Recuperação de Senha ---
+import crypto from 'crypto';
 
+authRouter.post(
+  '/esqueci-senha',
+  wrap(async (req, res) => {
+    const { email } = req.body ?? {};
+    if (!email) return res.status(400).json({ error: 'Informe seu e-mail.' });
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: String(email).toLowerCase().trim() },
+    });
+
+    if (!usuario) {
+      // Retorna sucesso de qualquer forma por segurança (para não enumerar emails válidos)
+      return res.json({ message: 'Se o e-mail existir, um link de recuperação foi enviado.' });
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiraEm = new Date(Date.now() + 1000 * 60 * 60); // 1 hora de validade
+
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        reset_token: token,
+        reset_token_expires: expiraEm,
+      },
+    });
+
+    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/resetar-senha?token=${token}`;
+
+    // TODO: Integrar envio real de e-mail (ex: AWS SES, Resend, etc)
+    console.log('\n=============================================');
+    console.log('🔗 [DEV] LINK DE RECUPERAÇÃO DE SENHA GERADO:');
+    console.log(`Para: ${usuario.email}`);
+    console.log(`Link: ${resetLink}`);
+    console.log('=============================================\n');
+
+    res.json({ message: 'Se o e-mail existir, um link de recuperação foi enviado.' });
+  })
+);
+
+authRouter.post(
+  '/resetar-senha',
+  wrap(async (req, res) => {
+    const { token, senha } = req.body ?? {};
+    if (!token || !senha) return res.status(400).json({ error: 'Token e nova senha são obrigatórios.' });
+
+    const usuario = await prisma.usuario.findFirst({
+      where: {
+        reset_token: String(token),
+        reset_token_expires: { gt: new Date() }, // O token não pode ter expirado
+      },
+    });
+
+    if (!usuario) {
+      return res.status(400).json({ error: 'Token inválido ou expirado.' });
+    }
+
+    const novaSenhaHash = await bcrypt.hash(String(senha), 10);
+
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        senha_hash: novaSenhaHash,
+        reset_token: null, // Limpa o token para não ser reutilizado
+        reset_token_expires: null,
+      },
+    });
+
+    res.json({ message: 'Senha alterada com sucesso! Faça login com a nova senha.' });
+  })
+);
 export default authRouter;

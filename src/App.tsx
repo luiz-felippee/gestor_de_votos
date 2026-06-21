@@ -8,6 +8,8 @@ import { ToastProvider } from './components/Toast'
 // Leves / críticas: carregam de imediato (formulário público e login)
 import { CadastroPage } from './pages/CadastroPage'
 import { LoginPage } from './pages/LoginPage'
+import { EsqueciSenhaPage } from './pages/EsqueciSenhaPage'
+import { ResetarSenhaPage } from './pages/ResetarSenhaPage'
 import { PrivacidadePage } from './pages/PrivacidadePage'
 
 // Pesadas: carregam sob demanda (mapa, gráficos, WhatsApp, planilha, etc.)
@@ -57,6 +59,8 @@ export default function App() {
             <Routes>
               {/* Públicas */}
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/esqueci-senha" element={<EsqueciSenhaPage />} />
+              <Route path="/resetar-senha" element={<ResetarSenhaPage />} />
               <Route path="/c/:campanhaSlug" element={<CadastroPage />} />
               <Route path="/c/:campanhaSlug/:nomeCabo" element={<CadastroPage />} />
               <Route path="/c/:campanhaSlug/cadastro-lideranca" element={<CadastroLiderancaPage />} />
