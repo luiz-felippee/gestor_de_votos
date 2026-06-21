@@ -89,6 +89,7 @@ authRouter.get(
 );
 // --- Recuperação de Senha ---
 import crypto from 'crypto';
+import { enviarEmail, templateResetSenha } from '../lib/email';
 
 authRouter.post(
   '/esqueci-senha',
@@ -118,12 +119,13 @@ authRouter.post(
 
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/resetar-senha?token=${token}`;
 
-    // TODO: Integrar envio real de e-mail (ex: AWS SES, Resend, etc)
-    console.log('\n=============================================');
-    console.log('🔗 [DEV] LINK DE RECUPERAÇÃO DE SENHA GERADO:');
-    console.log(`Para: ${usuario.email}`);
-    console.log(`Link: ${resetLink}`);
-    console.log('=============================================\n');
+    // Envia o e-mail real (Resend). Sem RESEND_API_KEY, o helper apenas loga (dev).
+    await enviarEmail({
+      to: usuario.email,
+      subject: 'Redefinir sua senha — Gestor de Votos',
+      html: templateResetSenha(usuario.nome, resetLink),
+    });
+    console.log(`🔗 [reset-senha] ${usuario.email} -> ${resetLink}`);
 
     res.json({ message: 'Se o e-mail existir, um link de recuperação foi enviado.' });
   })
