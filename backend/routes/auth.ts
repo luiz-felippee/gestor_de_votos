@@ -46,6 +46,73 @@ authRouter.post(
   })
 );
 
+// --- Login com Google (Google Identity Services) ---
+authRouter.post(
+  '/google',
+  loginLimiter,
+  wrap(async (req, res) => {
+    const { credential } = req.body ?? {};
+    if (!credential) return res.status(400).json({ error: 'Token do Google ausente.' });
+
+    // Valida o ID token diretamente no Google (verifica assinatura e expiração)
+    let payload: any;
+    try {
+      const r = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(String(credential))}`,
+      );
+      if (!r.ok) throw new Error('invalid');
+      payload = await r.json();
+    } catch {
+      return res.status(401).json({ error: 'Não foi possível validar o login do Google.' });
+    }
+
+    // Garante que o token foi emitido para ESTE app e que o e-mail é verificado
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (clientId && payload.aud !== clientId) {
+      return res.status(401).json({ error: 'Login do Google não corresponde a este aplicativo.' });
+    }
+    if (String(payload.email_verified) !== 'true') {
+      return res.status(401).json({ error: 'E-mail do Google não verificado.' });
+    }
+
+    const email = String(payload.email || '').toLowerCase().trim();
+    if (!email) return res.status(400).json({ error: 'O Google não retornou um e-mail.' });
+
+    // Só permite entrar quem já é usuário cadastrado (segurança da base)
+    const usuario = await prisma.usuario.findUnique({ where: { email } });
+    if (!usuario) {
+      return res.status(403).json({
+        error: 'Este e-mail não tem acesso. Peça ao administrador para cadastrá-lo.',
+      });
+    }
+
+    const token = assinarToken(usuario);
+    let campanha_nome: string | null = null;
+    let campanha_slug: string | null = null;
+    if (usuario.campanha_id) {
+      const c = await prisma.campanha.findUnique({
+        where: { id: usuario.campanha_id },
+        select: { nome: true, slug: true },
+      });
+      campanha_nome = c?.nome ?? null;
+      campanha_slug = c?.slug ?? null;
+    }
+    res.json({
+      token,
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        role: usuario.role,
+        cabo_id: usuario.cabo_id,
+        campanha_id: usuario.campanha_id,
+        campanha_nome,
+        campanha_slug,
+        super_admin: usuario.super_admin,
+      },
+    });
+  }),
+);
+
 authRouter.get(
   '/me',
   requireAuth,

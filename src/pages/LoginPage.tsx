@@ -1,15 +1,17 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, useRef, type FormEvent } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { Logo } from '../components/Logo'
 
 export function LoginPage() {
-  const { signIn, signUp } = useAuth()
+  const { signIn, signInWithGoogle, signUp } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const destino =
     (location.state as { from?: string } | null)?.from ?? '/'
+  const googleBtnRef = useRef<HTMLDivElement>(null)
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -50,6 +52,41 @@ export function LoginPage() {
     }
     setLoading(false)
   }
+
+  // Inicializa o botão "Entrar com Google" (Google Identity Services).
+  useEffect(() => {
+    if (!googleClientId) return
+    let cancelado = false
+    function tryInit() {
+      if (cancelado) return
+      const g = (window as unknown as { google?: any }).google
+      if (!g?.accounts?.id || !googleBtnRef.current) {
+        setTimeout(tryInit, 200) // GSI ainda carregando
+        return
+      }
+      g.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async (resp: { credential: string }) => {
+          const { error } = await signInWithGoogle(resp.credential)
+          if (error) setErro(error)
+          else navigate(destino, { replace: true })
+        },
+      })
+      googleBtnRef.current.innerHTML = ''
+      g.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'pill',
+        width: 320,
+      })
+    }
+    tryInit()
+    return () => {
+      cancelado = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleClientId])
 
   return (
     <div className="flex min-h-screen">
@@ -181,6 +218,20 @@ export function LoginPage() {
                 Criar Nova Conta
               </button>
             </div>
+
+            {googleClientId && (
+              <div>
+                <div className="relative my-1">
+                  <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="bg-white px-2 text-slate-400 dark:bg-slate-950">ou</span>
+                  </div>
+                </div>
+                <div ref={googleBtnRef} className="mt-3 flex justify-center" />
+              </div>
+            )}
           </form>
         </div>
       </div>

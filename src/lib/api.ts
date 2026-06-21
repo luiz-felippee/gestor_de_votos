@@ -79,6 +79,11 @@ export const api = {
       method: 'POST',
       body: { email, senha },
     }),
+  googleLogin: (credential: string) =>
+    request<{ token: string; usuario: Usuario }>('/auth/google', {
+      method: 'POST',
+      body: { credential },
+    }),
   me: () => request<{ usuario: Usuario }>('/auth/me'),
   async esqueciSenha(email: string) {
     return request<{ message: string }>('/auth/esqueci-senha', {

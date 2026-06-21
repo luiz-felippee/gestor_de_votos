@@ -13,6 +13,7 @@ interface AuthState {
   loading: boolean
   role: PerfilAcesso | null
   signIn: (email: string, senha: string) => Promise<{ error: string | null }>
+  signInWithGoogle: (credential: string) => Promise<{ error: string | null }>
   signUp: (
     email: string,
     senha: string,
@@ -57,6 +58,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function signInWithGoogle(credential: string) {
+    try {
+      const { token, usuario } = await api.googleLogin(credential)
+      setToken(token)
+      setUsuario(usuario)
+      return { error: null }
+    } catch (err) {
+      return { error: (err as Error).message }
+    }
+  }
+
   // Cadastro público é desativado por segurança (base de eleitores / LGPD).
   // Novos usuários são criados por um administrador.
   async function signUp() {
@@ -78,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         role: usuario?.role ?? null,
         signIn,
+        signInWithGoogle,
         signUp,
         signOut,
       }}
