@@ -106,9 +106,17 @@ app.use('/api', require('./routes/billing').default);
 app.use('/api', require('./routes/funis').default);
 
 // --- Saúde ---
-app.get('/api/health', (_req, res) =>
-  res.json({ ok: true, version: '2026-06-18-funnels', runtime: 'node-dist' }),
-);
+// Toca o banco (SELECT 1) para manter o Neon (free, scale-to-zero) acordado
+// junto com o Render. Retorna ok mesmo se o banco estiver acordando.
+app.get('/api/health', async (_req, res) => {
+  let db = 'ok';
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch {
+    db = 'acordando';
+  }
+  res.json({ ok: true, version: '2026-06-18-funnels', runtime: 'node-dist', db });
+});
 
 // --- Upload Genérico (autenticado + validação de tipo) ---
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -598,8 +606,7 @@ function startCronJobs() {
 // --- Inicialização ---
 const PORT = Number(process.env.PORT) || 3000;
 bootstrap()
-  .catch((err) => console.error('Falha no bootstrap:', err.message))
-  .finally(async () => {
+  .then(async () => {
     try {
       startCronJobs();
       // Restaurar sessões internas na inicialização
@@ -621,4 +628,8 @@ bootstrap()
     httpServer.listen(PORT, () => {
       console.log(`✓ API do Gestor de Votos rodando na porta ${PORT}`);
     });
+  })
+  .catch((err) => {
+    console.error('Falha crítica na inicialização do backend:', err.message);
+    process.exit(1);
   });
