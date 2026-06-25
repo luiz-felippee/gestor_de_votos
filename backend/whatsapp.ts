@@ -1,4 +1,4 @@
-import { makeWASocket, useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys';
+// Baileys é carregado sob demanda (lazy) dentro de initWhatsApp — ver nota lá.
 import QRCode from 'qrcode';
 import pino from 'pino';
 import { Server } from 'socket.io';
@@ -26,7 +26,12 @@ let ioInstance: Server | null = null;
 
 export async function initWhatsApp(io: Server, campanhaId: string) {
   ioInstance = io;
-  
+
+  // Baileys é pesado (dezenas de MB). Carrega só quando o WhatsApp interno é
+  // realmente usado, para não estourar a memória no boot (Render free = 512MB,
+  // crash "exited 134" / heap out of memory).
+  const { makeWASocket, useMultiFileAuthState, DisconnectReason } = await import('@whiskeysockets/baileys');
+
   const baseAuthFolder = process.env.WHATSAPP_AUTH_DIR || path.join(__dirname, 'baileys_auth_info');
   const authFolder = path.join(baseAuthFolder, campanhaId);
   

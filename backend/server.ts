@@ -115,7 +115,7 @@ app.get('/api/health', async (_req, res) => {
   } catch {
     db = 'acordando';
   }
-  res.json({ ok: true, version: '2026-06-18-funnels', runtime: 'node-dist', db });
+  res.json({ ok: true, version: '2026-06-25-lazy-wa', runtime: 'node-dist', db });
 });
 
 // --- Upload Genérico (autenticado + validação de tipo) ---
