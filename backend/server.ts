@@ -117,20 +117,20 @@ app.get('/api/health', async (_req, res) => {
   let adminExiste = false;
   let hashBateComEnv: boolean | null = null;
   const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim() || null;
-  const pwdTrim = (process.env.ADMIN_PASSWORD || '').trim();
+  const pwdSan = sanitizeSenha(process.env.ADMIN_PASSWORD || '');
   try {
     usuarios = await prisma.usuario.count();
     if (adminEmail) {
       const u = await prisma.usuario.findUnique({ where: { email: adminEmail }, select: { senha_hash: true } });
       adminExiste = !!u;
-      if (u && pwdTrim) {
-        hashBateComEnv = await bcrypt.compare(pwdTrim, u.senha_hash);
+      if (u && pwdSan) {
+        hashBateComEnv = await bcrypt.compare(pwdSan, u.senha_hash);
       }
     }
   } catch { /* banco acordando */ }
   res.json({
     ok: true,
-    version: '2026-06-26-diag3',
+    version: '2026-06-26-diag4',
     runtime: 'node-dist',
     db,
     diag: {
@@ -138,7 +138,7 @@ app.get('/api/health', async (_req, res) => {
       adminEmail,
       adminExiste,
       adminPwdLenRaw: (process.env.ADMIN_PASSWORD || '').length,
-      adminPwdLenTrim: pwdTrim.length,
+      adminPwdLenSan: pwdSan.length,
       hashBateComEnv,
       usuarios,
     },
@@ -252,12 +252,25 @@ app.delete(
 );
 
 // --- Bootstrap: cria/atualiza admin + campanha padrão ---
+// Remove caracteres de controle, zero-width, BOM e no-break-space, depois apara espaços.
+// Necessário porque copy-paste no painel do Render às vezes injeta caracteres invisíveis.
+function sanitizeSenha(s: string): string {
+  let out = '';
+  for (const ch of s) {
+    const c = ch.codePointAt(0) ?? 0;
+    if (c < 32 || c === 127 || (c >= 0x200B && c <= 0x200D) || c === 0xFEFF || c === 0xA0) continue;
+    out += ch;
+  }
+  return out.trim();
+}
+
 async function bootstrap() {
   const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
   if (ADMIN_EMAIL && ADMIN_PASSWORD) {
     const email = ADMIN_EMAIL.toLowerCase().trim();
-    // trim(): remove espaços/quebra de linha que entram por copy-paste no painel do Render.
-    const senha_hash = await bcrypt.hash(ADMIN_PASSWORD.trim(), 10);
+    // sanitizeSenha(): remove zero-width/invisíveis + espaços que entram por copy-paste
+    // no painel do Render (causavam senha "11 chars" que não batia com o valor visível).
+    const senha_hash = await bcrypt.hash(sanitizeSenha(ADMIN_PASSWORD), 10);
     // Upsert: a senha do admin é sempre sincronizada com ADMIN_PASSWORD (admin gerido
     // por env). Garante acesso após reset e permite redefinir a senha pela variável.
     const existe = await prisma.usuario.findUnique({ where: { email } });
