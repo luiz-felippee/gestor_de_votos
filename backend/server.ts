@@ -5,9 +5,8 @@
  *  - Configuração do Express (CORS, JSON, compression, static, multer)
  *  - Socket.io (tempo real)
  *  - Montagem dos routers
- *  - Rotas inline que dependem do `io` (WhatsApp, eventos, auditoria, upload)
+ *  - Rotas inline que dependem do `io` (eventos, auditoria, upload)
  *  - Bootstrap (admin + campanha padrão)
- *  - Cron jobs (aniversários)
  *
  * Middlewares de autenticação, autorização, rate-limiting e helpers compartilhados
  * ficam em ./middlewares/index.ts — os routers importam de lá diretamente.
@@ -20,10 +19,8 @@ import compression from 'compression';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { initWhatsApp, getWhatsAppStatus, sendWhatsAppMessage, sendWhatsAppMediaFile } from './whatsapp';
 import { createServer } from 'node:http';
 import { Server as SocketServer } from 'socket.io';
-import cron from 'node-cron';
 import { prisma } from './prismaClient';
 
 // Re-exporta tudo dos middlewares para que qualquer import de './server' ainda funcione.
@@ -41,7 +38,7 @@ export {
 import {
   requireAuth, requireRole,
   escopoCampanha, wrap,
-  verificarTokenSocket, requirePlanLimit,
+  verificarTokenSocket,
   type AuthedRequest,
 } from './middlewares';
 
@@ -86,8 +83,8 @@ export function notificarMudanca() {
   io.emit('eleitores:changed');
 }
 
-// Cada cliente entra na "sala" da sua campanha para receber eventos isolados
-// (mensagens do WhatsApp, QR Code, status). Broadcasts globais seguem via io.emit.
+// Cada cliente entra na "sala" da sua campanha para receber eventos isolados.
+// Broadcasts globais (ex: eleitores:changed) seguem via io.emit.
 io.on('connection', (socket) => {
   const token = (socket.handshake.auth as { token?: string } | undefined)?.token;
   if (!token) return;
@@ -103,7 +100,6 @@ app.use('/api', require('./routes/usuarios').default);
 app.use('/api', require('./routes/campanhas').default);
 app.use('/api', require('./routes/eleitores').default);
 app.use('/api', require('./routes/billing').default);
-app.use('/api', require('./routes/funis').default);
 
 // --- Saúde ---
 // Toca o banco (SELECT 1) para manter o Neon (free, scale-to-zero) acordado
@@ -115,7 +111,7 @@ app.get('/api/health', async (_req, res) => {
   } catch {
     db = 'acordando';
   }
-  res.json({ ok: true, version: '2026-06-25-lazy-wa', runtime: 'node-dist', db });
+  res.json({ ok: true, version: '2026-06-26-sem-wa', runtime: 'node-dist', db });
 });
 
 // --- Upload Genérico (autenticado + validação de tipo) ---
@@ -143,230 +139,6 @@ app.get(
       take: 300,
     });
     res.json(logs);
-  }),
-);
-
-// --- Configurações do WhatsApp ---
-app.get(
-  '/api/whatsapp/config',
-  requireAuth,
-  wrap(async (req, res) => {
-    let config = await prisma.configuracaoWhatsApp.findFirst({
-      where: { campanha_id: req.user!.campanha_id ?? 'global' }
-    });
-    res.json(config || { modo: 'nenhum' });
-  })
-);
-
-app.post(
-  '/api/whatsapp/config',
-  requireAuth,
-  wrap(async (req, res) => {
-    const b = req.body ?? {};
-    const campanha_id = req.user!.campanha_id ?? 'global';
-    
-    const dados = {
-      modo: b.modo || 'nenhum',
-      api_url: b.api_url,
-      api_token: b.api_token,
-      api_instancia_id: b.api_instancia_id,
-      msg_boas_vindas: b.msg_boas_vindas ?? null,
-      ativar_chatbot: b.ativar_chatbot ?? false,
-      usar_ia: b.usar_ia ?? false,
-      ia_prompt: b.ia_prompt ?? null,
-    };
-    const existente = await prisma.configuracaoWhatsApp.findFirst({ where: { campanha_id } });
-    const config = existente
-      ? await prisma.configuracaoWhatsApp.update({ where: { id: existente.id }, data: dados })
-      : await prisma.configuracaoWhatsApp.create({ data: { campanha_id, ...dados } });
-    
-    if (config.modo === 'interno') {
-      initWhatsApp(io, campanha_id).catch(console.error);
-    }
-    
-    res.json(config);
-  })
-);
-
-app.get(
-  '/api/whatsapp/status',
-  requireAuth,
-  wrap(async (req, res) => {
-    const campanha_id = req.user!.campanha_id ?? 'global';
-    const config = await prisma.configuracaoWhatsApp.findFirst({ where: { campanha_id } });
-    if (config?.modo === 'interno') {
-      return res.json(getWhatsAppStatus(campanha_id));
-    }
-    if (config?.modo === 'zapi' || config?.modo === 'evolution') {
-      return res.json({ status: 'conectado', tipo: 'externo' });
-    }
-    res.json({ status: 'desconectado' });
-  })
-);
-
-app.post(
-  '/api/whatsapp/send',
-  requireAuth,
-  requirePlanLimit('whatsapp'),
-  wrap(async (req, res) => {
-    const { numero, texto, tipo = 'text', url_midia } = req.body;
-    if (!numero) return res.status(400).json({ error: 'Número é obrigatório.' });
-    if (tipo === 'text' && !texto) return res.status(400).json({ error: 'Texto é obrigatório.' });
-    if (tipo !== 'text' && !url_midia) return res.status(400).json({ error: 'URL da mídia é obrigatória.' });
-
-    const campanha_id = req.user!.campanha_id ?? 'global';
-    const config = await prisma.configuracaoWhatsApp.findFirst({ where: { campanha_id } });
-    
-    if (config?.modo === 'interno') {
-      await sendWhatsAppMessage(campanha_id, numero, texto || '', tipo, url_midia);
-      return res.json({ success: true });
-    } 
-    
-    if (config?.modo === 'zapi' && config.api_url && config.api_token) {
-      let endpoint = '/send-text';
-      let body: any = { phone: `55${numero}` };
-      
-      if (tipo === 'image') {
-        endpoint = '/send-image';
-        body.image = url_midia;
-        if (texto) body.caption = texto;
-      } else if (tipo === 'video') {
-        endpoint = '/send-video';
-        body.video = url_midia;
-        if (texto) body.caption = texto;
-      } else if (tipo === 'audio') {
-        endpoint = '/send-audio';
-        body.audio = url_midia;
-      } else {
-        body.message = texto;
-      }
-
-      const response = await fetch(`${config.api_url}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Client-Token': config.api_token, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      if (!response.ok) throw new Error("Erro na API Externa Z-API");
-      return res.json({ success: true });
-    }
-
-    res.status(400).json({ error: 'Nenhuma configuração de WhatsApp ativa.' });
-  })
-);
-
-app.post(
-  '/api/whatsapp/send-media',
-  requireAuth,
-  requirePlanLimit('whatsapp'),
-  upload.single('arquivo'),
-  wrap(async (req, res) => {
-    const { numero, texto, tipo } = req.body;
-    const file = req.file;
-    if (!numero) return res.status(400).json({ error: 'Número é obrigatório.' });
-    if (!file) return res.status(400).json({ error: 'Arquivo é obrigatório.' });
-
-    const campanha_id = req.user!.campanha_id ?? 'global';
-    const config = await prisma.configuracaoWhatsApp.findFirst({ where: { campanha_id } });
-
-    try {
-      if (config?.modo === 'interno') {
-        await sendWhatsAppMediaFile(campanha_id, numero, file.path, file.mimetype, texto || '', tipo || 'image');
-        return res.json({ success: true });
-      }
-
-      if (config?.modo === 'zapi' && config.api_url && config.api_token) {
-        const fileBuffer = fs.readFileSync(file.path);
-        const base64 = fileBuffer.toString('base64');
-        let endpoint = '/send-image';
-        const body: any = { phone: `55${numero}` };
-
-        if (tipo === 'image') {
-          endpoint = '/send-image';
-          body.image = `data:${file.mimetype};base64,${base64}`;
-          if (texto) body.caption = texto;
-        } else if (tipo === 'video') {
-          endpoint = '/send-video';
-          body.video = `data:${file.mimetype};base64,${base64}`;
-          if (texto) body.caption = texto;
-        } else if (tipo === 'audio') {
-          endpoint = '/send-audio';
-          body.audio = `data:${file.mimetype};base64,${base64}`;
-        } else {
-          body.message = texto;
-          endpoint = '/send-text';
-        }
-
-        const response = await fetch(`${config.api_url}${endpoint}`, {
-          method: 'POST',
-          headers: { 'Client-Token': config.api_token, 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        if (!response.ok) throw new Error('Erro na API Externa Z-API');
-        return res.json({ success: true });
-      }
-
-      res.status(400).json({ error: 'Nenhuma configuração de WhatsApp ativa.' });
-    } finally {
-      try { fs.unlinkSync(file.path); } catch (_) { /* ignore */ }
-    }
-  })
-);
-
-// --- CRM WhatsApp: lista de conversas e histórico ---
-// Lista de conversas: agrupa por número, traz a última mensagem e quantas não lidas.
-// Usa uma ÚNICA query SQL ao invés de N+1 queries.
-app.get(
-  '/api/whatsapp/chats',
-  requireAuth,
-  wrap(async (req, res) => {
-    const campanha_id = req.user!.campanha_id ?? 'global';
-
-    const chats = await prisma.$queryRaw<Array<{
-      numero: string;
-      ultima_mensagem: string;
-      data: Date;
-      nao_lidas: bigint;
-    }>>`
-      SELECT 
-        numero,
-        (SELECT texto FROM mensagens_whatsapp m2 
-         WHERE m2.numero = m.numero AND m2.campanha_id = ${campanha_id} 
-         ORDER BY created_at DESC LIMIT 1) as ultima_mensagem,
-        MAX(created_at) as data,
-        COUNT(*) FILTER (WHERE is_from_me = false AND lida = false) as nao_lidas
-      FROM mensagens_whatsapp m
-      WHERE campanha_id = ${campanha_id}
-      GROUP BY numero
-      ORDER BY data DESC
-    `;
-
-    res.json(chats.map(c => ({
-      ...c,
-      nao_lidas: Number(c.nao_lidas),
-    })));
-  }),
-);
-
-// Histórico de um número + marca as recebidas como lidas.
-app.get(
-  '/api/whatsapp/chats/:numero',
-  requireAuth,
-  wrap(async (req, res) => {
-    const campanha_id = req.user!.campanha_id ?? 'global';
-    const numero = String(req.params.numero);
-
-    const mensagens = await prisma.mensagemWhatsApp.findMany({
-      where: { campanha_id, numero },
-      orderBy: { created_at: 'asc' },
-      take: 500,
-    });
-
-    await prisma.mensagemWhatsApp.updateMany({
-      where: { campanha_id, numero, is_from_me: false, lida: false },
-      data: { lida: true },
-    });
-
-    res.json(mensagens);
   }),
 );
 
@@ -476,11 +248,11 @@ async function bootstrap() {
   }
   const cid = campanhaPadrao.id;
 
-  // A campanha principal (do dono) tem acesso total — inclusive WhatsApp.
+  // A campanha principal (do dono) tem acesso total.
   // Novas campanhas criadas pelo painel nascem 'gratis' (modelo SaaS preservado).
   if (campanhaPadrao.plano === 'gratis') {
     await prisma.campanha.update({ where: { id: cid }, data: { plano: 'pro' } });
-    console.log('✓ Campanha principal promovida ao plano pro (WhatsApp liberado).');
+    console.log('✓ Campanha principal promovida ao plano pro.');
   }
   const [e, c, u, ev, lg] = await Promise.all([
     prisma.eleitor.updateMany({ where: { campanha_id: null }, data: { campanha_id: cid } }),
@@ -496,135 +268,10 @@ async function bootstrap() {
   }
 }
 
-// --- Automação de Aniversários ---
-function startCronJobs() {
-  cron.schedule('0 9 * * *', async () => {
-    console.log('[CRON] Iniciando rotina de aniversários...');
-    try {
-      const hoje = new Date();
-      const dia = hoje.getDate().toString().padStart(2, '0');
-      const mes = (hoje.getMonth() + 1).toString().padStart(2, '0');
-      const prefixoData = `${dia}/${mes}`;
-
-      const aniversariantes = await prisma.eleitor.findMany({
-        where: {
-          data_nascimento: { startsWith: prefixoData },
-          status: 'ativo'
-        }
-      });
-
-      console.log(`[CRON] Encontrados ${aniversariantes.length} aniversariantes hoje (${prefixoData}).`);
-
-      for (let i = 0; i < aniversariantes.length; i++) {
-        const eleitor = aniversariantes[i];
-        if (!eleitor.telefone || !eleitor.campanha_id) continue;
-
-        const numero = eleitor.telefone.replace(/\D/g, '');
-        const primeiroNome = eleitor.nome.split(' ')[0];
-        const texto = `Olá ${primeiroNome}! O Sistema Gestor de Votos te deseja um feliz aniversário! Que seu dia seja muito especial. 🎉🎂`;
-
-        try {
-          await sendWhatsAppMessage(eleitor.campanha_id, numero, texto, 'text');
-          console.log(`[CRON] Mensagem enviada para ${primeiroNome} (${numero})`);
-        } catch (err) {
-          console.error(`[CRON] Falha ao enviar para ${numero}:`, err);
-        }
-
-        if (i < aniversariantes.length - 1) {
-          await new Promise(r => setTimeout(r, 3000));
-        }
-      }
-    } catch (err) {
-      console.error('[CRON] Erro na rotina de aniversários:', err);
-    }
-  });
-
-  // Funis de Automação do WhatsApp (Roda a cada hora)
-  cron.schedule('0 * * * *', async () => {
-    console.log('[CRON] Verificando Funis de WhatsApp pendentes...');
-    try {
-      const pendentes = await prisma.eleitorFunil.findMany({
-        where: { concluido: false, proxima_execucao: { lte: new Date() } },
-        include: {
-          funil: true,
-          etapa_atual: true,
-          eleitor: { select: { nome: true, telefone: true, campanha_id: true } }
-        }
-      });
-
-      for (const item of pendentes) {
-        if (!item.eleitor.telefone || !item.eleitor.campanha_id || !item.etapa_atual) continue;
-
-        const numero = item.eleitor.telefone.replace(/\D/g, '');
-        const texto = item.etapa_atual.mensagem_texto.replace(/\{\{nome\}\}/g, item.eleitor.nome.split(' ')[0]);
-        
-        try {
-          if (item.etapa_atual.tipo_midia !== 'text' && item.etapa_atual.mensagem_midia_url) {
-            // Em um sistema real, faríamos o download da URL e enviaríamos o arquivo,
-            // ou passaríamos a URL para sendWhatsAppMessage se for a Z-API.
-            // Para simplificar, enviaremos apenas o link no texto para o Robô Interno, ou chamamos sendWhatsAppMessage
-            await sendWhatsAppMessage(item.eleitor.campanha_id, numero, texto, item.etapa_atual.tipo_midia, item.etapa_atual.mensagem_midia_url);
-          } else {
-            await sendWhatsAppMessage(item.eleitor.campanha_id, numero, texto, 'text');
-          }
-
-          // Avançar para a próxima etapa
-          const proximaEtapa = await prisma.funilEtapa.findFirst({
-            where: { funil_id: item.funil_id, ordem: { gt: item.etapa_atual.ordem } },
-            orderBy: { ordem: 'asc' }
-          });
-
-          if (proximaEtapa) {
-            await prisma.eleitorFunil.update({
-              where: { id: item.id },
-              data: {
-                etapa_atual_id: proximaEtapa.id,
-                proxima_execucao: new Date(Date.now() + proximaEtapa.dias_espera * 24 * 60 * 60 * 1000)
-              }
-            });
-          } else {
-            await prisma.eleitorFunil.update({
-              where: { id: item.id },
-              data: { concluido: true, proxima_execucao: null }
-            });
-          }
-
-          // Sleep to avoid rate limits
-          await new Promise(r => setTimeout(r, 2000));
-        } catch (err) {
-          console.error(`[CRON Funil] Erro enviando para ${numero}:`, err);
-        }
-      }
-    } catch (err) {
-      console.error('[CRON Funil] Erro na rotina de funis:', err);
-    }
-  });
-
-  console.log('✓ Cron jobs agendados.');
-}
-
 // --- Inicialização ---
 const PORT = Number(process.env.PORT) || 3000;
 bootstrap()
   .then(async () => {
-    try {
-      startCronJobs();
-      // Restaurar sessões internas na inicialização
-      prisma.configuracaoWhatsApp.findMany({ where: { modo: 'interno' } })
-        .then(configs => {
-          for (const config of configs) {
-            if (config.campanha_id) {
-               initWhatsApp(io, config.campanha_id).catch(err => {
-                 console.error(`Erro ao iniciar WhatsApp para campanha ${config.campanha_id}:`, err);
-               });
-            }
-          }
-        })
-        .catch(console.error);
-    } catch (e) {
-      console.error("Erro ao verificar config do whatsapp na inicialização", e);
-    }
-
     httpServer.listen(PORT, () => {
       console.log(`✓ API do Gestor de Votos rodando na porta ${PORT}`);
     });

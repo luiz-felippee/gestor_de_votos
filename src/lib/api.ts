@@ -5,11 +5,9 @@ import type {
   EleitorComCabo,
   Usuario,
   UsuarioAdmin,
-  ConfiguracaoWhatsApp,
   Evento,
   LogAuditoria,
   Campanha,
-  MensagemWhatsApp,
 } from './types'
 
 export const API_BASE =
@@ -236,24 +234,11 @@ export const api = {
     request<EleitorComCabo>(`/eleitores/${id}`, { method: 'PUT', body: data }),
   deleteEleitor: (id: string) =>
     request<void>(`/eleitores/${id}`, { method: 'DELETE' }),
-  marcarWhatsAppEnviado: (id: string, enviado: boolean) =>
-    request<EleitorComCabo>(`/eleitores/${id}/whatsapp`, { method: 'PATCH', body: { enviado } }),
   anonimizarEleitor: (id: string) =>
     request<EleitorComCabo>(`/eleitores/${id}/anonimizar`, { method: 'POST' }),
 
   // ---- Bairros (autocomplete do formulário) ----
   getBairros: () => request<string[]>('/bairros'),
-
-  // ---- Configurações WhatsApp ----
-  getConfigWhatsApp: () => request<ConfiguracaoWhatsApp>('/whatsapp/config'),
-  updateConfigWhatsApp: (data: Partial<ConfiguracaoWhatsApp>) =>
-    request<ConfiguracaoWhatsApp>('/whatsapp/config', { method: 'POST', body: data }),
-  
-  // ---- CRM Inbox WhatsApp ----
-  fetchWhatsAppChats: () => request<any[]>('/whatsapp/chats'),
-  fetchWhatsAppChatHistory: (numero: string) => request<MensagemWhatsApp[]>(`/whatsapp/chats/${numero}`),
-  sendWhatsApp: (numero: string, texto: string) =>
-    request<{ success: boolean }>('/whatsapp/send', { method: 'POST', body: { numero, texto, tipo: 'text' } }),
 
   // ---- Eventos ----
   getEventos: () => request<Evento[]>('/eventos'),
@@ -267,14 +252,4 @@ export const api = {
   // ---- Assinaturas (Billing) ----
   billingCheckout: (planoId: string) => request<{ url: string }>('/billing/checkout', { method: 'POST', body: { planoId } }),
   billingPortal: () => request<{ url: string }>('/billing/portal', { method: 'POST' }),
-
-  // ---- Funis de Automação (WhatsApp Drip Campaigns) ----
-  getFunis: () => request<any[]>('/funis'),
-  getFunil: (id: string) => request<any>(`/funis/${id}`),
-  createFunil: (data: unknown) => request<any>('/funis', { method: 'POST', body: data }),
-  updateFunil: (id: string, data: unknown) => request<any>(`/funis/${id}`, { method: 'PUT', body: data }),
-  deleteFunil: (id: string) => request<void>(`/funis/${id}`, { method: 'DELETE' }),
-  createFunilEtapa: (funilId: string, data: unknown) => request<any>(`/funis/${funilId}/etapas`, { method: 'POST', body: data }),
-  updateFunilEtapa: (funilId: string, etapaId: string, data: unknown) => request<any>(`/funis/${funilId}/etapas/${etapaId}`, { method: 'PUT', body: data }),
-  deleteFunilEtapa: (funilId: string, etapaId: string) => request<void>(`/funis/${funilId}/etapas/${etapaId}`, { method: 'DELETE' }),
 }

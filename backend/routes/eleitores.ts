@@ -3,7 +3,6 @@ import { prisma } from '../prismaClient';
 import { requireAuth, requireRole, optionalAuth, wrap, escopoCampanha, eleitorNaCampanha, registrarLog, cadastroLimiter, requirePlanLimit } from '../middlewares';
 import { notificarMudanca } from '../server';
 import { StatusEleitor } from '@prisma/client';
-import { sendWhatsAppMessage } from '../whatsapp';
 
 const eleitoresRouter = Router();
 
@@ -99,39 +98,6 @@ eleitoresRouter.post(
         }
       }).catch(console.error);
 
-      // Disparar Boas-Vindas se ativado
-      if (campanhaId && b.telefone) {
-        prisma.configuracaoWhatsApp.findFirst({
-          where: { campanha_id: campanhaId }
-        }).then((config) => {
-          if (config && config.msg_boas_vindas) {
-            // Pode haver variáveis de substituição, ex: {{nome}}
-            const texto = config.msg_boas_vindas.replace(/\{\{nome\}\}/g, String(b.nome).trim());
-            sendWhatsAppMessage(campanhaId, String(b.telefone), texto).catch((err) => {
-               console.error('Falha silenciosa ao enviar boas vindas:', err.message);
-            });
-          }
-        }).catch(console.error);
-
-        // Gatilho de Funil (se houver funil ativo para novo_cadastro)
-        prisma.funilWhatsApp.findFirst({
-          where: { campanha_id: campanhaId, gatilho: 'novo_cadastro', ativo: true },
-          include: { etapas: { orderBy: { ordem: 'asc' }, take: 1 } }
-        }).then((funil) => {
-          if (funil && funil.etapas.length > 0) {
-            const primeiraEtapa = funil.etapas[0];
-            return prisma.eleitorFunil.create({
-              data: {
-                eleitor_id: eleitor.id,
-                funil_id: funil.id,
-                etapa_atual_id: primeiraEtapa.id,
-                proxima_execucao: new Date(Date.now() + primeiraEtapa.dias_espera * 24 * 60 * 60 * 1000)
-              }
-            });
-          }
-        }).catch(console.error);
-      }
-
       notificarMudanca();
       res.status(201).json(eleitor);
     } catch (err: any) {
@@ -218,23 +184,6 @@ eleitoresRouter.get(
       totalPages: Math.ceil(total / limit),
     });
   }),
-);
-
-// Marcar WhatsApp Enviado
-eleitoresRouter.patch(
-  '/eleitores/:id/whatsapp',
-  requireAuth,
-  wrap(async (req, res) => {
-    const { enviado } = req.body ?? {};
-    if (!(await eleitorNaCampanha(req, String(req.params.id))))
-      return res.status(404).json({ error: 'Eleitor não encontrado.' });
-    const eleitor = await prisma.eleitor.update({
-      where: { id: String(req.params.id) },
-      data: { whatsapp_enviado: Boolean(enviado) }
-    });
-    notificarMudanca();
-    res.json(eleitor);
-  })
 );
 
 // Editar: admin/coordenador

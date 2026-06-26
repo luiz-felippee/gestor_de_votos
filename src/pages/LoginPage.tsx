@@ -122,7 +122,7 @@ export function LoginPage() {
               className="text-lg text-slate-300 font-medium animate-slide-up"
               style={{ animationDelay: '300ms', animationFillMode: 'both' }}
             >
-              Gestor de Votos é a plataforma completa para gerenciamento de lideranças, eleitores e comunicação via WhatsApp.
+              Gestor de Votos é a plataforma completa para gerenciamento de lideranças, eleitores e da sua base eleitoral.
             </p>
           </div>
         </div>

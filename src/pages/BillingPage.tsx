@@ -63,7 +63,7 @@ export function BillingPage() {
           <ul className="mb-8 space-y-3 text-sm text-slate-600 dark:text-slate-300">
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Até 500 eleitores</li>
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Até 3 Lideranças</li>
-            <li className="flex items-center gap-2 opacity-40"><CheckCircle2 className="h-4 w-4" /> Sem disparo de WhatsApp</li>
+            <li className="flex items-center gap-2 opacity-40"><CheckCircle2 className="h-4 w-4" /> Suporte por e-mail</li>
           </ul>
           <button disabled className="w-full rounded-lg bg-slate-100 py-2.5 text-sm font-semibold text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-500">
             Plano Atual
@@ -88,7 +88,7 @@ export function BillingPage() {
           <ul className="mb-8 space-y-3 text-sm text-slate-600 dark:text-slate-300">
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-brand-500" /> Até 5.000 eleitores</li>
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-brand-500" /> Até 10 Lideranças</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-brand-500" /> Disparo de WhatsApp Liberado</li>
+            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-brand-500" /> Mapa de calor e relatórios</li>
           </ul>
           <button 
             onClick={() => assinar('basico')}
@@ -112,7 +112,7 @@ export function BillingPage() {
           <ul className="mb-8 space-y-3 text-sm text-slate-600 dark:text-slate-300">
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Eleitores Ilimitados</li>
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Lideranças Ilimitadas</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Disparo de WhatsApp Liberado</li>
+            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Suporte prioritário</li>
           </ul>
           <button 
             onClick={() => assinar('pro')}

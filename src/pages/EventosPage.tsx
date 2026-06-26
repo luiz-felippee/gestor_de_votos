@@ -1,20 +1,14 @@
 import { useState } from "react"
 import { useEventos } from "../hooks/useEventos"
-import { useEleitores } from "../hooks/useEleitores"
 import { api } from "../lib/api"
 import { formatDataHora } from "../lib/format"
-import { BulkWhatsAppModal } from "../components/BulkWhatsAppModal"
-import type { Evento, EleitorComCabo } from "../lib/types"
+import type { Evento } from "../lib/types"
 
 export function EventosPage() {
   const { eventos, loading, recarregar } = useEventos()
-  const { eleitores } = useEleitores()
-  
+
   const [showModal, setShowModal] = useState(false)
   const [editForm, setEditForm] = useState<Partial<Evento>>({})
-  
-  const [showBulkMessage, setShowBulkMessage] = useState(false)
-  const [bulkEleitores, setBulkEleitores] = useState<EleitorComCabo[]>([])
 
   async function handleSalvar(e: React.FormEvent) {
     e.preventDefault()
@@ -41,26 +35,12 @@ export function EventosPage() {
     }
   }
 
-  function handleConvidarBairro(evento: Evento) {
-    if (!evento.bairro) {
-      alert("Este evento não tem um bairro definido para filtrar eleitores.")
-      return
-    }
-    const alvos = eleitores.filter(el => el.bairro === evento.bairro)
-    if (alvos.length === 0) {
-      alert("Nenhum eleitor encontrado neste bairro.")
-      return
-    }
-    setBulkEleitores(alvos)
-    setShowBulkMessage(true)
-  }
-
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800 dark:text-white">Agenda de Reuniões</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Gerencie eventos e envie convites por bairro.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Gerencie os eventos e reuniões da campanha.</p>
         </div>
         <button
           onClick={() => { setEditForm({}); setShowModal(true) }}
@@ -91,14 +71,8 @@ export function EventosPage() {
               </div>
               <div className="mt-5 flex flex-wrap gap-2 border-t pt-4 border-slate-100 dark:border-slate-800">
                 <button
-                  onClick={() => handleConvidarBairro(ev)}
-                  className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 font-bold py-2 rounded-lg text-sm transition dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/40"
-                >
-                  Convidar Bairro
-                </button>
-                <button
                   onClick={() => { setEditForm(ev); setShowModal(true) }}
-                  className="px-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg py-2 font-bold text-sm transition dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
                   Editar
                 </button>
@@ -155,14 +129,6 @@ export function EventosPage() {
             </form>
           </div>
         </div>
-      )}
-
-      {showBulkMessage && (
-        <BulkWhatsAppModal
-          eleitores={bulkEleitores}
-          onClose={() => setShowBulkMessage(false)}
-          onSuccess={() => setShowBulkMessage(false)}
-        />
       )}
     </div>
   )

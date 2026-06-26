@@ -12,7 +12,7 @@ import { EsqueciSenhaPage } from './pages/EsqueciSenhaPage'
 import { ResetarSenhaPage } from './pages/ResetarSenhaPage'
 import { PrivacidadePage } from './pages/PrivacidadePage'
 
-// Pesadas: carregam sob demanda (mapa, gráficos, WhatsApp, planilha, etc.)
+// Pesadas: carregam sob demanda (mapa, gráficos, planilha, etc.)
 const lazyPage = <T extends Record<string, React.ComponentType<any>>>(
   loader: () => Promise<T>,
   nome: keyof T,
@@ -22,7 +22,6 @@ const DashboardPage = lazyPage(() => import('./pages/DashboardPage'), 'Dashboard
 const PlanilhaPage = lazyPage(() => import('./pages/PlanilhaPage'), 'PlanilhaPage')
 const CabosPage = lazyPage(() => import('./pages/CabosPage'), 'CabosPage')
 const UsuariosPage = lazyPage(() => import('./pages/UsuariosPage'), 'UsuariosPage')
-const WhatsAppPage = lazyPage(() => import('./pages/WhatsAppPage'), 'WhatsAppPage')
 const MapaCalorPage = lazyPage(() => import('./pages/MapaCalorPage'), 'MapaCalorPage')
 const CadastroLiderancaPage = lazyPage(
   () => import('./pages/CadastroLiderancaPage'),
@@ -32,8 +31,6 @@ const EventosPage = lazyPage(() => import('./pages/EventosPage'), 'EventosPage')
 const AuditoriaPage = lazyPage(() => import('./pages/AuditoriaPage'), 'AuditoriaPage')
 const CampanhasPage = lazyPage(() => import('./pages/CampanhasPage'), 'CampanhasPage')
 const BillingPage = lazyPage(() => import('./pages/BillingPage').then(m => ({ BillingPage: m.BillingPage })), 'BillingPage')
-const WhatsAppInboxPage = lazyPage(() => import('./pages/WhatsAppInboxPage').then(m => ({ WhatsAppInboxPage: m.WhatsAppInboxPage })), 'WhatsAppInboxPage')
-const WhatsAppFunilPage = lazyPage(() => import('./pages/WhatsAppFunilPage').then(m => ({ WhatsAppFunilPage: m.WhatsAppFunilPage })), 'WhatsAppFunilPage')
 
 function CarregandoPagina() {
   return (
@@ -132,30 +129,6 @@ export default function App() {
                 }
               />
               <Route
-                path="/whatsapp"
-                element={
-                  <ProtectedRoute roles={['admin']}>
-                    <WhatsAppPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/whatsapp/inbox"
-                element={
-                  <ProtectedRoute roles={['admin', 'coordenador']}>
-                    <WhatsAppInboxPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/whatsapp/funil"
-                element={
-                  <ProtectedRoute roles={['admin']}>
-                    <WhatsAppFunilPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/assinatura"
                 element={
                   <ProtectedRoute roles={['admin', 'coordenador']}>
@@ -206,14 +179,6 @@ function Header() {
               <Item to="/mapa">Mapa</Item>
               <Item to="/eventos">Agenda</Item>
               <Item to="/cadastro">Cadastro</Item>
-
-              {(role === 'admin' || role === 'coordenador') && (
-                <Dropdown title="Comunicação">
-                  {role === 'admin' && <DropdownItem to="/whatsapp">WhatsApp</DropdownItem>}
-                  {role === 'admin' && <DropdownItem to="/whatsapp/funil">Automações & Funis</DropdownItem>}
-                  <DropdownItem to="/whatsapp/inbox">Atendimento (CRM)</DropdownItem>
-                </Dropdown>
-              )}
 
               {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
                 <Dropdown title="Administração">
@@ -301,8 +266,6 @@ function Header() {
             {usuario?.super_admin && <MobileItem to="/campanhas" onClick={() => setMenuOpen(false)}>Campanhas</MobileItem>}
             {role === 'admin' && <MobileItem to="/usuarios" onClick={() => setMenuOpen(false)}>Usuários</MobileItem>}
             {role === 'admin' && <MobileItem to="/auditoria" onClick={() => setMenuOpen(false)}>Auditoria</MobileItem>}
-            {role === 'admin' && <MobileItem to="/whatsapp" onClick={() => setMenuOpen(false)}>WhatsApp</MobileItem>}
-            {(role === 'admin' || role === 'coordenador') && <MobileItem to="/whatsapp/inbox" onClick={() => setMenuOpen(false)}>Atendimento (CRM)</MobileItem>}
             <MobileItem to="/cadastro" onClick={() => setMenuOpen(false)}>Novo Cadastro</MobileItem>
           </nav>
         </div>

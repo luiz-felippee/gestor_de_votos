@@ -57,7 +57,6 @@ export interface Eleitor {
   titulo_eleitor?: string | null
   lat?: number | null
   lng?: number | null
-  whatsapp_enviado: boolean
   created_at: string
 }
 
@@ -82,30 +81,6 @@ export interface CaboEleitoral {
 /** Eleitor com o nome do cabo já resolvido (join), usado na planilha. */
 export interface EleitorComCabo extends Eleitor {
   cabo: Pick<CaboEleitoral, 'id' | 'nome'> | null
-}
-
-export interface ConfiguracaoWhatsApp {
-  id: string
-  modo: string
-  api_url: string | null
-  api_token: string | null
-  api_instancia_id: string | null
-  msg_boas_vindas: string | null
-  ativar_chatbot: boolean
-  fluxo_chatbot: any | null
-  usar_ia: boolean
-  ia_prompt: string | null
-  updated_at: string
-}
-
-export interface MensagemWhatsApp {
-  id: string
-  campanha_id: string
-  numero: string
-  texto: string
-  is_from_me: boolean
-  lida: boolean
-  created_at: string
 }
 
 export interface LogAuditoria {

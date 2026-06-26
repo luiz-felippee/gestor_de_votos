@@ -4,20 +4,19 @@ import { prisma } from '../prismaClient';
 export interface PlanLimits {
   maxEleitores: number;
   maxCabos: number;
-  permiteWhatsApp: boolean;
 }
 
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
-  gratis: { maxEleitores: 500, maxCabos: 3, permiteWhatsApp: false },
-  basico: { maxEleitores: 5000, maxCabos: 10, permiteWhatsApp: true },
-  pro: { maxEleitores: 9999999, maxCabos: 9999999, permiteWhatsApp: true },
+  gratis: { maxEleitores: 500, maxCabos: 3 },
+  basico: { maxEleitores: 5000, maxCabos: 10 },
+  pro: { maxEleitores: 9999999, maxCabos: 9999999 },
 };
 
 /**
  * Middleware para bloquear ações se a campanha ultrapassou o limite do plano.
  * Usar antes da criação de registros no backend.
  */
-export const requirePlanLimit = (recurso: 'eleitores' | 'cabos' | 'whatsapp') => {
+export const requirePlanLimit = (recurso: 'eleitores' | 'cabos') => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       let campanha_id = (req as Request & { user?: { campanha_id?: string | null } }).user?.campanha_id;
@@ -51,10 +50,6 @@ export const requirePlanLimit = (recurso: 'eleitores' | 'cabos' | 'whatsapp') =>
       // Se a assinatura está cancelada/inadimplente, cai para limites do grátis
       const planoAtivo = (campanha.assinatura_status === 'ativa') ? (campanha.plano || 'gratis') : 'gratis';
       const limites = PLAN_LIMITS[planoAtivo] || PLAN_LIMITS['gratis'];
-
-      if (recurso === 'whatsapp' && !limites.permiteWhatsApp) {
-        return res.status(403).json({ error: 'Seu plano atual não permite envio de WhatsApp. Faça o upgrade.' });
-      }
 
       if (recurso === 'eleitores') {
         const count = await prisma.eleitor.count({ where: { campanha_id } });

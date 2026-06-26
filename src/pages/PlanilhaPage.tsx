@@ -5,8 +5,6 @@ import { useToast } from '../components/Toast'
 import { CIDADES, STATUS_OPTIONS, STATUS_STYLES } from '../lib/constants'
 import { formatDataHora, maskTelefone } from '../lib/format'
 import { exportarCSV, exportarXLSX } from '../lib/export'
-import { WhatsAppMenu } from '../components/WhatsAppMenu'
-import { BulkWhatsAppModal } from '../components/BulkWhatsAppModal'
 import type { EleitorComCabo, StatusEleitor } from '../lib/types'
 
 type Coluna =
@@ -52,10 +50,6 @@ export function PlanilhaPage() {
 
   const [editId, setEditId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<EleitorComCabo>>({})
-
-  // Seleção guarda o objeto completo → funciona mesmo selecionando entre páginas
-  const [selecionados, setSelecionados] = useState<Map<string, EleitorComCabo>>(new Map())
-  const [mostrarBulkModal, setMostrarBulkModal] = useState(false)
 
   // Debounce da busca (evita um request por tecla)
   useEffect(() => {
@@ -185,38 +179,6 @@ export function PlanilhaPage() {
     setEditForm((f) => ({ ...f, [campo]: valor }))
   }
 
-  // --- Seleção entre páginas ---
-  const paginaTodaSelecionada = eleitores.length > 0 && eleitores.every((e) => selecionados.has(e.id))
-
-  function toggleSel(e: EleitorComCabo) {
-    setSelecionados((prev) => {
-      const n = new Map(prev)
-      if (n.has(e.id)) n.delete(e.id)
-      else n.set(e.id, e)
-      return n
-    })
-  }
-
-  function alternarPagina() {
-    setSelecionados((prev) => {
-      const n = new Map(prev)
-      if (paginaTodaSelecionada) eleitores.forEach((e) => n.delete(e.id))
-      else eleitores.forEach((e) => n.set(e.id, e))
-      return n
-    })
-  }
-
-  async function selecionarTodosFiltrados() {
-    try {
-      const todos = await api.getEleitoresFiltrados(filtros)
-      setSelecionados(new Map(todos.map((e) => [e.id, e])))
-    } catch (e) {
-      toast(`Erro ao selecionar todos: ${(e as Error).message}`, 'error')
-    }
-  }
-
-  const eleitoresSelecionados = useMemo(() => Array.from(selecionados.values()), [selecionados])
-
   async function exportar(tipo: 'xlsx' | 'csv') {
     setExportando(true)
     try {
@@ -316,32 +278,6 @@ export function PlanilhaPage() {
         </select>
       </div>
 
-      {/* Barra de Ação em Massa */}
-      {selecionados.size > 0 && (
-        <div className="mb-6 flex flex-col sm:flex-row animate-fade-in items-center justify-between gap-4 sm:gap-0 rounded-xl border border-brand-200 bg-brand-50 px-5 py-3 shadow-sm dark:border-brand-900/50 dark:bg-brand-900/20">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white">
-              {selecionados.size}
-            </span>
-            <span className="text-sm font-bold text-brand-900 dark:text-brand-100">eleitores selecionados</span>
-            {selecionados.size < total && (
-              <button onClick={selecionarTodosFiltrados} className="text-xs font-bold text-brand-600 underline hover:text-brand-700 dark:text-brand-400">
-                Selecionar todos os {total.toLocaleString('pt-BR')}
-              </button>
-            )}
-          </div>
-          <div className="flex w-full sm:w-auto justify-end gap-3">
-            <button onClick={() => setSelecionados(new Map())} className="rounded-lg px-3 py-1.5 text-sm font-bold text-slate-600 transition hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800">
-              Cancelar
-            </button>
-            <button onClick={() => setMostrarBulkModal(true)} className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700">
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-              Disparar WhatsApp
-            </button>
-          </div>
-        </div>
-      )}
-
       {erro && (
         <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700 border border-red-200">
           {erro}
@@ -354,14 +290,6 @@ export function PlanilhaPage() {
           <table className="w-full min-w-[1000px] text-left text-sm border-collapse">
             <thead className="sticky top-0 z-20 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
               <tr>
-                <th className="px-5 py-4 w-10 border-b border-slate-200 dark:border-slate-800">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-transform hover:scale-110"
-                    checked={paginaTodaSelecionada}
-                    onChange={alternarPagina}
-                  />
-                </th>
                 <Th col="nome" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Nome</Th>
                 <Th col="telefone" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Telefone</Th>
                 <Th col="local_votacao" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Local / Zona / Seç.</Th>
@@ -375,7 +303,7 @@ export function PlanilhaPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan={9} className="px-3 py-12 text-center">
+                  <td colSpan={8} className="px-3 py-12 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
                       <span className="text-slate-400 font-medium">Carregando planilha...</span>
@@ -384,7 +312,7 @@ export function PlanilhaPage() {
                 </tr>
               ) : eleitores.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-3 py-16 text-center text-slate-400 font-medium">
+                  <td colSpan={8} className="px-3 py-16 text-center text-slate-400 font-medium">
                     <svg className="w-12 h-12 mx-auto text-slate-300 mb-3 dark:text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     Nenhum eleitor encontrado na busca atual.
                   </td>
@@ -435,21 +363,10 @@ export function PlanilhaPage() {
                     </tr>
                   ) : (
                     <tr key={e.id} className="group transition-all hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                      <td className="px-5 py-4">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-transform hover:scale-110"
-                          checked={selecionados.has(e.id)}
-                          onChange={() => toggleSel(e)}
-                        />
-                      </td>
                       <Td className="font-bold text-slate-900 dark:text-slate-100">{e.nome}</Td>
                       <Td>
                         <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300">
                           {e.telefone}
-                          {e.telefone && (
-                            <WhatsAppMenu eleitor={e} />
-                          )}
                         </div>
                         {e.cpf && <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wider font-medium">CPF: {e.cpf}</p>}
                         {e.titulo_eleitor && <p className="text-[11px] text-slate-500 mt-0.5 uppercase tracking-wider font-medium">TÍT: {e.titulo_eleitor}</p>}
@@ -529,17 +446,6 @@ export function PlanilhaPage() {
           </div>
         )}
       </div>
-
-      {mostrarBulkModal && (
-        <BulkWhatsAppModal
-          eleitores={eleitoresSelecionados}
-          onClose={() => setMostrarBulkModal(false)}
-          onSuccess={() => {
-            setSelecionados(new Map())
-            carregar()
-          }}
-        />
-      )}
     </div>
   )
 }
