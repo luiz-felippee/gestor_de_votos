@@ -111,7 +111,29 @@ app.get('/api/health', async (_req, res) => {
   } catch {
     db = 'acordando';
   }
-  res.json({ ok: true, version: '2026-06-26-admin', runtime: 'node-dist', db });
+  // Diagnóstico temporário do admin (remover depois): mostra se as variáveis estão
+  // setadas e quantos usuários existem — para depurar o login pós-reset.
+  let usuarios = -1;
+  let adminExiste = false;
+  const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim() || null;
+  try {
+    usuarios = await prisma.usuario.count();
+    if (adminEmail) {
+      adminExiste = !!(await prisma.usuario.findUnique({ where: { email: adminEmail } }));
+    }
+  } catch { /* banco acordando */ }
+  res.json({
+    ok: true,
+    version: '2026-06-26-diag',
+    runtime: 'node-dist',
+    db,
+    diag: {
+      adminEnvSet: !!(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD),
+      adminEmail,
+      adminExiste,
+      usuarios,
+    },
+  });
 });
 
 // --- Upload Genérico (autenticado + validação de tipo) ---
