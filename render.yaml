@@ -7,8 +7,9 @@ services:
     plan: free
     rootDir: backend
     # Gera o Prisma Client e sincroniza as tabelas no banco (Neon) no deploy.
-    # (db push aplica o diff do schema: dropa tabelas/colunas removidas, sem apagar o resto.)
-    buildCommand: npm install && npx prisma generate && npx prisma db push
+    # --accept-data-loss: aplica o diff de forma NÃO-interativa, inclusive quando dropa
+    # tabelas/colunas (ex.: remoção do WhatsApp). Sem ele o build trava pedindo confirmação.
+    buildCommand: npm install && npx prisma generate && npx prisma db push --accept-data-loss
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
