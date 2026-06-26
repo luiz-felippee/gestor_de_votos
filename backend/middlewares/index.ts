@@ -83,14 +83,25 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'Não autenticado.' });
+
+  // 1) Validação do token (401 = token realmente inválido/expirado → desloga)
+  let payload: TokenPayload;
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
-    await completarToken(payload);
-    req.user = payload;
-    next();
+    payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
   } catch {
     return res.status(401).json({ error: 'Sessão inválida.' });
   }
+
+  // 2) Enriquecer com dados do banco. Se o BANCO falhar (ex.: Neon acordando),
+  //    NÃO é falha de autenticação — devolve 503 (o front NÃO desloga em 503).
+  try {
+    await completarToken(payload);
+  } catch {
+    return res.status(503).json({ error: 'Banco indisponível no momento. Tente novamente.' });
+  }
+
+  req.user = payload;
+  next();
 }
 
 export function requireRole(...roles: PerfilAcesso[]) {

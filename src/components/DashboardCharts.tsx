@@ -13,7 +13,7 @@ import {
   CartesianGrid,
 } from 'recharts'
 
-const CORES_ZONA = ['#6366f1', '#06b6d4', '#f43f5e', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899', '#10b981', '#3b82f6', '#eab308', '#64748b', '#a855f7']
+const CORES_ZONA = ['#3b82f6', '#f97316', '#14b8a6', '#f43f5e', '#eab308', '#8b5cf6', '#10b981', '#06b6d4', '#ec4899', '#64748b', '#6366f1', '#a855f7']
 
 interface Fatia {
   label: string
@@ -31,6 +31,19 @@ interface Props {
 // Gráficos pesados (recharts) carregados em um chunk separado para o painel
 // inicial pintar os KPIs/perfil na hora, sem esperar a biblioteca de gráficos.
 export default function DashboardCharts({ porCidade, porLocalVotacao, porBairro, porDia, totalEleitores }: Props) {
+  // Processamento para o gráfico de Locais de Votação (Top 5 + Outros, Ordenado)
+  const locaisOrdenados = [...porLocalVotacao].sort((a, b) => b.total - a.total);
+  let locaisProcessados = locaisOrdenados;
+  if (locaisOrdenados.length > 6) {
+    const top5 = locaisOrdenados.slice(0, 5);
+    const outrosTotal = locaisOrdenados.slice(5).reduce((acc, curr) => acc + curr.total, 0);
+    if (outrosTotal > 0) {
+      top5.push({ label: 'Outros locais', total: outrosTotal });
+    }
+    locaisProcessados = top5;
+  }
+  const maxVotosLocal = Math.max(...locaisProcessados.map((z) => z.total), 1);
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <Painel titulo="Eleitores por cidade">
@@ -84,7 +97,7 @@ export default function DashboardCharts({ porCidade, porLocalVotacao, porBairro,
                   ))}
                 </defs>
                 <Pie
-                  data={porLocalVotacao}
+                  data={locaisProcessados}
                   dataKey="total"
                   nameKey="label"
                   cx="50%"
@@ -95,7 +108,7 @@ export default function DashboardCharts({ porCidade, porLocalVotacao, porBairro,
                   cornerRadius={4}
                   stroke="none"
                 >
-                  {porLocalVotacao.map((entry, i) => (
+                  {locaisProcessados.map((entry, i) => (
                     <Cell key={i} fill={entry.label === 'Outros locais' ? '#475569' : `url(#zonaGrad${i % CORES_ZONA.length})`} />
                   ))}
                 </Pie>
@@ -122,32 +135,33 @@ export default function DashboardCharts({ porCidade, porLocalVotacao, porBairro,
           </div>
 
           {/* Legenda lateral */}
-          <div className="flex-1 w-full min-w-0 space-y-2.5 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-            {porLocalVotacao.map((z, i) => {
+          <div className="flex-1 w-full min-w-0 space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+            {locaisProcessados.map((z, i) => {
               const pct = totalEleitores > 0 ? Math.round((z.total / totalEleitores) * 100) : 0
+              const widthBarra = Math.round((z.total / maxVotosLocal) * 100)
               const color = z.label === 'Outros locais' ? '#475569' : CORES_ZONA[i % CORES_ZONA.length]
 
               return (
-                <div key={z.label} className="flex items-center gap-3 group">
+                <div key={z.label} className="flex items-start gap-3 group py-0.5">
                   <div
-                    className="w-3.5 h-3.5 rounded-full flex-shrink-0 ring-2 ring-white dark:ring-slate-900 shadow-sm"
+                    className="w-3.5 h-3.5 rounded-full flex-shrink-0 ring-2 ring-white dark:ring-slate-900 shadow-sm mt-0.5"
                     style={{ backgroundColor: color }}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-[13px] leading-tight font-medium text-slate-700 dark:text-slate-300 truncate" title={z.label}>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[13px] leading-tight font-medium text-slate-700 dark:text-slate-300 line-clamp-2" title={z.label}>
                         {z.label}
                       </span>
-                      <span className="text-xs tabular-nums font-bold text-slate-500 dark:text-slate-400 flex-shrink-0">
+                      <span className="text-xs tabular-nums font-bold text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5">
                         {z.total}
                         <span className="ml-1 text-[10px] font-normal text-slate-400 dark:text-slate-500">({pct}%)</span>
                       </span>
                     </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
-                          width: `${pct}%`,
+                          width: `${widthBarra}%`,
                           backgroundColor: color,
                         }}
                       />
@@ -156,7 +170,7 @@ export default function DashboardCharts({ porCidade, porLocalVotacao, porBairro,
                 </div>
               )
             })}
-            {porLocalVotacao.length === 0 && (
+            {locaisProcessados.length === 0 && (
               <p className="text-sm text-slate-400 dark:text-slate-500 italic">Nenhum dado disponível</p>
             )}
           </div>

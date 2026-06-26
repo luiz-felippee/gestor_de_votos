@@ -70,6 +70,35 @@ async function request<T>(
   return data as T
 }
 
+export interface EleitorFiltros {
+  busca?: string
+  cidade?: string
+  bairro?: string
+  status?: string
+  cabo_id?: string
+  zona?: number
+  mes_aniversario?: string
+  sort?: string
+  dir?: 'asc' | 'desc'
+}
+
+function montarQueryEleitores(p?: EleitorFiltros & { page?: number; limit?: number }): string {
+  const q = new URLSearchParams()
+  if (!p) return ''
+  if (p.page) q.set('page', String(p.page))
+  if (p.limit) q.set('limit', String(p.limit))
+  if (p.busca) q.set('busca', p.busca)
+  if (p.cidade) q.set('cidade', p.cidade)
+  if (p.bairro) q.set('bairro', p.bairro)
+  if (p.status) q.set('status', p.status)
+  if (p.cabo_id) q.set('cabo_id', p.cabo_id)
+  if (p.zona) q.set('zona', String(p.zona))
+  if (p.mes_aniversario) q.set('mes_aniversario', p.mes_aniversario)
+  if (p.sort) q.set('sort', p.sort)
+  if (p.dir) q.set('dir', p.dir)
+  return q.toString()
+}
+
 export const api = {
   base: API_BASE,
 
@@ -159,19 +188,27 @@ export const api = {
     request<void>(`/usuarios/${id}`, { method: 'DELETE' }),
 
   // ---- Eleitores ----
-  getEleitores: async (params?: { page?: number; limit?: number; busca?: string; cidade?: string; bairro?: string; status?: string; cabo_id?: string; zona?: number }) => {
-    const query = new URLSearchParams()
-    if (params?.page) query.set('page', String(params.page))
-    if (params?.limit) query.set('limit', String(params.limit))
-    if (params?.busca) query.set('busca', params.busca)
-    if (params?.cidade) query.set('cidade', params.cidade)
-    if (params?.bairro) query.set('bairro', params.bairro)
-    if (params?.status) query.set('status', params.status)
-    if (params?.cabo_id) query.set('cabo_id', params.cabo_id)
-    if (params?.zona) query.set('zona', String(params.zona))
-    const qs = query.toString()
+  getEleitores: async (params?: EleitorFiltros & { page?: number; limit?: number }) => {
+    const qs = montarQueryEleitores(params)
     const res = await request<{ data: EleitorComCabo[]; total: number; page: number; limit: number; totalPages: number }>(`/eleitores${qs ? `?${qs}` : ''}`)
     return res
+  },
+  /** Busca TODOS os eleitores que batem com os filtros (para exportar / selecionar todos). */
+  getEleitoresFiltrados: async (filtros?: EleitorFiltros) => {
+    const first = await request<{ data: EleitorComCabo[]; total: number }>(
+      `/eleitores?${montarQueryEleitores({ ...filtros, page: 1, limit: 200 })}`,
+    )
+    const all = [...(first.data ?? [])]
+    if ((first.total ?? 0) > 200) {
+      const pages = Math.ceil(first.total / 200)
+      const proms: Promise<{ data: EleitorComCabo[] }>[] = []
+      for (let p = 2; p <= pages; p++) {
+        proms.push(request<{ data: EleitorComCabo[] }>(`/eleitores?${montarQueryEleitores({ ...filtros, page: p, limit: 200 })}`))
+      }
+      const rs = await Promise.all(proms)
+      for (const r of rs) all.push(...(r.data ?? []))
+    }
+    return all
   },
   /** Busca TODOS os eleitores (sem paginação), para páginas que precisam da lista completa (mapa, cabos, eventos). */
   getAllEleitores: async () => {

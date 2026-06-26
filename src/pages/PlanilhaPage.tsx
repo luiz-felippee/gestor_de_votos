@@ -1,6 +1,6 @@
-import { useMemo, useState, useEffect } from 'react'
-import { api } from '../lib/api'
-import { useEleitores } from '../hooks/useEleitores'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { api, type EleitorFiltros } from '../lib/api'
+import { getSocket } from '../lib/socket'
 import { useToast } from '../components/Toast'
 import { CIDADES, STATUS_OPTIONS, STATUS_STYLES } from '../lib/constants'
 import { formatDataHora, maskTelefone } from '../lib/format'
@@ -26,79 +26,99 @@ interface Ordenacao {
 }
 
 export function PlanilhaPage() {
-  const { eleitores, loading, erro, recarregar } = useEleitores()
   const { toast } = useToast()
 
+  // Dados apenas da página atual — paginação/filtros/ordenação no SERVIDOR
+  const [eleitores, setEleitores] = useState<EleitorComCabo[]>([])
+  const [total, setTotal] = useState(0)
+  const [totalPaginas, setTotalPaginas] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
+
   const [busca, setBusca] = useState('')
+  const [buscaDeb, setBuscaDeb] = useState('')
   const [filtroCidade, setFiltroCidade] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
   const [filtroBairro, setFiltroBairro] = useState('')
   const [filtroZona, setFiltroZona] = useState('')
-  const [ordem, setOrdem] = useState<Ordenacao>({
-    campo: 'created_at',
-    dir: 'desc',
-  })
+  const [filtroMesAniversario, setFiltroMesAniversario] = useState('')
+  const [ordem, setOrdem] = useState<Ordenacao>({ campo: 'created_at', dir: 'desc' })
 
-  // Paginação
   const [paginaAtual, setPaginaAtual] = useState(1)
   const itensPorPagina = 50
+
+  const [bairrosOptions, setBairrosOptions] = useState<string[]>([])
+  const [exportando, setExportando] = useState(false)
 
   const [editId, setEditId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<EleitorComCabo>>({})
 
-  // Seleção Múltipla
-  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
+  // Seleção guarda o objeto completo → funciona mesmo selecionando entre páginas
+  const [selecionados, setSelecionados] = useState<Map<string, EleitorComCabo>>(new Map())
   const [mostrarBulkModal, setMostrarBulkModal] = useState(false)
 
-  const [filtroMesAniversario, setFiltroMesAniversario] = useState('')
+  // Debounce da busca (evita um request por tecla)
+  useEffect(() => {
+    const t = setTimeout(() => setBuscaDeb(busca.trim()), 350)
+    return () => clearTimeout(t)
+  }, [busca])
 
-  // Reseta a página para 1 quando os filtros mudam
+  // Lista de bairros para o filtro (distintos da campanha)
+  useEffect(() => {
+    api.getBairros().then(setBairrosOptions).catch(() => {})
+  }, [])
+
+  const filtros: EleitorFiltros = useMemo(
+    () => ({
+      busca: buscaDeb || undefined,
+      cidade: filtroCidade || undefined,
+      status: filtroStatus || undefined,
+      bairro: filtroBairro || undefined,
+      zona: filtroZona ? Number(filtroZona) : undefined,
+      mes_aniversario: filtroMesAniversario || undefined,
+      sort: ordem.campo,
+      dir: ordem.dir,
+    }),
+    [buscaDeb, filtroCidade, filtroStatus, filtroBairro, filtroZona, filtroMesAniversario, ordem],
+  )
+
+  // Filtros mudaram → volta para a página 1
   useEffect(() => {
     setPaginaAtual(1)
-    setSelecionados(new Set()) // Limpa seleção ao filtrar
-  }, [busca, filtroCidade, filtroStatus, filtroBairro, filtroZona, filtroMesAniversario])
+  }, [filtros])
 
-  const listaFiltrada = useMemo(() => {
-    const termo = busca.trim().toLowerCase()
-    let lista = eleitores.filter((e) => {
-      const correspondeBusca =
-        !termo ||
-        e.nome.toLowerCase().includes(termo) ||
-        e.bairro.toLowerCase().includes(termo) ||
-        e.cidade.toLowerCase().includes(termo) ||
-        (e.cabo?.nome ?? '').toLowerCase().includes(termo) ||
-        (e.local_votacao ?? '').toLowerCase().includes(termo)
-      const correspondeCidade = !filtroCidade || e.cidade === filtroCidade
-      const correspondeStatus = !filtroStatus || e.status === filtroStatus
-      const correspondeBairro = !filtroBairro || e.bairro === filtroBairro
-      const correspondeZona = !filtroZona || String(e.zona) === filtroZona
-      const correspondeMes = !filtroMesAniversario || (e.data_nascimento && e.data_nascimento.split('-')[1] === filtroMesAniversario)
-      return correspondeBusca && correspondeCidade && correspondeStatus && correspondeBairro && correspondeZona && correspondeMes
-    })
+  const carregar = useCallback(async () => {
+    setLoading(true)
+    setErro(null)
+    try {
+      const res = await api.getEleitores({ ...filtros, page: paginaAtual, limit: itensPorPagina })
+      setEleitores(res.data ?? [])
+      setTotal(res.total ?? 0)
+      setTotalPaginas(res.totalPages || 1)
+    } catch (e) {
+      setErro((e as Error).message)
+    } finally {
+      setLoading(false)
+    }
+  }, [filtros, paginaAtual])
 
-    lista = [...lista].sort((a, b) => {
-      const va = a[ordem.campo] ?? ''
-      const vb = b[ordem.campo] ?? ''
-      let cmp: number
-      if (typeof va === 'number' && typeof vb === 'number') cmp = va - vb
-      else cmp = String(va).localeCompare(String(vb), 'pt-BR')
-      return ordem.dir === 'asc' ? cmp : -cmp
-    })
-    return lista
-  }, [eleitores, busca, filtroCidade, filtroStatus, filtroBairro, filtroZona, filtroMesAniversario, ordem])
+  useEffect(() => {
+    carregar()
+  }, [carregar])
 
-  const totalPaginas = Math.ceil(listaFiltrada.length / itensPorPagina)
-  
-  const listaPaginada = useMemo(() => {
-    const inicio = (paginaAtual - 1) * itensPorPagina
-    return listaFiltrada.slice(inicio, inicio + itensPorPagina)
-  }, [listaFiltrada, paginaAtual])
+  // Tempo real: recarrega a página atual quando algo muda no servidor
+  useEffect(() => {
+    const socket = getSocket()
+    const h = () => carregar()
+    socket.on('eleitores:changed', h)
+    return () => {
+      socket.off('eleitores:changed', h)
+    }
+  }, [carregar])
 
   function ordenarPor(campo: Coluna) {
     setOrdem((o) =>
-      o.campo === campo
-        ? { campo, dir: o.dir === 'asc' ? 'desc' : 'asc' }
-        : { campo, dir: 'asc' },
+      o.campo === campo ? { campo, dir: o.dir === 'asc' ? 'desc' : 'asc' } : { campo, dir: 'asc' },
     )
   }
 
@@ -125,7 +145,7 @@ export function PlanilhaPage() {
         data_nascimento: editForm.data_nascimento,
       })
       toast('Eleitor atualizado com sucesso!', 'success')
-      recarregar()
+      carregar()
     } catch (err) {
       toast(`Erro ao salvar: ${(err as Error).message}`, 'error')
       return
@@ -137,14 +157,14 @@ export function PlanilhaPage() {
   async function anonimizar(e: EleitorComCabo) {
     if (
       !confirm(
-        `Anonimizar "${e.nome}"?\nOs dados pessoais (nome, telefone, CPF, título, nascimento) serão apagados permanentemente, mantendo apenas a estatística (LGPD).`
+        `Anonimizar "${e.nome}"?\nOs dados pessoais (nome, telefone, CPF, título, nascimento) serão apagados permanentemente, mantendo apenas a estatística (LGPD).`,
       )
     )
       return
     try {
       await api.anonimizarEleitor(e.id)
       toast('Dados anonimizados com sucesso (LGPD)', 'success')
-      recarregar()
+      carregar()
     } catch (err) {
       toast(`Erro ao anonimizar: ${(err as Error).message}`, 'error')
     }
@@ -155,44 +175,65 @@ export function PlanilhaPage() {
     try {
       await api.deleteEleitor(e.id)
       toast('Eleitor excluído com sucesso', 'success')
-      recarregar()
+      carregar()
     } catch (err) {
       toast(`Erro ao excluir: ${(err as Error).message}`, 'error')
     }
   }
 
-  function setCampo<K extends keyof EleitorComCabo>(
-    campo: K,
-    valor: EleitorComCabo[K],
-  ) {
+  function setCampo<K extends keyof EleitorComCabo>(campo: K, valor: EleitorComCabo[K]) {
     setEditForm((f) => ({ ...f, [campo]: valor }))
   }
 
-  // Extrair listas únicas para os novos filtros
-  const bairrosUnicos = useMemo(() => Array.from(new Set(eleitores.map(e => e.bairro).filter(Boolean))).sort(), [eleitores])
-  const zonasUnicas = useMemo(() => Array.from(new Set(eleitores.map(e => String(e.zona)).filter(Boolean))).sort((a,b) => Number(a) - Number(b)), [eleitores])
+  // --- Seleção entre páginas ---
+  const paginaTodaSelecionada = eleitores.length > 0 && eleitores.every((e) => selecionados.has(e.id))
 
-  // Handlers de Seleção
-  const handleSelecionarTodos = () => {
-    if (selecionados.size === listaFiltrada.length && listaFiltrada.length > 0) {
-      setSelecionados(new Set())
-    } else {
-      setSelecionados(new Set(listaFiltrada.map(e => e.id)))
-    }
-  }
-
-  const handleSelecionar = (id: string) => {
-    setSelecionados(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
+  function toggleSel(e: EleitorComCabo) {
+    setSelecionados((prev) => {
+      const n = new Map(prev)
+      if (n.has(e.id)) n.delete(e.id)
+      else n.set(e.id, e)
+      return n
     })
   }
 
-  const eleitoresSelecionados = useMemo(() => {
-    return eleitores.filter(e => selecionados.has(e.id))
-  }, [eleitores, selecionados])
+  function alternarPagina() {
+    setSelecionados((prev) => {
+      const n = new Map(prev)
+      if (paginaTodaSelecionada) eleitores.forEach((e) => n.delete(e.id))
+      else eleitores.forEach((e) => n.set(e.id, e))
+      return n
+    })
+  }
+
+  async function selecionarTodosFiltrados() {
+    try {
+      const todos = await api.getEleitoresFiltrados(filtros)
+      setSelecionados(new Map(todos.map((e) => [e.id, e])))
+    } catch (e) {
+      toast(`Erro ao selecionar todos: ${(e as Error).message}`, 'error')
+    }
+  }
+
+  const eleitoresSelecionados = useMemo(() => Array.from(selecionados.values()), [selecionados])
+
+  async function exportar(tipo: 'xlsx' | 'csv') {
+    setExportando(true)
+    try {
+      const todos = await api.getEleitoresFiltrados(filtros)
+      if (tipo === 'xlsx') exportarXLSX(todos)
+      else exportarCSV(todos)
+    } catch (e) {
+      toast(`Erro ao exportar: ${(e as Error).message}`, 'error')
+    } finally {
+      setExportando(false)
+    }
+  }
+
+  const exportBtn =
+    'flex-1 sm:flex-none flex justify-center items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:border-brand-500 hover:text-brand-600 hover:shadow-md active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-brand-400 dark:hover:text-brand-400'
+  const selectClass =
+    'w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950'
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 animate-fade-in flex flex-col h-full">
@@ -202,7 +243,7 @@ export function PlanilhaPage() {
             Planilha de Votação
           </h1>
           <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
-            Exibindo {listaFiltrada.length} de {eleitores.length} eleitores cadastrados
+            {total.toLocaleString('pt-BR')} eleitores no filtro atual
             <span className="ml-3 inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-bold text-green-700 dark:bg-green-900/40 dark:text-green-400">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
               Sincronizado
@@ -210,17 +251,11 @@ export function PlanilhaPage() {
           </p>
         </div>
         <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto">
-          <button
-            onClick={() => exportarXLSX(listaFiltrada)}
-            className="flex-1 sm:flex-none flex justify-center items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:border-brand-500 hover:text-brand-600 hover:shadow-md active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-brand-400 dark:hover:text-brand-400"
-          >
-            Exportar Excel
+          <button onClick={() => exportar('xlsx')} disabled={exportando} className={exportBtn}>
+            {exportando ? 'Exportando...' : 'Exportar Excel'}
           </button>
-          <button
-            onClick={() => exportarCSV(listaFiltrada)}
-            className="flex-1 sm:flex-none flex justify-center items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:border-brand-500 hover:text-brand-600 hover:shadow-md active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-brand-400 dark:hover:text-brand-400"
-          >
-            Exportar CSV
+          <button onClick={() => exportar('csv')} disabled={exportando} className={exportBtn}>
+            {exportando ? 'Exportando...' : 'Exportar CSV'}
           </button>
         </div>
       </div>
@@ -238,51 +273,33 @@ export function PlanilhaPage() {
           />
         </div>
         <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 hidden lg:block mx-1"></div>
-        <select
-          value={filtroCidade}
-          onChange={(e) => setFiltroCidade(e.target.value)}
-          className="w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950"
-        >
+        <select value={filtroCidade} onChange={(e) => setFiltroCidade(e.target.value)} className={selectClass}>
           <option value="">Cidades (Todas)</option>
           {CIDADES.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <select
-          value={filtroStatus}
-          onChange={(e) => setFiltroStatus(e.target.value)}
-          className="w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950"
-        >
+        <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={selectClass}>
           <option value="">Status (Todos)</option>
           {STATUS_OPTIONS.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
-        <select
-          value={filtroBairro}
-          onChange={(e) => setFiltroBairro(e.target.value)}
-          className="w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950 max-w-[160px]"
-        >
+        <select value={filtroBairro} onChange={(e) => setFiltroBairro(e.target.value)} className={`${selectClass} max-w-[160px]`}>
           <option value="">Bairros</option>
-          {bairrosUnicos.map((b) => (
+          {bairrosOptions.map((b) => (
             <option key={b} value={b}>{b}</option>
           ))}
         </select>
-        <select
+        <input
+          type="number"
+          min={1}
           value={filtroZona}
           onChange={(e) => setFiltroZona(e.target.value)}
-          className="w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950 max-w-[120px]"
-        >
-          <option value="">Zonas</option>
-          {zonasUnicas.map((z) => (
-            <option key={z} value={z}>{z}</option>
-          ))}
-        </select>
-        <select
-          value={filtroMesAniversario}
-          onChange={(e) => setFiltroMesAniversario(e.target.value)}
-          className="w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950 max-w-[160px]"
-        >
+          placeholder="Zona"
+          className={`${selectClass} max-w-[110px]`}
+        />
+        <select value={filtroMesAniversario} onChange={(e) => setFiltroMesAniversario(e.target.value)} className={`${selectClass} max-w-[160px]`}>
           <option value="">Aniversário (Mês)</option>
           <option value="01">Janeiro</option>
           <option value="02">Fevereiro</option>
@@ -299,31 +316,26 @@ export function PlanilhaPage() {
         </select>
       </div>
 
-      {/* Barra de Ação em Massa Flutuante */}
+      {/* Barra de Ação em Massa */}
       {selecionados.size > 0 && (
         <div className="mb-6 flex flex-col sm:flex-row animate-fade-in items-center justify-between gap-4 sm:gap-0 rounded-xl border border-brand-200 bg-brand-50 px-5 py-3 shadow-sm dark:border-brand-900/50 dark:bg-brand-900/20">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white">
               {selecionados.size}
             </span>
-            <span className="text-sm font-bold text-brand-900 dark:text-brand-100">
-              eleitores selecionados
-            </span>
+            <span className="text-sm font-bold text-brand-900 dark:text-brand-100">eleitores selecionados</span>
+            {selecionados.size < total && (
+              <button onClick={selecionarTodosFiltrados} className="text-xs font-bold text-brand-600 underline hover:text-brand-700 dark:text-brand-400">
+                Selecionar todos os {total.toLocaleString('pt-BR')}
+              </button>
+            )}
           </div>
           <div className="flex w-full sm:w-auto justify-end gap-3">
-            <button
-              onClick={() => setSelecionados(new Set())}
-              className="rounded-lg px-3 py-1.5 text-sm font-bold text-slate-600 transition hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800"
-            >
+            <button onClick={() => setSelecionados(new Map())} className="rounded-lg px-3 py-1.5 text-sm font-bold text-slate-600 transition hover:bg-white dark:text-slate-300 dark:hover:bg-slate-800">
               Cancelar
             </button>
-            <button
-              onClick={() => setMostrarBulkModal(true)}
-              className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
+            <button onClick={() => setMostrarBulkModal(true)} className="flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-1.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
               Disparar WhatsApp
             </button>
           </div>
@@ -346,8 +358,8 @@ export function PlanilhaPage() {
                   <input
                     type="checkbox"
                     className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-transform hover:scale-110"
-                    checked={listaFiltrada.length > 0 && selecionados.size === listaFiltrada.length}
-                    onChange={handleSelecionarTodos}
+                    checked={paginaTodaSelecionada}
+                    onChange={alternarPagina}
                   />
                 </th>
                 <Th col="nome" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Nome</Th>
@@ -363,22 +375,22 @@ export function PlanilhaPage() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-12 text-center">
+                  <td colSpan={9} className="px-3 py-12 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
                       <span className="text-slate-400 font-medium">Carregando planilha...</span>
                     </div>
                   </td>
                 </tr>
-              ) : listaPaginada.length === 0 ? (
+              ) : eleitores.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-16 text-center text-slate-400 font-medium">
+                  <td colSpan={9} className="px-3 py-16 text-center text-slate-400 font-medium">
                     <svg className="w-12 h-12 mx-auto text-slate-300 mb-3 dark:text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                     Nenhum eleitor encontrado na busca atual.
                   </td>
                 </tr>
               ) : (
-                listaPaginada.map((e) =>
+                eleitores.map((e) =>
                   editId === e.id ? (
                     <tr key={e.id} className="bg-brand-50/50 dark:bg-brand-900/10">
                       <Td>
@@ -428,7 +440,7 @@ export function PlanilhaPage() {
                           type="checkbox"
                           className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 transition-transform hover:scale-110"
                           checked={selecionados.has(e.id)}
-                          onChange={() => handleSelecionar(e.id)}
+                          onChange={() => toggleSel(e)}
                         />
                       </td>
                       <Td className="font-bold text-slate-900 dark:text-slate-100">{e.nome}</Td>
@@ -491,7 +503,7 @@ export function PlanilhaPage() {
             </tbody>
           </table>
         </div>
-        
+
         {/* Rodapé: Paginação */}
         {totalPaginas > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0 border-t border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
@@ -500,14 +512,14 @@ export function PlanilhaPage() {
             </span>
             <div className="flex gap-2 w-full sm:w-auto justify-between sm:justify-start">
               <button
-                onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
+                onClick={() => setPaginaAtual((p) => Math.max(1, p - 1))}
                 disabled={paginaAtual === 1}
                 className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 Anterior
               </button>
               <button
-                onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
+                onClick={() => setPaginaAtual((p) => Math.min(totalPaginas, p + 1))}
                 disabled={paginaAtual === totalPaginas}
                 className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
@@ -523,8 +535,8 @@ export function PlanilhaPage() {
           eleitores={eleitoresSelecionados}
           onClose={() => setMostrarBulkModal(false)}
           onSuccess={() => {
-            setSelecionados(new Set())
-            recarregar()
+            setSelecionados(new Map())
+            carregar()
           }}
         />
       )}
@@ -568,4 +580,3 @@ function Th({
     </th>
   )
 }
-

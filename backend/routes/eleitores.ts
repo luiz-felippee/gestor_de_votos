@@ -172,20 +172,38 @@ eleitoresRouter.get(
     if (req.query.cabo_id) where.cabo_id = String(req.query.cabo_id);
     if (req.query.zona) where.zona = Number(req.query.zona);
 
-    // Busca textual (nome ou telefone)
+    // Filtro por mês de aniversário (data_nascimento no formato YYYY-MM-DD)
+    if (req.query.mes_aniversario) {
+      where.data_nascimento = { contains: `-${String(req.query.mes_aniversario)}-` };
+    }
+
+    // Busca textual (nome, telefone, bairro, cidade, local e cabo)
     if (req.query.busca) {
       const termo = String(req.query.busca).toLowerCase().trim();
       where.OR = [
         { nome_busca: { contains: termo } },
         { telefone: { contains: termo } },
+        { bairro: { contains: termo, mode: 'insensitive' } },
+        { cidade: { contains: termo, mode: 'insensitive' } },
+        { local_votacao: { contains: termo, mode: 'insensitive' } },
+        { cabo: { nome: { contains: termo, mode: 'insensitive' } } },
       ];
     }
+
+    // Ordenação (whitelist de colunas para segurança)
+    const SORT_MAP: Record<string, string> = {
+      nome: 'nome_busca', telefone: 'telefone', local_votacao: 'local_votacao',
+      zona: 'zona', secao: 'secao', bairro: 'bairro', cidade: 'cidade',
+      status: 'status', created_at: 'created_at',
+    };
+    const sortField = SORT_MAP[String(req.query.sort)] || 'created_at';
+    const sortDir = String(req.query.dir) === 'asc' ? 'asc' : 'desc';
 
     const [eleitores, total] = await Promise.all([
       prisma.eleitor.findMany({
         where,
         include: { cabo: { select: { id: true, nome: true } } },
-        orderBy: { created_at: 'desc' },
+        orderBy: { [sortField]: sortDir } as any,
         skip,
         take: limit,
       }),
