@@ -16,10 +16,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 try {
-  // ⚠️ RESET ÚNICO: --force-reset DROPA TODO o banco e recria do schema limpo (apaga
-  // eleitores/cabos/usuarios). Reverter para "db push --accept-data-loss" logo após
-  // este deploy, senão TODO deploy futuro zera os dados.
-  execSync('npx prisma db push --force-reset --accept-data-loss --skip-generate', { stdio: 'inherit' });
+  execSync('npx prisma db push --accept-data-loss --skip-generate', { stdio: 'inherit' });
 } catch (err) {
   console.warn('[db-sync] prisma db push falhou (banco indisponível?) — ignorando.', err.message);
 }
