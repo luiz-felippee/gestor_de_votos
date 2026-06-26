@@ -111,38 +111,7 @@ app.get('/api/health', async (_req, res) => {
   } catch {
     db = 'acordando';
   }
-  // Diagnóstico temporário do admin (remover depois): mostra se as variáveis estão
-  // setadas e quantos usuários existem — para depurar o login pós-reset.
-  let usuarios = -1;
-  let adminExiste = false;
-  let hashBateComEnv: boolean | null = null;
-  const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim() || null;
-  const pwdSan = sanitizeSenha(process.env.ADMIN_PASSWORD || '');
-  try {
-    usuarios = await prisma.usuario.count();
-    if (adminEmail) {
-      const u = await prisma.usuario.findUnique({ where: { email: adminEmail }, select: { senha_hash: true } });
-      adminExiste = !!u;
-      if (u && pwdSan) {
-        hashBateComEnv = await bcrypt.compare(pwdSan, u.senha_hash);
-      }
-    }
-  } catch { /* banco acordando */ }
-  res.json({
-    ok: true,
-    version: '2026-06-26-pwd',
-    runtime: 'node-dist',
-    db,
-    diag: {
-      adminEnvSet: !!(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD),
-      adminEmail,
-      adminExiste,
-      adminPwdLenRaw: (process.env.ADMIN_PASSWORD || '').length,
-      adminPwdLenSan: pwdSan.length,
-      hashBateComEnv,
-      usuarios,
-    },
-  });
+  res.json({ ok: true, version: '2026-06-26-final', runtime: 'node-dist', db });
 });
 
 // --- Upload Genérico (autenticado + validação de tipo) ---
@@ -268,24 +237,22 @@ async function bootstrap() {
   const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
   if (ADMIN_EMAIL && ADMIN_PASSWORD) {
     const email = ADMIN_EMAIL.toLowerCase().trim();
-    // TEMPORÁRIO (reset único): força a senha do admin para um valor conhecido, porque o
-    // ADMIN_PASSWORD do Render estava com um valor inesperado de 11 chars. Reverter para
-    // sanitizeSenha(ADMIN_PASSWORD) após confirmar o login. Trocar a senha depois.
-    const senha_hash = await bcrypt.hash('Gestor2026', 10);
-    // Upsert: a senha do admin é sempre sincronizada com ADMIN_PASSWORD (admin gerido
-    // por env). Garante acesso após reset e permite redefinir a senha pela variável.
     const existe = await prisma.usuario.findUnique({ where: { email } });
     if (!existe) {
+      // Só na CRIAÇÃO usamos a senha do env (sanitizada contra lixo de copy-paste).
+      const senha_hash = await bcrypt.hash(sanitizeSenha(ADMIN_PASSWORD), 10);
       await prisma.usuario.create({
         data: { nome: ADMIN_NAME || 'Administrador', email, senha_hash, role: 'admin', super_admin: true },
       });
       console.log(`✓ Admin criado: ${email}`);
     } else {
+      // Admin já existe: PRESERVA a senha atual (não sobrescreve com o env, que pode estar
+      // errado). Garante apenas role/super_admin. Troca de senha é feita dentro do app.
       await prisma.usuario.update({
         where: { email },
-        data: { senha_hash, role: 'admin', super_admin: true },
+        data: { role: 'admin', super_admin: true },
       });
-      console.log(`✓ Admin atualizado: ${email} (senha sincronizada com ADMIN_PASSWORD)`);
+      console.log(`✓ Admin já existe: ${email} (senha preservada)`);
     }
   } else {
     console.warn('⚠️ ADMIN_EMAIL/ADMIN_PASSWORD não definidos — nenhum admin foi criado.');
