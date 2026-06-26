@@ -115,22 +115,30 @@ app.get('/api/health', async (_req, res) => {
   // setadas e quantos usuários existem — para depurar o login pós-reset.
   let usuarios = -1;
   let adminExiste = false;
+  let hashBateComEnv: boolean | null = null;
   const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim() || null;
+  const adminPwdLen = (process.env.ADMIN_PASSWORD || '').length;
   try {
     usuarios = await prisma.usuario.count();
     if (adminEmail) {
-      adminExiste = !!(await prisma.usuario.findUnique({ where: { email: adminEmail } }));
+      const u = await prisma.usuario.findUnique({ where: { email: adminEmail }, select: { senha_hash: true } });
+      adminExiste = !!u;
+      if (u && process.env.ADMIN_PASSWORD) {
+        hashBateComEnv = await bcrypt.compare(process.env.ADMIN_PASSWORD, u.senha_hash);
+      }
     }
   } catch { /* banco acordando */ }
   res.json({
     ok: true,
-    version: '2026-06-26-diag',
+    version: '2026-06-26-diag2',
     runtime: 'node-dist',
     db,
     diag: {
       adminEnvSet: !!(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD),
       adminEmail,
       adminExiste,
+      adminPwdLen,
+      hashBateComEnv,
       usuarios,
     },
   });
