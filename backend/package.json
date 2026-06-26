@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "ts-node server.ts",
     "build": "prisma generate && tsc",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && node scripts/db-sync.js",
     "prestart": "npm run build",
     "start": "node --max-old-space-size=460 dist/server.js",
     "typecheck": "tsc --noEmit",
