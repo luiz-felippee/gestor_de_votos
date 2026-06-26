@@ -111,7 +111,7 @@ app.get('/api/health', async (_req, res) => {
   } catch {
     db = 'acordando';
   }
-  res.json({ ok: true, version: '2026-06-26-reset', runtime: 'node-dist', db });
+  res.json({ ok: true, version: '2026-06-26-admin', runtime: 'node-dist', db });
 });
 
 // --- Upload Genérico (autenticado + validação de tipo) ---
@@ -225,17 +225,24 @@ async function bootstrap() {
   const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
   if (ADMIN_EMAIL && ADMIN_PASSWORD) {
     const email = ADMIN_EMAIL.toLowerCase().trim();
+    const senha_hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    // Upsert: a senha do admin é sempre sincronizada com ADMIN_PASSWORD (admin gerido
+    // por env). Garante acesso após reset e permite redefinir a senha pela variável.
     const existe = await prisma.usuario.findUnique({ where: { email } });
     if (!existe) {
-      const senha_hash = await bcrypt.hash(ADMIN_PASSWORD, 10);
       await prisma.usuario.create({
-        data: { nome: ADMIN_NAME || 'Administrador', email, senha_hash, role: 'admin' },
+        data: { nome: ADMIN_NAME || 'Administrador', email, senha_hash, role: 'admin', super_admin: true },
       });
       console.log(`✓ Admin criado: ${email}`);
     } else {
-      console.log(`✓ Admin já existe: ${email} (senha preservada)`);
+      await prisma.usuario.update({
+        where: { email },
+        data: { senha_hash, role: 'admin', super_admin: true },
+      });
+      console.log(`✓ Admin atualizado: ${email} (senha sincronizada com ADMIN_PASSWORD)`);
     }
-    await prisma.usuario.updateMany({ where: { email }, data: { super_admin: true } });
+  } else {
+    console.warn('⚠️ ADMIN_EMAIL/ADMIN_PASSWORD não definidos — nenhum admin foi criado.');
   }
 
   // Multi-campanha: garante uma campanha padrão e adota os dados sem dono
