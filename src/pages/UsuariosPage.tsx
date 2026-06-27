@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { useAuth } from '../auth/AuthContext'
 import { Eye, EyeOff } from 'lucide-react'
+import { useConfirm } from '../components/ConfirmDialog'
 import type { PerfilAcesso, UsuarioAdmin } from '../lib/types'
 
 const PERFIS: { value: PerfilAcesso; label: string }[] = [
@@ -38,6 +39,7 @@ const VAZIO: FormState = {
 export function UsuariosPage() {
   const { cabos } = useCabos()
   const { usuario: atual } = useAuth()
+  const { confirm, alert } = useConfirm()
 
   const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
   const [loading, setLoading] = useState(true)
@@ -115,12 +117,19 @@ export function UsuariosPage() {
   }
 
   async function excluir(u: UsuarioAdmin) {
-    if (!confirm(`Excluir o acesso de "${u.nome}" (${u.email})?`)) return
+    const ok = await confirm({
+      title: 'Excluir Usuário?',
+      message: `Tem certeza que deseja remover o acesso de "${u.nome}" (${u.email})?`,
+      confirmText: 'Excluir',
+      cancelText: 'Voltar',
+    })
+    if (!ok) return
+
     try {
       await api.deleteUsuario(u.id)
       await recarregar()
     } catch (err) {
-      alert(`Erro ao excluir: ${(err as Error).message}`)
+      alert(`Erro ao excluir: ${(err as Error).message}`, 'Erro')
     }
   }
 

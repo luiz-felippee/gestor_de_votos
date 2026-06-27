@@ -7,6 +7,8 @@ import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, generateSlug } from '../lib/format'
 import { compressImage } from '../lib/imageOptimization'
+import { useConfirm } from '../components/ConfirmDialog'
+import { CardSkeleton } from '../components/Skeleton'
 import type { CaboEleitoral } from '../lib/types'
 
 interface FormState {
@@ -39,6 +41,7 @@ const VAZIO: FormState = {
 
 export function CabosPage() {
   const { cabos, loading, recarregar } = useCabos()
+  const { confirm, alert } = useConfirm()
 
   const [form, setForm] = useState<FormState>(VAZIO)
   const [editId, setEditId] = useState<string | null>(null)
@@ -144,17 +147,19 @@ export function CabosPage() {
   }
 
   async function excluir(c: CaboEleitoral) {
-    if (
-      !confirm(
-        `Excluir o cabo "${c.nome}"? Os eleitores vinculados ficarão sem cabo.`,
-      )
-    )
-      return
+    const ok = await confirm({
+      title: 'Excluir Liderança?',
+      message: `Tem certeza que deseja excluir o cabo "${c.nome}"? Os eleitores vinculados ficarão sem cabo de indicação.`,
+      confirmText: 'Excluir',
+      cancelText: 'Voltar',
+    })
+    if (!ok) return
+
     try {
       await api.deleteCabo(c.id)
       recarregar()
     } catch (err) {
-      alert(`Erro ao excluir: ${(err as Error).message}`)
+      alert(`Erro ao excluir: ${(err as Error).message}`, 'Erro')
     }
   }
 
@@ -357,9 +362,24 @@ export function CabosPage() {
       </div>
 
       {loading ? (
-        <p className="text-slate-400">Carregando...</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
       ) : cabos.length === 0 ? (
-        <p className="text-slate-400">Nenhum cabo cadastrado ainda.</p>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 p-12 text-center dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+          <div className="rounded-full bg-slate-100 p-4 dark:bg-slate-800 text-slate-400 mb-4 animate-bounce">
+            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">Nenhuma liderança cadastrada</h3>
+          <p className="max-w-md text-sm text-slate-500 dark:text-slate-400">
+            Adicione os cabos eleitorais e coordenadores para que eles possam indicar eleitores e atingir suas metas.
+          </p>
+        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {cabosOrdenados.map((c, i) => (
@@ -394,6 +414,7 @@ function CardCabo({
   const [copiado, setCopiado] = useState(false)
   const [mostrarQR, setMostrarQR] = useState(false)
   const { usuario } = useAuth()
+  const { alert } = useConfirm()
   
   // Cria a url amigavel: dominio.com/c/nome-campanha/joao-silva
   const slugLideranca = generateSlug(cabo.nome)
@@ -417,7 +438,7 @@ function CardCabo({
       setCopiado(true)
       setTimeout(() => setCopiado(false), 2000)
     } catch {
-      alert(link)
+      alert(link, 'Link de Indicação')
     }
   }
 

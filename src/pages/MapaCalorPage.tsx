@@ -14,6 +14,7 @@ import html2canvas from 'html2canvas'
 import { useEleitores } from '../hooks/useEleitores'
 import { useCabos } from '../hooks/useCabos'
 import { useTheme } from '../components/ThemeProvider'
+import { useConfirm } from '../components/ConfirmDialog'
 import cidadesPE from '../data/pe-cidades.json'
 
 /* Tiles limpos (CARTO) — visual profissional, claro e escuro */
@@ -153,6 +154,7 @@ export function MapaCalorPage() {
   const { eleitores: todosEleitores, loading } = useEleitores()
   const { cabos } = useCabos()
   const { theme } = useTheme()
+  const { alert } = useConfirm()
   const tema = theme === 'dark' ? TILES.dark : TILES.light
   const mapaRef = useRef<HTMLDivElement>(null)
   const [cidadeSelecionada, setCidadeSelecionada] = useState<string | null>(null)
@@ -216,7 +218,7 @@ export function MapaCalorPage() {
       a.download = `mapa-pernambuco${caboFiltro ? '-filtrado' : ''}.png`
       a.click()
     } catch {
-      alert('Não foi possível exportar a imagem. Tente novamente.')
+      alert('Não foi possível exportar a imagem. Tente novamente.', 'Erro ao exportar')
     } finally {
       setExportando(false)
     }

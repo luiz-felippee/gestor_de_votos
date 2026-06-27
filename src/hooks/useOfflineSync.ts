@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
+import { useToast } from '../components/Toast'
 
 export interface PendenteOffline {
   id: string; // id temporário gerado no cliente
@@ -11,6 +12,7 @@ export interface PendenteOffline {
 export function useOfflineSync() {
   const [online, setOnline] = useState(navigator.onLine)
   const [pendentes, setPendentes] = useState<number>(0)
+  const { toast } = useToast()
 
   useEffect(() => {
     const checkQueue = () => {
@@ -59,7 +61,7 @@ export function useOfflineSync() {
         localStorage.setItem('gv_offline_queue', JSON.stringify(novaFila))
         setPendentes(novaFila.length)
         if (sucesso > 0) {
-          alert(`Sincronização offline concluída! ${sucesso} cadastros enviados.`)
+          toast(`Sincronização offline concluída! ${sucesso} cadastros enviados.`, 'success')
         }
       }
     }

@@ -20,14 +20,17 @@ export interface DashboardStats {
   aniversariantes: { id: string; nome: string; telefone: string | null; data_nascimento: string; diffDias: number; bairro: string | null; cidade: string | null }[]
 }
 
-export function useDashboardStats(cidade?: string) {
+export function useDashboardStats(cidade?: string, dias?: string) {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     try {
       setLoading(true)
-      const query = cidade ? `?cidade=${encodeURIComponent(cidade)}` : ""
+      const params = new URLSearchParams()
+      if (cidade) params.set('cidade', cidade)
+      if (dias) params.set('dias', dias)
+      const query = params.toString() ? `?${params.toString()}` : ''
       const data = await api.getDashboardStats(query)
       setStats(data)
     } catch (err) {
@@ -35,7 +38,7 @@ export function useDashboardStats(cidade?: string) {
     } finally {
       setLoading(false)
     }
-  }, [cidade])
+  }, [cidade, dias])
 
   useEffect(() => {
     load()

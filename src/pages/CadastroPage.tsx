@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams, useParams } from 'react-router-dom'
-import { CheckCircle2, UserPlus } from 'lucide-react'
+import { CheckCircle2, UserPlus, AlertCircle } from 'lucide-react'
 import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
 import { LocalVotacaoAutocomplete } from '../components/LocalVotacaoAutocomplete'
 import { saveOffline } from '../hooks/useOfflineSync'
+import { updateFavicon } from '../lib/favicon'
 import type { Campanha } from '../lib/types'
 
 interface FormState {
@@ -56,6 +57,17 @@ export function CadastroPage() {
     }
   }, [campanhaSlug])
 
+  // Atualiza o favicon dinamicamente
+  useEffect(() => {
+    if (campanha?.foto_url) {
+      const url = campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`
+      updateFavicon(url)
+    } else {
+      updateFavicon(null)
+    }
+    return () => updateFavicon(null)
+  }, [campanha])
+
   // Encontra o cabo se vier pelo query param antigo, OU pelo novo slug
   const caboEncontrado = useMemo(() => {
     if (caboDoLink) {
@@ -72,7 +84,7 @@ export function CadastroPage() {
   const [bairros, setBairros] = useState<string[]>([])
   const [consentimento, setConsentimento] = useState(false)
   const [enviando, setEnviando] = useState(false)
-  const [erro, setErro] = useState<string | null>(null)
+  const [erros, setErros] = useState<Record<string, string>>({})
   const [sucesso, setSucesso] = useState(false)
 
   // Sugestões de bairro para o autocomplete
@@ -92,6 +104,14 @@ export function CadastroPage() {
 
   function atualizar<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((f) => ({ ...f, [campo]: valor }))
+    // Limpa erro do campo ao começar a digitar
+    if (erros[campo]) {
+      setErros((e) => {
+        const copy = { ...e }
+        delete copy[campo]
+        return copy
+      })
+    }
   }
 
   async function buscarCep(cepFormatado: string) {
@@ -114,7 +134,6 @@ export function CadastroPage() {
   }
 
   function handleCepChange(val: string) {
-    // Formata CEP: 12345-678
     let f = val.replace(/\D/g, '')
     if (f.length > 5) f = f.slice(0, 5) + '-' + f.slice(5, 8)
     atualizar('cep', f)
@@ -134,26 +153,34 @@ export function CadastroPage() {
     return v.replace(/\D/g, '').slice(0, 12);
   }
 
-  function validar(): string | null {
-    if (!form.nome.trim()) return 'Informe o nome completo do eleitor.'
+  function validar(): boolean {
+    const novosErros: Record<string, string> = {}
+    if (!form.nome.trim()) novosErros.nome = 'Informe o nome completo do eleitor.'
     if (!isTelefoneValido(form.telefone))
-      return 'Telefone inválido. Use (XX) XXXXX-XXXX.'
-    if (!form.local_votacao.trim()) return 'Informe o local de votação.'
-    if (!form.zona.trim()) return 'Informe a zona eleitoral.'
-    if (!form.secao.trim()) return 'Informe a seção eleitoral.'
-    if (!form.bairro.trim()) return 'Informe o bairro.'
-    if (!form.cidade) return 'Selecione a cidade.'
-    if (!form.cabo_id) return 'Selecione quem indicou o eleitor.'
+      novosErros.telefone = 'Telefone inválido. Use (XX) XXXXX-XXXX.'
+    if (!form.local_votacao.trim()) novosErros.local_votacao = 'Informe o local de votação.'
+    if (!form.zona.trim()) novosErros.zona = 'Informe a zona eleitoral.'
+    if (!form.secao.trim()) novosErros.secao = 'Informe a seção eleitoral.'
+    if (!form.bairro.trim()) novosErros.bairro = 'Informe o bairro.'
+    if (!form.cidade) novosErros.cidade = 'Selecione a cidade.'
+    if (!form.cabo_id) novosErros.cabo_id = 'Selecione quem indicou o eleitor.'
     if (!consentimento)
-      return 'É necessário aceitar o uso dos dados para concluir o cadastro.'
-    return null
+      novosErros.consentimento = 'É necessário aceitar o uso dos dados para concluir o cadastro.'
+
+    setErros(novosErros)
+    return Object.keys(novosErros).length === 0
   }
 
   async function enviar(e: FormEvent) {
     e.preventDefault()
-    setErro(null)
-    const problema = validar()
-    if (problema) return setErro(problema)
+    setErros({})
+    if (!validar()) {
+      // Faz scroll até o primeiro campo com erro
+      const primeiroErro = Object.keys(erros)[0]
+      const el = document.getElementsByName(primeiroErro)[0]
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
 
     setEnviando(true)
     const payload = {
@@ -171,11 +198,10 @@ export function CadastroPage() {
       observacoes: form.observacoes.trim() || null,
       status: 'ativo',
       website, // honeypot: humanos deixam vazio
-      campanha_slug: campanhaSlug, // <-- Adicionando o slug da campanha para o backend
+      campanha_slug: campanhaSlug,
     }
 
     if (!navigator.onLine) {
-      // Salva offline se não tiver internet
       saveOffline('/eleitores-public', payload)
       setEnviando(false)
       setSucesso(true)
@@ -186,7 +212,7 @@ export function CadastroPage() {
       await api.createEleitor(payload as any)
     } catch (err) {
       setEnviando(false)
-      setErro('Erro ao cadastrar: ' + (err as Error).message)
+      setErros({ global: 'Erro ao cadastrar: ' + (err as Error).message })
       return
     }
     setEnviando(false)
@@ -197,10 +223,10 @@ export function CadastroPage() {
     setForm({ ...VAZIO, cabo_id: caboEncontrado?.id || '' })
     setConsentimento(false)
     setSucesso(false)
+    setErros({})
   }
 
   return (
-    // Fundo da página (tela toda)
     <div className="flex min-h-[100dvh] min-h-safe items-start justify-center bg-slate-50 py-6 pb-safe pt-safe sm:py-12 sm:px-4">
       <div className="w-full max-w-lg overflow-hidden sm:rounded-2xl bg-white shadow-2xl dark:bg-slate-900 border-x border-y sm:border border-slate-200 dark:border-slate-800">
         
@@ -253,7 +279,7 @@ export function CadastroPage() {
             onSubmit={enviar}
             className="max-h-[calc(100vh-9rem)] space-y-6 overflow-y-auto px-6 py-6"
           >
-            {/* Honeypot anti-robô: invisível e fora do fluxo de tab */}
+            {/* Honeypot anti-robô */}
             <input
               type="text"
               name="website"
@@ -267,37 +293,41 @@ export function CadastroPage() {
 
             {/* Seção: dados pessoais */}
             <Secao titulo="Dados do eleitor">
-              <Campo label="Nome completo" obrigatorio>
+              <Campo label="Nome completo" obrigatorio erro={erros.nome}>
                 <input
                   type="text"
+                  name="nome"
                   value={form.nome}
                   onChange={(e) => atualizar('nome', e.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} ${erros.nome ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                   placeholder="Ex.: José da Silva"
                 />
               </Campo>
-              <Campo label="Telefone / WhatsApp" obrigatorio>
+              <Campo label="Telefone / WhatsApp" obrigatorio erro={erros.telefone}>
                 <input
                   type="tel"
+                  name="telefone"
                   inputMode="numeric"
                   value={form.telefone}
                   onChange={(e) => atualizar('telefone', maskTelefone(e.target.value))}
-                  className={inputClass}
+                  className={`${inputClass} ${erros.telefone ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                   placeholder="(11) 91234-5678"
                 />
               </Campo>
-              <Campo label="Data de Nascimento (Opcional)">
+              <Campo label="Data de Nascimento (Opcional)" erro={erros.data_nascimento}>
                 <input
                   type="date"
+                  name="data_nascimento"
                   value={form.data_nascimento}
                   onChange={(e) => atualizar('data_nascimento', e.target.value)}
                   className={inputClass}
                 />
               </Campo>
-              <Campo label="CEP">
+              <Campo label="CEP" erro={erros.cep}>
                 <div className="relative">
                   <input
                     type="tel"
+                    name="cep"
                     value={form.cep}
                     onChange={(e) => handleCepChange(e.target.value)}
                     className={inputClass}
@@ -312,18 +342,20 @@ export function CadastroPage() {
                 </div>
               </Campo>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Campo label="CPF (Opcional)">
+                <Campo label="CPF (Opcional)" erro={erros.cpf}>
                   <input
                     type="tel"
+                    name="cpf"
                     value={form.cpf}
                     onChange={(e) => atualizar('cpf', maskCpf(e.target.value))}
                     className={inputClass}
                     placeholder="000.000.000-00"
                   />
                 </Campo>
-                <Campo label="Título de Eleitor (Opcional)">
+                <Campo label="Título de Eleitor (Opcional)" erro={erros.titulo_eleitor}>
                   <input
                     type="tel"
+                    name="titulo_eleitor"
                     value={form.titulo_eleitor}
                     onChange={(e) => atualizar('titulo_eleitor', maskTitulo(e.target.value))}
                     className={inputClass}
@@ -335,7 +367,7 @@ export function CadastroPage() {
 
             {/* Seção: local de votação */}
             <Secao titulo="Local de votação">
-              <Campo label="Local de votação" obrigatorio>
+              <Campo label="Local de votação" obrigatorio erro={erros.local_votacao}>
                 <LocalVotacaoAutocomplete
                   value={form.local_votacao}
                   onChangeLocal={(val) => atualizar('local_votacao', val)}
@@ -346,37 +378,40 @@ export function CadastroPage() {
                       cidade: cidade || f.cidade
                     }))
                   }}
-                  className={inputClass}
+                  className={`${inputClass} ${erros.local_votacao ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                 />
               </Campo>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Campo label="Zona" obrigatorio>
+                <Campo label="Zona" obrigatorio erro={erros.zona}>
                   <input
                     type="number"
+                    name="zona"
                     min={1}
                     value={form.zona}
                     onChange={(e) => atualizar('zona', e.target.value)}
-                    className={inputClass}
+                    className={`${inputClass} ${erros.zona ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                   />
                 </Campo>
-                <Campo label="Seção" obrigatorio>
+                <Campo label="Seção" obrigatorio erro={erros.secao}>
                   <input
                     type="number"
+                    name="secao"
                     min={1}
                     value={form.secao}
                     onChange={(e) => atualizar('secao', e.target.value)}
-                    className={inputClass}
+                    className={`${inputClass} ${erros.secao ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                   />
                 </Campo>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Campo label="Bairro" obrigatorio>
+                <Campo label="Bairro" obrigatorio erro={erros.bairro}>
                   <input
                     type="text"
+                    name="bairro"
                     list="lista-bairros"
                     value={form.bairro}
                     onChange={(e) => atualizar('bairro', e.target.value)}
-                    className={inputClass}
+                    className={`${inputClass} ${erros.bairro ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                     placeholder="Ex.: Centro"
                   />
                   <datalist id="lista-bairros">
@@ -385,11 +420,12 @@ export function CadastroPage() {
                     ))}
                   </datalist>
                 </Campo>
-                <Campo label="Cidade" obrigatorio>
+                <Campo label="Cidade" obrigatorio erro={erros.cidade}>
                   <select
+                    name="cidade"
                     value={form.cidade}
                     onChange={(e) => atualizar('cidade', e.target.value)}
-                    className={inputClass}
+                    className={`${inputClass} ${erros.cidade ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                   >
                     <option value="">Selecione...</option>
                     {CIDADES.map((c) => (
@@ -402,13 +438,14 @@ export function CadastroPage() {
               </div>
             </Secao>
 
-            {/* Seção: indicação (quem trouxe o eleitor) */}
+            {/* Seção: indicação */}
             <Secao titulo="Indicação">
-              <Campo label="Quem indicou este eleitor?" obrigatorio>
+              <Campo label="Quem indicou este eleitor?" obrigatorio erro={erros.cabo_id}>
                 <select
+                  name="cabo_id"
                   value={form.cabo_id}
                   onChange={(e) => atualizar('cabo_id', e.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} ${erros.cabo_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                   disabled={caboTravado}
                 >
                   <option value="">Selecione...</option>
@@ -429,8 +466,9 @@ export function CadastroPage() {
                   </span>
                 )}
               </Campo>
-              <Campo label="Observações">
+              <Campo label="Observações" erro={erros.observacoes}>
                 <textarea
+                  name="observacoes"
                   value={form.observacoes}
                   onChange={(e) => atualizar('observacoes', e.target.value)}
                   className={inputClass}
@@ -445,7 +483,7 @@ export function CadastroPage() {
                 type="checkbox"
                 checked={consentimento}
                 onChange={(e) => setConsentimento(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                className={`mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500 ${erros.consentimento ? 'border-red-500 ring-red-500/20 ring-1' : ''}`}
               />
               <span>
                 Autorizo o uso dos meus dados para fins da campanha, conforme a{' '}
@@ -460,10 +498,14 @@ export function CadastroPage() {
                 .
               </span>
             </label>
+            {erros.consentimento && (
+              <p className="text-xs font-bold text-red-500">{erros.consentimento}</p>
+            )}
 
-            {erro && (
-              <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400">
-                {erro}
+            {erros.global && (
+              <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700 dark:bg-red-900/20 dark:text-red-400 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <span>{erros.global}</span>
               </div>
             )}
 
@@ -495,22 +537,32 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
   )
 }
 
+interface CampoProps {
+  label: string
+  obrigatorio?: boolean
+  erro?: string
+  children: React.ReactNode
+}
+
 function Campo({
   label,
   obrigatorio,
+  erro,
   children,
-}: {
-  label: string
-  obrigatorio?: boolean
-  children: React.ReactNode
-}) {
+}: CampoProps) {
   return (
-    <label className="block">
+    <div className="block">
       <span className="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300">
         {label}
         {obrigatorio && <span className="text-red-500"> *</span>}
       </span>
       {children}
-    </label>
+      {erro && (
+        <span className="mt-1 block text-xs font-bold text-red-500 flex items-center gap-1 animate-slide-up">
+          <AlertCircle className="h-3 w-3" />
+          <span>{erro}</span>
+        </span>
+      )}
+    </div>
   )
 }

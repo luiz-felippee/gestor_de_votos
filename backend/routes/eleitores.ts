@@ -98,7 +98,7 @@ eleitoresRouter.post(
         }
       }).catch(console.error);
 
-      notificarMudanca();
+      notificarMudanca(campanhaId);
       res.status(201).json(eleitor);
     } catch (err: any) {
       if (err?.code === 'P2002') {
@@ -221,7 +221,7 @@ eleitoresRouter.put(
         },
       });
       registrarLog(req, 'editar', 'eleitor', String(req.params.id), eleitor.nome);
-      notificarMudanca();
+      notificarMudanca(req.user?.campanha_id);
       res.json(eleitor);
     } catch (err: any) {
       if (err?.code === 'P2002') {
@@ -249,7 +249,7 @@ eleitoresRouter.delete(
       return res.status(404).json({ error: 'Eleitor não encontrado.' });
     await prisma.eleitor.delete({ where: { id: String(req.params.id) } });
     registrarLog(req, 'excluir', 'eleitor', String(req.params.id));
-    notificarMudanca();
+    notificarMudanca(req.user?.campanha_id);
     res.status(204).send();
   }),
 );
@@ -278,7 +278,7 @@ eleitoresRouter.post(
       },
     });
     registrarLog(req, 'anonimizar', 'eleitor', String(req.params.id));
-    notificarMudanca();
+    notificarMudanca(req.user?.campanha_id);
     res.json(eleitor);
   }),
 );
@@ -315,7 +315,7 @@ eleitoresRouter.post(
     const restantes = await prisma.eleitor.count({
       where: { lat: null, ...escopoCampanha(req) },
     });
-    if (geocodificados > 0) notificarMudanca();
+    if (geocodificados > 0) notificarMudanca(req.user?.campanha_id);
     res.json({ processados: lote.length, geocodificados, restantes });
   }),
 );

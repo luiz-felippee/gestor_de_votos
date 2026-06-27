@@ -102,15 +102,23 @@ export const api = {
 
   // ---- Autenticação ----
   login: (email: string, senha: string) =>
-    request<{ token: string; usuario: Usuario }>('/auth/login', {
+    request<{ token: string; usuario: Usuario } | { require2FA: true; userId: string }>('/auth/login', {
       method: 'POST',
       body: { email, senha },
     }),
   googleLogin: (credential: string) =>
-    request<{ token: string; usuario: Usuario }>('/auth/google', {
+    request<{ token: string; usuario: Usuario } | { require2FA: true; userId: string }>('/auth/google', {
       method: 'POST',
       body: { credential },
     }),
+  login2FA: (userId: string, token: string) =>
+    request<{ token: string; usuario: Usuario }>('/auth/login-2fa', {
+      method: 'POST',
+      body: { userId, token },
+    }),
+  generate2FA: () => request<{ secret: string; qrCodeUrl: string }>('/auth/2fa/generate', { method: 'POST' }),
+  enable2FA: (token: string) => request<{ message: string }>('/auth/2fa/enable', { method: 'POST', body: { token } }),
+  disable2FA: (senha: string) => request<{ message: string }>('/auth/2fa/disable', { method: 'POST', body: { senha } }),
   me: () => request<{ usuario: Usuario }>('/auth/me'),
   async esqueciSenha(email: string) {
     return request<{ message: string }>('/auth/esqueci-senha', {

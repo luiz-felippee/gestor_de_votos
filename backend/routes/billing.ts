@@ -1,7 +1,3 @@
-// @ts-nocheck
-// ⚠️ Billing/Stripe (feature separada, ainda não revisada): a checagem de tipos
-// está desligada porque a versão dos tipos do Stripe diverge da API usada aqui.
-// O código roda, mas precisa de revisão dedicada antes de confiar em produção.
 import { Router } from 'express';
 import Stripe from 'stripe';
 import { prisma } from '../prismaClient';
@@ -10,9 +6,10 @@ import { requireAuth, requireRole, wrap } from '../middlewares';
 const billingRouter = Router();
 
 // Configure a chave na Vercel / Render / .env local
+// @ts-ignore
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock', {
   apiVersion: '2025-02-24.acacia',
-});
+} as any);
 
 // ID do preço no Stripe (ex: price_12345)
 // Em produção, isso deve vir do banco ou do .env dependendo do plano escolhido.

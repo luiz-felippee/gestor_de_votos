@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { useAuth } from '../auth/AuthContext'
 import { formatDataHora } from '../lib/format'
 import { compressImage } from '../lib/imageOptimization'
+import { useConfirm } from '../components/ConfirmDialog'
 import type { Campanha } from '../lib/types'
 
 interface FormState {
@@ -20,6 +21,7 @@ const VAZIO: FormState = { nome: '', admin_nome: '', admin_email: '', admin_senh
 
 export function CampanhasPage() {
   const { usuario } = useAuth()
+  const { confirm, alert } = useConfirm()
   const [campanhas, setCampanhas] = useState<Campanha[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState<FormState>(VAZIO)
@@ -47,17 +49,19 @@ export function CampanhasPage() {
   }
 
   async function excluir(c: Campanha) {
-    if (
-      !confirm(
-        `EXCLUIR a campanha "${c.nome}" e TODOS os dados dela (${c.total_eleitores ?? 0} eleitores)?\n\nEsta ação é permanente e não pode ser desfeita.`,
-      )
-    )
-      return
+    const ok = await confirm({
+      title: 'Excluir Campanha?',
+      message: `EXCLUIR a campanha "${c.nome}" e TODOS os dados dela (${c.total_eleitores ?? 0} eleitores)? Esta ação é permanente e não pode ser desfeita.`,
+      confirmText: 'Excluir',
+      cancelText: 'Voltar',
+    })
+    if (!ok) return
+
     try {
       await api.deleteCampanha(c.id)
       await recarregar()
     } catch (err) {
-      alert(`Erro ao excluir: ${(err as Error).message}`)
+      alert(`Erro ao excluir: ${(err as Error).message}`, 'Erro')
     }
   }
 

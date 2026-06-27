@@ -1,4 +1,5 @@
-import { Suspense, lazy, useState } from 'react'
+import { Suspense, lazy, useState, useEffect } from 'react'
+import { OnboardingModal } from '../components/OnboardingModal'
 import { useDashboardStats } from '../hooks/useDashboardStats'
 import { api } from '../lib/api'
 import { CIDADES } from '../lib/constants'
@@ -9,7 +10,18 @@ const DashboardCharts = lazy(() => import('../components/DashboardCharts'))
 
 export function DashboardPage() {
   const [filtroCidade, setFiltroCidade] = useState('')
-  const { stats, loading } = useDashboardStats(filtroCidade)
+  const [filtroPeriodo, setFiltroPeriodo] = useState('') // '' = todos
+  const { stats, loading } = useDashboardStats(filtroCidade, filtroPeriodo)
+
+  const [hasShownOnboarding, setHasShownOnboarding] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  useEffect(() => {
+    if (!loading && stats && stats.kpis.totalEleitores === 0 && !hasShownOnboarding) {
+      setShowOnboarding(true)
+      setHasShownOnboarding(true)
+    }
+  }, [loading, stats, hasShownOnboarding])
 
   if (loading || !stats) {
     return (
@@ -17,7 +29,10 @@ export function DashboardPage() {
         {/* Skeleton do header */}
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="h-9 w-48 rounded-lg bg-slate-200 dark:bg-slate-800" />
-          <div className="h-10 w-48 rounded-lg bg-slate-200 dark:bg-slate-800" />
+          <div className="flex gap-2 w-full sm:w-auto">
+            <div className="h-10 w-36 rounded-lg bg-slate-200 dark:bg-slate-800" />
+            <div className="h-10 w-36 rounded-lg bg-slate-200 dark:bg-slate-800" />
+          </div>
         </div>
         {/* Skeleton dos KPIs */}
         <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -53,18 +68,30 @@ export function DashboardPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 animate-fade-in">
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Dashboard</h1>
-        <select
-          value={filtroCidade}
-          onChange={(e) => setFiltroCidade(e.target.value)}
-          className="w-full sm:w-auto rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-        >
-          <option value="">Todas as cidades</option>
-          {CIDADES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <select
+            value={filtroPeriodo}
+            onChange={(e) => setFiltroPeriodo(e.target.value)}
+            className="w-full sm:w-auto rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 focus:outline-none focus:border-brand-500"
+          >
+            <option value="">Todo o período</option>
+            <option value="7">Últimos 7 dias</option>
+            <option value="30">Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+          <select
+            value={filtroCidade}
+            onChange={(e) => setFiltroCidade(e.target.value)}
+            className="w-full sm:w-auto rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 focus:outline-none focus:border-brand-500"
+          >
+            <option value="">Todas as cidades</option>
+            {CIDADES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Perfil da Campanha */}
@@ -191,6 +218,9 @@ export function DashboardPage() {
         )}
       </Painel>
 
+      {showOnboarding && (
+        <OnboardingModal onClose={() => setShowOnboarding(false)} />
+      )}
     </div>
   )
 }

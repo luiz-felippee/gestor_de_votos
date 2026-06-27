@@ -5,6 +5,8 @@ import { api } from '../lib/api'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
 import { compressImage } from '../lib/imageOptimization'
+import { useConfirm } from '../components/ConfirmDialog'
+import { useToast } from '../components/Toast'
 import type { Campanha } from '../lib/types'
 
 interface FormState {
@@ -33,10 +35,13 @@ const VAZIO: FormState = {
 
 export function CadastroLiderancaPage() {
   const { campanhaSlug } = useParams() // Rota: /c/:campanhaSlug/cadastro-lideranca
+  const { alert } = useConfirm()
+  const { toast } = useToast()
   const [form, setForm] = useState<FormState>(VAZIO)
   const [website, setWebsite] = useState('') // honeypot (anti-robô)
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [errosCampos, setErrosCampos] = useState<Record<string, string>>({})
   const [sucesso, setSucesso] = useState(false)
   const [linkGerado, setLinkGerado] = useState<string | null>(null)
   const [arquivoFoto, setArquivoFoto] = useState<File | null>(null)
@@ -53,21 +58,31 @@ export function CadastroLiderancaPage() {
     setForm((f) => ({ ...f, [campo]: valor }))
   }
 
-  function validar(): string | null {
-    if (!form.nome.trim()) return 'Informe seu nome completo.'
+  function validar(): boolean {
+    const novosErros: Record<string, string> = {}
+    if (!form.nome.trim()) novosErros.nome = 'Informe seu nome completo.'
     if (!isTelefoneValido(form.telefone))
-      return 'Telefone inválido. Use (XX) XXXXX-XXXX.'
-    if (!arquivoFoto) return 'A foto da liderança é obrigatória.'
-    if (!form.bairro_atuacao.trim()) return 'Informe o bairro onde atua.'
-    if (!form.cidade) return 'Selecione sua cidade.'
-    return null
+      novosErros.telefone = 'Telefone inválido. Use (XX) XXXXX-XXXX.'
+    if (!arquivoFoto) novosErros.foto = 'A foto da liderança é obrigatória.'
+    if (!form.bairro_atuacao.trim()) novosErros.bairro_atuacao = 'Informe o bairro onde atua.'
+    if (!form.cidade) novosErros.cidade = 'Selecione sua cidade.'
+
+    setErrosCampos(novosErros)
+
+    if (Object.keys(novosErros).length > 0) {
+      const primeiro = Object.keys(novosErros)[0]
+      const el = document.getElementById(`campo-${primeiro}`)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return false
+    }
+    return true
   }
 
   async function enviar(e: FormEvent) {
     e.preventDefault()
     setErro(null)
-    const problema = validar()
-    if (problema) return setErro(problema)
+    setErrosCampos({})
+    if (!validar()) return
 
     setEnviando(true)
     try {
@@ -165,9 +180,13 @@ export function CadastroLiderancaPage() {
                     onFocus={(e) => e.target.select()}
                   />
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(linkGerado);
-                      alert('Link copiado para a área de transferência!');
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(linkGerado);
+                        toast('Link copiado com sucesso!', 'success');
+                      } catch {
+                        alert(linkGerado, 'Copiar Link');
+                      }
                     }}
                     className="shrink-0 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors"
                   >
@@ -203,30 +222,33 @@ export function CadastroLiderancaPage() {
 
             {/* Seção: dados pessoais */}
             <Secao titulo="Seus Dados">
-              <Campo label="Sua Foto" obrigatorio>
+              <Campo label="Sua Foto" obrigatorio error={errosCampos.foto}>
                 <input
+                  id="campo-foto"
                   type="file"
                   accept="image/*"
                   onChange={(e) => setArquivoFoto(e.target.files?.[0] || null)}
-                  className="w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-sm file:font-bold file:text-teal-700 hover:file:bg-teal-100 dark:text-slate-400 dark:file:bg-teal-900/30 dark:file:text-teal-400"
+                  className={`w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-sm file:font-bold file:text-teal-700 hover:file:bg-teal-100 dark:text-slate-400 dark:file:bg-teal-900/30 dark:file:text-teal-400`}
                 />
               </Campo>
-              <Campo label="Nome completo" obrigatorio>
+              <Campo label="Nome completo" obrigatorio error={errosCampos.nome}>
                 <input
+                  id="campo-nome"
                   type="text"
                   value={form.nome}
                   onChange={(e) => atualizar('nome', e.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} ${errosCampos.nome ? 'border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="Ex.: João Silva"
                 />
               </Campo>
-              <Campo label="WhatsApp / Telefone" obrigatorio>
+              <Campo label="WhatsApp / Telefone" obrigatorio error={errosCampos.telefone}>
                 <input
+                  id="campo-telefone"
                   type="tel"
                   inputMode="numeric"
                   value={form.telefone}
                   onChange={(e) => atualizar('telefone', maskTelefone(e.target.value))}
-                  className={inputClass}
+                  className={`${inputClass} ${errosCampos.telefone ? 'border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="(11) 91234-5678"
                 />
               </Campo>
@@ -241,20 +263,22 @@ export function CadastroLiderancaPage() {
             </Secao>
 
             <Secao titulo="Local de Atuação">
-              <Campo label="Bairro Principal" obrigatorio>
+              <Campo label="Bairro Principal" obrigatorio error={errosCampos.bairro_atuacao}>
                 <input
+                  id="campo-bairro_atuacao"
                   type="text"
                   value={form.bairro_atuacao}
                   onChange={(e) => atualizar('bairro_atuacao', e.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} ${errosCampos.bairro_atuacao ? 'border-red-500 focus:ring-red-500' : ''}`}
                   placeholder="Bairro onde atua forte"
                 />
               </Campo>
-              <Campo label="Cidade" obrigatorio>
+              <Campo label="Cidade" obrigatorio error={errosCampos.cidade}>
                 <select
+                  id="campo-cidade"
                   value={form.cidade}
                   onChange={(e) => atualizar('cidade', e.target.value)}
-                  className={inputClass}
+                  className={`${inputClass} ${errosCampos.cidade ? 'border-red-500 focus:ring-red-500' : ''}`}
                 >
                   <option value="">Selecione...</option>
                   {CIDADES.map((c) => (
@@ -352,10 +376,12 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
 function Campo({
   label,
   obrigatorio,
+  error,
   children,
 }: {
   label: string
   obrigatorio?: boolean
+  error?: string
   children: React.ReactNode
 }) {
   return (
@@ -365,6 +391,7 @@ function Campo({
         {obrigatorio && <span className="text-red-500"> *</span>}
       </span>
       {children}
+      {error && <span className="mt-1.5 block text-xs font-bold text-red-500">{error}</span>}
     </label>
   )
 }

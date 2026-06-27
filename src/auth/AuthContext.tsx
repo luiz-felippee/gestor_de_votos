@@ -22,8 +22,9 @@ interface AuthState {
   usuario: Usuario | null
   loading: boolean
   role: PerfilAcesso | null
-  signIn: (email: string, senha: string) => Promise<{ error: string | null }>
-  signInWithGoogle: (credential: string) => Promise<{ error: string | null }>
+  signIn: (email: string, senha: string) => Promise<{ error: string | null; require2FA?: boolean; userId?: string }>
+  signInWithGoogle: (credential: string) => Promise<{ error: string | null; require2FA?: boolean; userId?: string }>
+  signIn2FA: (userId: string, token: string) => Promise<{ error: string | null }>
   signUp: (
     email: string,
     senha: string,
@@ -73,9 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(email: string, senha: string) {
     try {
-      const { token, usuario } = await api.login(email, senha)
-      setToken(token)
-      setUsuario(usuario)
+      const res = await api.login(email, senha)
+      if ('require2FA' in res) {
+        return { error: null, require2FA: true, userId: res.userId }
+      }
+      setToken(res.token)
+      setUsuario(res.usuario)
       return { error: null }
     } catch (err) {
       return { error: (err as Error).message }
@@ -84,7 +88,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signInWithGoogle(credential: string) {
     try {
-      const { token, usuario } = await api.googleLogin(credential)
+      const res = await api.googleLogin(credential)
+      if ('require2FA' in res) {
+        return { error: null, require2FA: true, userId: res.userId }
+      }
+      setToken(res.token)
+      setUsuario(res.usuario)
+      return { error: null }
+    } catch (err) {
+      return { error: (err as Error).message }
+    }
+  }
+
+  async function signIn2FA(userId: string, mfaToken: string) {
+    try {
+      const { token, usuario } = await api.login2FA(userId, mfaToken)
       setToken(token)
       setUsuario(usuario)
       return { error: null }
@@ -115,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: usuario?.role ?? null,
         signIn,
         signInWithGoogle,
+        signIn2FA,
         signUp,
         signOut,
       }}

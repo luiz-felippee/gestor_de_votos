@@ -9,11 +9,29 @@ dashboardRouter.get(
   requireAuth,
   wrap(async (req, res) => {
     const filtroCidade = req.query.cidade as string;
+    const filtroDias = req.query.dias as string;
     const whereBase = {
       ...escopoCampanha(req),
       ...(req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : {}),
     };
-    const whereFiltrado = filtroCidade ? { ...whereBase, cidade: filtroCidade } : whereBase;
+
+    // Filtro temporal opcional
+    let whereData = { ...whereBase };
+    if (filtroDias) {
+      const dias = parseInt(filtroDias, 10);
+      if (!isNaN(dias)) {
+        const dataLimite = new Date();
+        dataLimite.setDate(dataLimite.getDate() - dias);
+        whereData = {
+          ...whereData,
+          // @ts-ignore
+          created_at: { gte: dataLimite },
+        };
+      }
+    }
+
+    const whereFiltrado = filtroCidade ? { ...whereData, cidade: filtroCidade } : whereData;
+    const whereCidadeSemDias = filtroCidade ? { ...whereBase, cidade: filtroCidade } : whereBase;
 
     // Executa TODAS as queries de agregação em paralelo — nenhuma puxa todos os registros
     const [
@@ -68,6 +86,12 @@ dashboardRouter.get(
         if (filtroCidade) {
           conditions.push(Prisma.sql`AND cidade = ${filtroCidade}`);
         }
+        if (filtroDias) {
+          const dias = parseInt(filtroDias, 10);
+          if (!isNaN(dias)) {
+            conditions.push(Prisma.sql`AND created_at >= NOW() - INTERVAL '${Prisma.raw(dias.toString())} days'`);
+          }
+        }
         const whereClause = conditions.length > 0
           ? Prisma.sql`${Prisma.join(conditions, ' ')}`
           : Prisma.empty;
@@ -107,7 +131,7 @@ dashboardRouter.get(
 
         return prisma.eleitor.findMany({
           where: {
-            ...whereFiltrado,
+            ...whereCidadeSemDias,
             data_nascimento: { not: null },
             OR: [
               { data_nascimento: { contains: `-${mesAtualStr}-` } },

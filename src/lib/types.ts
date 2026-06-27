@@ -6,12 +6,14 @@ export type PerfilAcesso = 'admin' | 'coordenador' | 'cabo' | 'visualizador'
 export interface Usuario {
   id: string
   nome: string | null
+  email?: string | null
   role: PerfilAcesso
   cabo_id: string | null
   campanha_id?: string | null
   super_admin?: boolean
   campanha_nome?: string | null
   campanha_slug?: string | null
+  campanha_plano?: string | null
 }
 
 /** Campanha (candidato) — visão do super-admin. */

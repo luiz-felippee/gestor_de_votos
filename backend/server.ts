@@ -2,10 +2,9 @@
  * Servidor principal do Gestor de Votos.
  *
  * Responsabilidades deste arquivo:
- *  - Configuração do Express (CORS, JSON, compression, static, multer)
+ *  - Configuração do Express (CORS, JSON, compression, static)
  *  - Socket.io (tempo real)
  *  - Montagem dos routers
- *  - Rotas inline que dependem do `io` (eventos, auditoria, upload)
  *  - Bootstrap (admin + campanha padrão)
  *
  * Middlewares de autenticação, autorização, rate-limiting e helpers compartilhados
@@ -16,12 +15,12 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import compression from 'compression';
-import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { createServer } from 'node:http';
 import { Server as SocketServer } from 'socket.io';
 import { prisma } from './prismaClient';
+import { logger } from './lib/logger';
 
 // Re-exporta tudo dos middlewares para que qualquer import de './server' ainda funcione.
 export { prisma };
@@ -35,12 +34,7 @@ export {
 } from './middlewares';
 
 // Importa para uso local neste arquivo
-import {
-  requireAuth, requireRole,
-  escopoCampanha, wrap,
-  verificarTokenSocket,
-  type AuthedRequest,
-} from './middlewares';
+import { verificarTokenSocket } from './middlewares';
 
 // --- App Express ---
 const app = express();
@@ -55,32 +49,40 @@ const CORS_ORIGIN: '*' | string[] = CORS_LIST.includes('*') ? '*' : CORS_LIST;
 
 app.use(cors({ origin: CORS_ORIGIN }));
 
+// Middleware de Logging estruturado para requisições HTTP
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    logger.info('Request processed', {
+      method: req.method,
+      url: req.url,
+      status: res.statusCode,
+      durationMs: Date.now() - start,
+      ip: req.ip,
+    });
+  });
+  next();
+});
+
 // --- Webhooks (Stripe precisa do body cru) ---
 app.use('/api/webhook', express.raw({ type: 'application/json' }), require('./routes/webhook').default);
 
 app.use(express.json());
 app.use(compression());
 
-// --- Upload de mídias (multer) ---
+// --- Arquivos estáticos de uploads ---
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, uploadsDir),
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-    }
-  }),
-  limits: { fileSize: 64 * 1024 * 1024 } // 64 MB max
-});
-
 // --- Tempo real (Socket.io) ---
 const io = new SocketServer(httpServer, { cors: { origin: CORS_ORIGIN } });
-export function notificarMudanca() {
-  io.emit('eleitores:changed');
+export function notificarMudanca(campanhaId?: string | null) {
+  if (campanhaId) {
+    io.to(campanhaId).emit('eleitores:changed');
+  } else {
+    io.emit('eleitores:changed');
+  }
 }
 
 // Cada cliente entra na "sala" da sua campanha para receber eventos isolados.
@@ -100,125 +102,50 @@ app.use('/api', require('./routes/usuarios').default);
 app.use('/api', require('./routes/campanhas').default);
 app.use('/api', require('./routes/eleitores').default);
 app.use('/api', require('./routes/billing').default);
+app.use('/api', require('./routes/eventos').default);
+app.use('/api', require('./routes/auditoria').default);
+app.use('/api', require('./routes/upload').default);
+app.use('/api/auth', require('./routes/2fa').default);
 
 // --- Saúde ---
-// Toca o banco (SELECT 1) para manter o Neon (free, scale-to-zero) acordado
-// junto com o Render. Retorna ok mesmo se o banco estiver acordando.
+// Retorna estatísticas detalhadas de uso de memória, latência de banco e uptime.
 app.get('/api/health', async (_req, res) => {
-  let db = 'ok';
+  const startDb = Date.now();
+  let dbStatus = 'ok';
+  let dbLatencyMs = 0;
+  
   try {
     await prisma.$queryRaw`SELECT 1`;
-  } catch {
-    db = 'acordando';
+    dbLatencyMs = Date.now() - startDb;
+  } catch (err: any) {
+    dbStatus = 'acordando';
   }
-  res.json({ ok: true, version: '2026-06-26-final', runtime: 'node-dist', db });
-});
 
-// --- Upload Genérico (autenticado + validação de tipo) ---
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-app.post('/api/upload', requireAuth, upload.single('foto'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
-  }
-  if (!ALLOWED_MIME_TYPES.includes(req.file.mimetype)) {
-    try { fs.unlinkSync(req.file.path); } catch (_) { /* ignore */ }
-    return res.status(400).json({ error: 'Tipo de arquivo não permitido. Envie apenas imagens (JPG, PNG, WebP, GIF).' });
-  }
-  res.json({ url: `/uploads/${req.file.filename}` });
-});
+  const memory = process.memoryUsage();
+  const uptime = process.uptime();
+  const cpu = process.cpuUsage();
 
-// --- Log de auditoria (somente admin) ---
-app.get(
-  '/api/auditoria',
-  requireAuth,
-  requireRole('admin'),
-  wrap(async (req, res) => {
-    const logs = await prisma.logAuditoria.findMany({
-      where: escopoCampanha(req),
-      orderBy: { created_at: 'desc' },
-      take: 300,
-    });
-    res.json(logs);
-  }),
-);
-
-// --- Eventos (Agenda de Reuniões) ---
-app.get(
-  '/api/eventos',
-  requireAuth,
-  wrap(async (req, res) => {
-    const eventos = await prisma.evento.findMany({
-      where: escopoCampanha(req),
-      orderBy: { data_hora: 'asc' },
-    });
-    res.json(eventos);
-  })
-);
-
-app.post(
-  '/api/eventos',
-  requireAuth,
-  requireRole('admin', 'coordenador'),
-  wrap(async (req, res) => {
-    const { titulo, descricao, data_hora, local, bairro, cidade } = req.body ?? {};
-    if (!titulo || !data_hora || !local) {
-      return res.status(400).json({ error: 'Título, data/hora e local são obrigatórios.' });
+  res.json({
+    ok: true,
+    version: '2026-06-27-features',
+    runtime: 'node-dist',
+    db: {
+      status: dbStatus,
+      latencyMs: dbLatencyMs > 0 ? dbLatencyMs : undefined,
+    },
+    uptimeSeconds: Math.floor(uptime),
+    memoryUsageMB: {
+      rss: Math.round(memory.rss / 1024 / 1024),
+      heapTotal: Math.round(memory.heapTotal / 1024 / 1024),
+      heapUsed: Math.round(memory.heapUsed / 1024 / 1024),
+      external: Math.round(memory.external / 1024 / 1024),
+    },
+    cpuUsage: {
+      user: cpu.user,
+      system: cpu.system,
     }
-    const evento = await prisma.evento.create({
-      data: {
-        campanha_id: (req as AuthedRequest).user!.campanha_id,
-        titulo: String(titulo),
-        descricao: descricao ? String(descricao) : null,
-        data_hora: new Date(data_hora),
-        local: String(local),
-        bairro: bairro ? String(bairro) : null,
-        cidade: cidade ? String(cidade) : null,
-      }
-    });
-    res.status(201).json(evento);
-  })
-);
-
-app.put(
-  '/api/eventos/:id',
-  requireAuth,
-  requireRole('admin', 'coordenador'),
-  wrap(async (req, res) => {
-    const { titulo, descricao, data_hora, local, bairro, cidade } = req.body ?? {};
-    const dono = await prisma.evento.findFirst({
-      where: { id: String(req.params.id), ...escopoCampanha(req) },
-      select: { id: true },
-    });
-    if (!dono) return res.status(404).json({ error: 'Evento não encontrado.' });
-    const evento = await prisma.evento.update({
-      where: { id: String(req.params.id) },
-      data: {
-        titulo: titulo ? String(titulo) : undefined,
-        descricao: descricao !== undefined ? String(descricao) : undefined,
-        data_hora: data_hora ? new Date(data_hora) : undefined,
-        local: local ? String(local) : undefined,
-        bairro: bairro !== undefined ? String(bairro) : undefined,
-        cidade: cidade !== undefined ? String(cidade) : undefined,
-      }
-    });
-    res.json(evento);
-  })
-);
-
-app.delete(
-  '/api/eventos/:id',
-  requireAuth,
-  requireRole('admin', 'coordenador'),
-  wrap(async (req, res) => {
-    const dono = await prisma.evento.findFirst({
-      where: { id: String(req.params.id), ...escopoCampanha(req) },
-      select: { id: true },
-    });
-    if (!dono) return res.status(404).json({ error: 'Evento não encontrado.' });
-    await prisma.evento.delete({ where: { id: String(req.params.id) } });
-    res.status(204).send();
-  })
-);
+  });
+});
 
 // --- Bootstrap: cria/atualiza admin + campanha padrão ---
 // Remove caracteres de controle, zero-width, BOM e no-break-space, depois apara espaços.
@@ -255,7 +182,7 @@ async function bootstrap() {
       console.log(`✓ Admin já existe: ${email} (senha preservada)`);
     }
   } else {
-    console.warn('⚠️ ADMIN_EMAIL/ADMIN_PASSWORD não definidos — nenhum admin foi criado.');
+    logger.warn('ADMIN_EMAIL/ADMIN_PASSWORD não definidos — nenhum admin foi criado.');
   }
 
   // Multi-campanha: garante uma campanha padrão e adota os dados sem dono
@@ -264,7 +191,7 @@ async function bootstrap() {
     campanhaPadrao = await prisma.campanha.create({
       data: { nome: 'Campanha Principal', slug: 'principal', plano: 'pro' },
     });
-    console.log('✓ Campanha padrão criada:', campanhaPadrao.id);
+    logger.info('Campanha padrão criada', { campanhaId: campanhaPadrao.id });
   }
   const cid = campanhaPadrao.id;
 
@@ -272,7 +199,7 @@ async function bootstrap() {
   // Novas campanhas criadas pelo painel nascem 'gratis' (modelo SaaS preservado).
   if (campanhaPadrao.plano === 'gratis') {
     await prisma.campanha.update({ where: { id: cid }, data: { plano: 'pro' } });
-    console.log('✓ Campanha principal promovida ao plano pro.');
+    logger.info('Campanha principal promovida ao plano pro.');
   }
   const [e, c, u, ev, lg] = await Promise.all([
     prisma.eleitor.updateMany({ where: { campanha_id: null }, data: { campanha_id: cid } }),
@@ -282,9 +209,13 @@ async function bootstrap() {
     prisma.logAuditoria.updateMany({ where: { campanha_id: null }, data: { campanha_id: cid } }),
   ]);
   if (e.count + c.count + u.count + ev.count + lg.count > 0) {
-    console.log(
-      `✓ Backfill de campanha: eleitores=${e.count} cabos=${c.count} usuarios=${u.count} eventos=${ev.count} logs=${lg.count}`,
-    );
+    logger.info('Backfill de campanha executado', {
+      eleitores: e.count,
+      cabos: c.count,
+      usuarios: u.count,
+      eventos: ev.count,
+      logs: lg.count,
+    });
   }
 }
 
@@ -293,10 +224,10 @@ const PORT = Number(process.env.PORT) || 3000;
 bootstrap()
   .then(async () => {
     httpServer.listen(PORT, () => {
-      console.log(`✓ API do Gestor de Votos rodando na porta ${PORT}`);
+      logger.info('Servidor iniciado com sucesso', { port: PORT });
     });
   })
   .catch((err) => {
-    console.error('Falha crítica na inicialização do backend:', err.message);
+    logger.error('Falha ao iniciar servidor', err);
     process.exit(1);
   });

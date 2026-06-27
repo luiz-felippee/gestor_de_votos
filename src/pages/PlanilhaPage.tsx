@@ -5,6 +5,8 @@ import { useToast } from '../components/Toast'
 import { CIDADES, STATUS_OPTIONS, STATUS_STYLES } from '../lib/constants'
 import { formatDataHora, maskTelefone } from '../lib/format'
 import { exportarCSV, exportarXLSX } from '../lib/export'
+import { useConfirm } from '../components/ConfirmDialog'
+import { Printer } from 'lucide-react'
 import type { EleitorComCabo, StatusEleitor } from '../lib/types'
 
 type Coluna =
@@ -25,6 +27,7 @@ interface Ordenacao {
 
 export function PlanilhaPage() {
   const { toast } = useToast()
+  const { confirm } = useConfirm()
 
   // Dados apenas da página atual — paginação/filtros/ordenação no SERVIDOR
   const [eleitores, setEleitores] = useState<EleitorComCabo[]>([])
@@ -149,12 +152,14 @@ export function PlanilhaPage() {
   }
 
   async function anonimizar(e: EleitorComCabo) {
-    if (
-      !confirm(
-        `Anonimizar "${e.nome}"?\nOs dados pessoais (nome, telefone, CPF, título, nascimento) serão apagados permanentemente, mantendo apenas a estatística (LGPD).`,
-      )
-    )
-      return
+    const ok = await confirm({
+      title: 'Anonimizar Eleitor?',
+      message: `Tem certeza que deseja anonimizar "${e.nome}"? Os dados pessoais (nome, telefone, CPF, título, nascimento) serão apagados permanentemente, mantendo apenas a estatística (LGPD).`,
+      confirmText: 'Anonimizar',
+      cancelText: 'Voltar',
+    })
+    if (!ok) return
+
     try {
       await api.anonimizarEleitor(e.id)
       toast('Dados anonimizados com sucesso (LGPD)', 'success')
@@ -165,7 +170,14 @@ export function PlanilhaPage() {
   }
 
   async function excluir(e: EleitorComCabo) {
-    if (!confirm(`Excluir o cadastro de "${e.nome}"? Esta ação é irreversível.`)) return
+    const ok = await confirm({
+      title: 'Excluir Eleitor?',
+      message: `Tem certeza que deseja excluir o cadastro de "${e.nome}"? Esta ação é irreversível.`,
+      confirmText: 'Excluir',
+      cancelText: 'Voltar',
+    })
+    if (!ok) return
+
     try {
       await api.deleteEleitor(e.id)
       toast('Eleitor excluído com sucesso', 'success')
@@ -213,6 +225,10 @@ export function PlanilhaPage() {
           </p>
         </div>
         <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto">
+          <button onClick={() => window.print()} className={exportBtn}>
+            <Printer className="h-4 w-4" />
+            <span>Imprimir / PDF</span>
+          </button>
           <button onClick={() => exportar('xlsx')} disabled={exportando} className={exportBtn}>
             {exportando ? 'Exportando...' : 'Exportar Excel'}
           </button>

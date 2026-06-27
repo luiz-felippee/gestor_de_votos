@@ -57,6 +57,7 @@ model CaboEleitoral {
   data_nascimento String?
   foto_url       String?
   created_at     DateTime  @default(now())
+  deleted_at     DateTime?
   eleitores      Eleitor[]
   usuarios       Usuario[]
 
@@ -83,6 +84,7 @@ model Eleitor {
   lat              Float?
   lng              Float?
   created_at       DateTime       @default(now())
+  deleted_at       DateTime?
   // Normalizado (minúsculo, sem espaços nas pontas) p/ impedir duplicados
   nome_busca    String
   cabo          CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
@@ -110,6 +112,13 @@ model Usuario {
   role        PerfilAcesso   @default(visualizador)
   cabo_id     String?
   created_at  DateTime       @default(now())
+  deleted_at  DateTime?
+
+  // Controle de sessão e segurança avançada
+  token_version        Int     @default(0)
+  two_factor_secret    String?
+  two_factor_enabled   Boolean @default(false)
+
   // Recuperação de senha ("esqueci minha senha")
   reset_token         String?
   reset_token_expires DateTime?
@@ -129,6 +138,7 @@ model Evento {
   bairro    String?
   cidade    String?
   created_at DateTime @default(now())
+  deleted_at DateTime?
 
   @@index([campanha_id])
   @@map("eventos")

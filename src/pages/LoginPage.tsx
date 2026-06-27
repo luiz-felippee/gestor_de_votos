@@ -5,7 +5,7 @@ import { AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { Logo } from '../components/Logo'
 
 export function LoginPage() {
-  const { signIn, signInWithGoogle, signUp } = useAuth()
+  const { signIn, signInWithGoogle, signIn2FA, signUp } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const destino =
@@ -19,6 +19,11 @@ export function LoginPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [msgSucesso, setMsgSucesso] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  
+  // 2FA States
+  const [step, setStep] = useState<'login' | '2fa'>('login')
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null)
+  const [token2fa, setToken2fa] = useState('')
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
@@ -26,12 +31,36 @@ export function LoginPage() {
     setMsgSucesso(null)
     setLoading(true)
 
-    const { error } = await signIn(email, senha)
+    const res = await signIn(email, senha)
     setLoading(false)
+    if (res.error) {
+      setErro(res.error)
+      return
+    }
+    
+    if (res.require2FA) {
+      setPendingUserId(res.userId!)
+      setStep('2fa')
+      return
+    }
+    
+    navigate(destino, { replace: true })
+  }
+
+  async function handle2FASubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!pendingUserId || !token2fa) return
+    
+    setErro(null)
+    setLoading(true)
+    const { error } = await signIn2FA(pendingUserId, token2fa)
+    setLoading(false)
+    
     if (error) {
       setErro(error)
       return
     }
+    
     navigate(destino, { replace: true })
   }
 
@@ -67,9 +96,15 @@ export function LoginPage() {
       g.accounts.id.initialize({
         client_id: googleClientId,
         callback: async (resp: { credential: string }) => {
-          const { error } = await signInWithGoogle(resp.credential)
-          if (error) setErro(error)
-          else navigate(destino, { replace: true })
+          const res = await signInWithGoogle(resp.credential)
+          if (res.error) {
+            setErro(res.error)
+          } else if (res.require2FA) {
+            setPendingUserId(res.userId!)
+            setStep('2fa')
+          } else {
+            navigate(destino, { replace: true })
+          }
         },
       })
       googleBtnRef.current.innerHTML = ''
@@ -137,14 +172,17 @@ export function LoginPage() {
               <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Gestor de Votos</span>
             </div>
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              Bem-vindo de volta
+              {step === 'login' ? 'Bem-vindo de volta' : 'Autenticação em Duas Etapas'}
             </h2>
             <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
-              Faça login para acessar o painel de controle da campanha.
+              {step === 'login' 
+                ? 'Faça login para acessar o painel de controle da campanha.'
+                : 'Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.'}
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          {step === 'login' ? (
+            <form onSubmit={handleLogin} className="space-y-5">
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
                 E-mail
@@ -233,6 +271,56 @@ export function LoginPage() {
               </div>
             )}
           </form>
+          ) : (
+            <form onSubmit={handle2FASubmit} className="space-y-5 animate-fade-in">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  Código de Autenticação (6 dígitos)
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={token2fa}
+                  onChange={(e) => setToken2fa(e.target.value.replace(/\D/g, ''))}
+                  className={`${inputClass} text-center text-2xl tracking-[0.5em] font-mono py-4`}
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  autoFocus
+                />
+              </div>
+
+              {erro && (
+                <div className="rounded-lg bg-red-50 p-3 border border-red-100 flex items-start gap-3 dark:bg-red-500/10 dark:border-red-500/20">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm font-medium text-red-800 dark:text-red-400">{erro}</p>
+                </div>
+              )}
+
+              <div className="pt-2 flex flex-col gap-3">
+                <button
+                  type="submit"
+                  disabled={loading || token2fa.length < 6}
+                  className="flex w-full justify-center rounded-xl bg-brand-600 px-4 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-70 dark:focus:ring-offset-slate-950"
+                >
+                  {loading ? 'Verificando...' : 'Verificar e Entrar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('login')
+                    setPendingUserId(null)
+                    setToken2fa('')
+                    setErro(null)
+                  }}
+                  className="w-full justify-center rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80"
+                >
+                  Voltar
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     </div>

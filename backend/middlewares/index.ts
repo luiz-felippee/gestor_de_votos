@@ -21,6 +21,7 @@ export interface TokenPayload {
   cabo_id: string | null;
   campanha_id: string | null;
   super_admin: boolean;
+  token_version: number;
 }
 export interface AuthedRequest extends Request {
   user?: TokenPayload;
@@ -42,6 +43,7 @@ export function assinarToken(u: {
   cabo_id: string | null;
   campanha_id: string | null;
   super_admin: boolean;
+  token_version: number;
 }) {
   return jwt.sign(
     {
@@ -51,6 +53,7 @@ export function assinarToken(u: {
       cabo_id: u.cabo_id,
       campanha_id: u.campanha_id,
       super_admin: u.super_admin,
+      token_version: u.token_version,
     },
     JWT_SECRET,
     { expiresIn: '7d' },
@@ -58,25 +61,40 @@ export function assinarToken(u: {
 }
 
 // Cache para evitar query ao banco em toda requisição autenticada.
-const _tokenCache = new Map<string, { campanha_id: string | null; super_admin: boolean; ts: number }>();
+const _tokenCache = new Map<string, { campanha_id: string | null; super_admin: boolean; token_version: number; ts: number }>();
 const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 export async function completarToken(p: TokenPayload): Promise<void> {
-  if (p.super_admin === undefined || p.campanha_id === undefined) {
-    const cached = _tokenCache.get(p.id);
-    if (cached && Date.now() - cached.ts < TOKEN_CACHE_TTL) {
-      p.campanha_id = cached.campanha_id;
-      p.super_admin = cached.super_admin;
-      return;
+  // Sempre validamos o banco caso não esteja no cache (para token_version)
+  const cached = _tokenCache.get(p.id);
+  if (cached && Date.now() - cached.ts < TOKEN_CACHE_TTL) {
+    p.campanha_id = cached.campanha_id;
+    p.super_admin = cached.super_admin;
+    
+    // Validação estrita de versão do token em cache
+    if (cached.token_version !== p.token_version) {
+      throw new Error('Token version mismatch');
     }
-    const u = await prisma.usuario.findUnique({
-      where: { id: p.id },
-      select: { campanha_id: true, super_admin: true },
-    });
-    p.campanha_id = u?.campanha_id ?? null;
-    p.super_admin = u?.super_admin ?? false;
-    _tokenCache.set(p.id, { campanha_id: p.campanha_id, super_admin: p.super_admin, ts: Date.now() });
+    return;
   }
+  
+  const u = await prisma.usuario.findUnique({
+    where: { id: p.id, deleted_at: null },
+    select: { campanha_id: true, super_admin: true, token_version: true },
+  });
+  
+  if (!u || u.token_version !== p.token_version) {
+    throw new Error('Token version mismatch');
+  }
+
+  p.campanha_id = u.campanha_id ?? null;
+  p.super_admin = u.super_admin ?? false;
+  _tokenCache.set(p.id, { 
+    campanha_id: p.campanha_id, 
+    super_admin: p.super_admin, 
+    token_version: u.token_version,
+    ts: Date.now() 
+  });
 }
 
 export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
@@ -96,7 +114,10 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
   //    NÃO é falha de autenticação — devolve 503 (o front NÃO desloga em 503).
   try {
     await completarToken(payload);
-  } catch {
+  } catch (err: any) {
+    if (err.message === 'Token version mismatch') {
+      return res.status(401).json({ error: 'Sessão revogada ou expirada.' });
+    }
     return res.status(503).json({ error: 'Banco indisponível no momento. Tente novamente.' });
   }
 

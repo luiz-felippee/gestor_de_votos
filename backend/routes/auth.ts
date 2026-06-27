@@ -19,16 +19,23 @@ authRouter.post(
     if (!usuario || !(await bcrypt.compare(senha, usuario.senha_hash))) {
       return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
     }
+
+    if (usuario.two_factor_enabled) {
+      return res.json({ require2FA: true, userId: usuario.id });
+    }
+
     const token = assinarToken(usuario);
     let campanha_nome: string | null = null;
     let campanha_slug: string | null = null;
+    let campanha_plano: string | null = null;
     if (usuario.campanha_id) {
       const c = await prisma.campanha.findUnique({
         where: { id: usuario.campanha_id },
-        select: { nome: true, slug: true },
+        select: { nome: true, slug: true, plano: true },
       });
       campanha_nome = c?.nome ?? null;
       campanha_slug = c?.slug ?? null;
+      campanha_plano = c?.plano ?? null;
     }
     res.json({
       token,
@@ -40,6 +47,64 @@ authRouter.post(
         campanha_id: usuario.campanha_id,
         campanha_nome,
         campanha_slug,
+        campanha_plano,
+        super_admin: usuario.super_admin,
+      },
+    });
+  })
+);
+
+import { verify as verifyTotp } from 'otplib';
+
+authRouter.post(
+  '/login-2fa',
+  loginLimiter,
+  wrap(async (req, res) => {
+    const { userId, token: mfaToken } = req.body ?? {};
+    if (!userId || !mfaToken) return res.status(400).json({ error: 'Dados incompletos para 2FA.' });
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: userId },
+    });
+
+    if (!usuario || !usuario.two_factor_enabled || !usuario.two_factor_secret) {
+      return res.status(400).json({ error: '2FA não está ativado para este usuário.' });
+    }
+
+    const isValid = (await verifyTotp({
+      token: String(mfaToken),
+      secret: usuario.two_factor_secret,
+      epochTolerance: 30,
+    })).valid;
+
+    if (!isValid) {
+      return res.status(401).json({ error: 'Código 2FA inválido.' });
+    }
+
+    const token = assinarToken(usuario);
+    let campanha_nome: string | null = null;
+    let campanha_slug: string | null = null;
+    let campanha_plano: string | null = null;
+    if (usuario.campanha_id) {
+      const c = await prisma.campanha.findUnique({
+        where: { id: usuario.campanha_id },
+        select: { nome: true, slug: true, plano: true },
+      });
+      campanha_nome = c?.nome ?? null;
+      campanha_slug = c?.slug ?? null;
+      campanha_plano = c?.plano ?? null;
+    }
+    res.json({
+      token,
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        role: usuario.role,
+        cabo_id: usuario.cabo_id,
+        campanha_id: usuario.campanha_id,
+        campanha_nome,
+        campanha_slug,
+        campanha_plano,
         super_admin: usuario.super_admin,
       },
     });
@@ -86,16 +151,22 @@ authRouter.post(
       });
     }
 
+    if (usuario.two_factor_enabled) {
+      return res.json({ require2FA: true, userId: usuario.id });
+    }
+
     const token = assinarToken(usuario);
     let campanha_nome: string | null = null;
     let campanha_slug: string | null = null;
+    let campanha_plano: string | null = null;
     if (usuario.campanha_id) {
       const c = await prisma.campanha.findUnique({
         where: { id: usuario.campanha_id },
-        select: { nome: true, slug: true },
+        select: { nome: true, slug: true, plano: true },
       });
       campanha_nome = c?.nome ?? null;
       campanha_slug = c?.slug ?? null;
+      campanha_plano = c?.plano ?? null;
     }
     res.json({
       token,
@@ -107,6 +178,7 @@ authRouter.post(
         campanha_id: usuario.campanha_id,
         campanha_nome,
         campanha_slug,
+        campanha_plano,
         super_admin: usuario.super_admin,
       },
     });
@@ -122,12 +194,14 @@ authRouter.get(
       id: string; nome: string; email: string; role: string;
       cabo_id: string | null; campanha_id: string | null;
       super_admin: boolean; campanha_nome: string | null;
-      campanha_slug: string | null; cabo_nome: string | null;
+      campanha_slug: string | null; campanha_plano: string | null;
+      cabo_nome: string | null;
     }>>`
       SELECT u.id, u.nome, u.email, u.role, u.cabo_id, u.campanha_id,
              u.super_admin,
              c.nome AS campanha_nome,
              c.slug AS campanha_slug,
+             c.plano AS campanha_plano,
              cb.nome AS cabo_nome
       FROM usuarios u
       LEFT JOIN campanhas c ON c.id = u.campanha_id
@@ -148,12 +222,26 @@ authRouter.get(
         campanha_id: u.campanha_id,
         campanha_nome: u.campanha_nome,
         campanha_slug: u.campanha_slug,
+        campanha_plano: u.campanha_plano,
         super_admin: u.super_admin,
         cabo: u.cabo_id ? { id: u.cabo_id, nome: u.cabo_nome } : null,
       },
     });
   })
 );
+// --- Gestão de Sessões ---
+authRouter.post(
+  '/logout-all',
+  requireAuth,
+  wrap(async (req, res) => {
+    await prisma.usuario.update({
+      where: { id: req.user!.id },
+      data: { token_version: { increment: 1 } },
+    });
+    res.json({ message: 'Sessão revogada em todos os dispositivos com sucesso.' });
+  })
+);
+
 // --- Recuperação de Senha ---
 import crypto from 'crypto';
 import { enviarEmail, templateResetSenha } from '../lib/email';
@@ -223,6 +311,7 @@ authRouter.post(
         senha_hash: novaSenhaHash,
         reset_token: null, // Limpa o token para não ser reutilizado
         reset_token_expires: null,
+        token_version: { increment: 1 }, // Revoga sessões antigas ao alterar a senha
       },
     });
 

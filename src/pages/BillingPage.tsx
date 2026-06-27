@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
+import { useAuth } from '../auth/AuthContext'
 import { CheckCircle2, Crown, Zap, AlertTriangle } from 'lucide-react'
 
 export function BillingPage() {
+  const { usuario } = useAuth()
   const [loading, setLoading] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+
+  const planoAtual = usuario?.campanha_plano || 'gratis'
 
   async function assinar(planoId: string) {
     try {
@@ -31,7 +35,7 @@ export function BillingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl py-8 px-4">
+    <div className="mx-auto max-w-5xl py-8 px-4 animate-fade-in">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Planos e Assinatura</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Gerencie seu plano e aumente seus limites no Gestor de Votos.</p>
@@ -53,7 +57,11 @@ export function BillingPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         {/* Grátis */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className={`rounded-2xl border bg-white p-6 shadow-sm dark:bg-slate-900 transition-all ${
+          planoAtual === 'gratis' 
+            ? 'border-brand-500 ring-2 ring-brand-500/20' 
+            : 'border-slate-200 dark:border-slate-800'
+        }`}>
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">Grátis</h2>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Para testar o sistema.</p>
           <div className="my-6">
@@ -61,22 +69,34 @@ export function BillingPage() {
             <span className="text-base font-medium text-slate-500">/mês</span>
           </div>
           <ul className="mb-8 space-y-3 text-sm text-slate-600 dark:text-slate-300">
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Até 500 eleitores</li>
+            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500 animate-pulse" /> Até 500 eleitores</li>
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Até 3 Lideranças</li>
             <li className="flex items-center gap-2 opacity-40"><CheckCircle2 className="h-4 w-4" /> Suporte por e-mail</li>
           </ul>
-          <button disabled className="w-full rounded-lg bg-slate-100 py-2.5 text-sm font-semibold text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:text-slate-500">
-            Plano Atual
-          </button>
+          {planoAtual === 'gratis' ? (
+            <button disabled className="w-full rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 py-2.5 text-sm font-semibold cursor-not-allowed">
+              Plano Atual
+            </button>
+          ) : (
+            <button disabled className="w-full rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 py-2.5 text-sm font-semibold cursor-not-allowed">
+              Não disponível
+            </button>
+          )}
         </div>
 
         {/* Básico */}
-        <div className="relative rounded-2xl border-2 border-brand-500 bg-white p-6 shadow-lg dark:border-brand-500 dark:bg-slate-900">
-          <div className="absolute -top-3 left-0 right-0 flex justify-center">
-            <span className="rounded-full bg-brand-500 px-3 py-1 text-xs font-bold text-white uppercase tracking-wide">
-              Mais Popular
-            </span>
-          </div>
+        <div className={`relative rounded-2xl border bg-white p-6 shadow-sm dark:bg-slate-900 transition-all ${
+          planoAtual === 'basico' 
+            ? 'border-brand-500 ring-2 ring-brand-500/20' 
+            : 'border-slate-200 dark:border-slate-800'
+        }`}>
+          {planoAtual === 'basico' && (
+            <div className="absolute -top-3 left-0 right-0 flex justify-center">
+              <span className="rounded-full bg-brand-500 px-3 py-1 text-xs font-bold text-white uppercase tracking-wide">
+                Plano Atual
+              </span>
+            </div>
+          )}
           <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             Básico <Zap className="h-4 w-4 text-amber-500" />
           </h2>
@@ -90,17 +110,34 @@ export function BillingPage() {
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-brand-500" /> Até 10 Lideranças</li>
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-brand-500" /> Mapa de calor e relatórios</li>
           </ul>
-          <button 
-            onClick={() => assinar('basico')}
-            disabled={loading}
-            className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
-          >
-            Assinar Básico
-          </button>
+          {planoAtual === 'basico' ? (
+            <button disabled className="w-full rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 py-2.5 text-sm font-semibold cursor-not-allowed">
+              Plano Atual
+            </button>
+          ) : (
+            <button 
+              onClick={() => assinar('basico')}
+              disabled={loading}
+              className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+            >
+              Assinar Básico
+            </button>
+          )}
         </div>
 
         {/* Pro */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className={`relative rounded-2xl border bg-white p-6 shadow-sm dark:bg-slate-900 transition-all ${
+          planoAtual === 'pro' 
+            ? 'border-brand-500 ring-2 ring-brand-500/20' 
+            : 'border-slate-200 dark:border-slate-800'
+        }`}>
+          {planoAtual === 'pro' && (
+            <div className="absolute -top-3 left-0 right-0 flex justify-center">
+              <span className="rounded-full bg-brand-500 px-3 py-1 text-xs font-bold text-white uppercase tracking-wide">
+                Plano Atual
+              </span>
+            </div>
+          )}
           <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             Pro <Crown className="h-4 w-4 text-amber-500" />
           </h2>
@@ -114,13 +151,19 @@ export function BillingPage() {
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Lideranças Ilimitadas</li>
             <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> Suporte prioritário</li>
           </ul>
-          <button 
-            onClick={() => assinar('pro')}
-            disabled={loading}
-            className="w-full rounded-lg border border-brand-200 bg-brand-50 text-brand-700 py-2.5 text-sm font-semibold hover:bg-brand-100 disabled:opacity-50 dark:border-brand-900/50 dark:bg-brand-500/10 dark:hover:bg-brand-500/20"
-          >
-            Assinar Pro
-          </button>
+          {planoAtual === 'pro' ? (
+            <button disabled className="w-full rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 py-2.5 text-sm font-semibold cursor-not-allowed">
+              Plano Atual
+            </button>
+          ) : (
+            <button 
+              onClick={() => assinar('pro')}
+              disabled={loading}
+              className="w-full rounded-lg border border-brand-200 bg-brand-50 text-brand-700 py-2.5 text-sm font-semibold hover:bg-brand-100 disabled:opacity-50 dark:border-brand-900/50 dark:bg-brand-500/10 dark:hover:bg-brand-500/20 transition-colors"
+            >
+              Assinar Pro
+            </button>
+          )}
         </div>
 
       </div>
