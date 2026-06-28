@@ -6,7 +6,8 @@ import { CIDADES, STATUS_OPTIONS, STATUS_STYLES } from '../lib/constants'
 import { formatDataHora, maskTelefone } from '../lib/format'
 import { exportarCSV, exportarXLSX } from '../lib/export'
 import { useConfirm } from '../components/ConfirmDialog'
-import { Printer } from 'lucide-react'
+import { Printer, Upload, MessageCircle } from 'lucide-react'
+import { ImportModal } from '../components/ImportModal'
 import type { EleitorComCabo, StatusEleitor } from '../lib/types'
 
 type Coluna =
@@ -50,6 +51,7 @@ export function PlanilhaPage() {
 
   const [bairrosOptions, setBairrosOptions] = useState<string[]>([])
   const [exportando, setExportando] = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   const [editId, setEditId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<EleitorComCabo>>({})
@@ -225,6 +227,10 @@ export function PlanilhaPage() {
           </p>
         </div>
         <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto">
+          <button onClick={() => setShowImport(true)} className={exportBtn}>
+            <Upload className="h-4 w-4" />
+            <span>Importar</span>
+          </button>
           <button onClick={() => window.print()} className={exportBtn}>
             <Printer className="h-4 w-4" />
             <span>Imprimir / PDF</span>
@@ -237,6 +243,16 @@ export function PlanilhaPage() {
           </button>
         </div>
       </div>
+
+      {showImport && (
+        <ImportModal 
+          onClose={() => setShowImport(false)} 
+          onSuccess={() => {
+            setShowImport(false)
+            carregar()
+          }} 
+        />
+      )}
 
       {/* Filtros */}
       <div className="mb-6 flex flex-wrap lg:flex-nowrap items-center gap-3 rounded-2xl border border-slate-200/60 bg-white/50 p-3 shadow-sm backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/50">
@@ -381,8 +397,17 @@ export function PlanilhaPage() {
                     <tr key={e.id} className="group transition-all hover:bg-slate-50 dark:hover:bg-slate-800/40">
                       <Td className="font-bold text-slate-900 dark:text-slate-100">{e.nome}</Td>
                       <Td>
-                        <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300">
+                        <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300 group/phone">
                           {e.telefone}
+                          <a 
+                            href={`https://wa.me/55${e.telefone.replace(/\D/g, '')}`} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            title="Conversar no WhatsApp"
+                            className="text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300 opacity-0 group-hover/phone:opacity-100 transition-opacity"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </a>
                         </div>
                         {e.cpf && <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wider font-medium">CPF: {e.cpf}</p>}
                         {e.titulo_eleitor && <p className="text-[11px] text-slate-500 mt-0.5 uppercase tracking-wider font-medium">TÍT: {e.titulo_eleitor}</p>}

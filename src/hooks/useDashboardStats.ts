@@ -1,7 +1,5 @@
 import { api } from "../lib/api"
-import { useState, useEffect, useCallback } from "react"
-import { getSocket } from "../lib/socket"
-
+import { useQuery } from "@tanstack/react-query"
 import type { Campanha } from "../lib/types"
 
 export interface DashboardStats {
@@ -21,33 +19,16 @@ export interface DashboardStats {
 }
 
 export function useDashboardStats(cidade?: string, dias?: string) {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  const load = useCallback(async () => {
-    try {
-      setLoading(true)
+  const { data, isLoading, error } = useQuery<DashboardStats>({
+    queryKey: ['dashboard', cidade, dias],
+    queryFn: async () => {
       const params = new URLSearchParams()
       if (cidade) params.set('cidade', cidade)
       if (dias) params.set('dias', dias)
       const query = params.toString() ? `?${params.toString()}` : ''
-      const data = await api.getDashboardStats(query)
-      setStats(data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }, [cidade, dias])
+      return api.getDashboardStats(query)
+    },
+  })
 
-  useEffect(() => {
-    load()
-    const socket = getSocket()
-    socket.on("eleitores:changed", load)
-    return () => {
-      socket.off("eleitores:changed", load)
-    }
-  }, [load])
-
-  return { stats, loading }
+  return { stats: data || null, loading: isLoading, error }
 }

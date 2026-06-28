@@ -3,6 +3,7 @@ import { prisma } from '../prismaClient';
 import { requireAuth, requireRole, optionalAuth, wrap, escopoCampanha, eleitorNaCampanha, registrarLog, cadastroLimiter, requirePlanLimit } from '../middlewares';
 import { notificarMudanca } from '../server';
 import { StatusEleitor } from '@prisma/client';
+import { cache } from '../lib/cache';
 
 const eleitoresRouter = Router();
 
@@ -116,6 +117,69 @@ eleitoresRouter.post(
   }),
 );
 
+// Importação em Lote (Bulk Import)
+eleitoresRouter.post(
+  '/eleitores/import',
+  requireAuth,
+  requireRole('admin', 'coordenador', 'cabo'),
+  requirePlanLimit('eleitores'),
+  wrap(async (req, res) => {
+    const { eleitores } = req.body;
+    if (!Array.isArray(eleitores) || eleitores.length === 0) {
+      return res.status(400).json({ error: 'Array de eleitores inválido ou vazio.' });
+    }
+
+    const campanhaId: string | null = req.user!.campanha_id ?? null;
+
+    // Pré-processa os eleitores para garantir que os campos necessários existem
+    const dataToInsert = eleitores.map((e: any) => {
+      const bairroStr = String(e.bairro || 'Não informado').trim();
+      const cidadeStr = String(e.cidade || 'Não informada').trim();
+      const nomeStr = String(e.nome || '').trim();
+
+      return {
+        campanha_id: campanhaId,
+        nome: nomeStr,
+        nome_busca: nomeStr.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(),
+        telefone: String(e.telefone || '').replace(/\D/g, ''),
+        local_votacao: String(e.local_votacao || 'Não informado').trim(),
+        zona: Number(e.zona) || 0,
+        secao: Number(e.secao) || 0,
+        bairro: bairroStr,
+        cidade: cidadeStr,
+        cabo_id: req.user!.role === 'cabo' ? req.user!.cabo_id : (e.cabo_id || null),
+        data_nascimento: e.data_nascimento || null,
+        cpf: e.cpf ? String(e.cpf).replace(/\D/g, '') : null,
+        titulo_eleitor: e.titulo_eleitor ? String(e.titulo_eleitor).replace(/\D/g, '') : null,
+        status: (e.status as StatusEleitor) || 'ativo',
+        observacoes: e.observacoes?.trim() || null,
+      };
+    }).filter((e: any) => e.nome && e.telefone); // Filtra linhas vazias inválidas
+
+    if (dataToInsert.length === 0) {
+      return res.status(400).json({ error: 'Nenhum eleitor válido encontrado para importação.' });
+    }
+
+    // Usar createMany com skipDuplicates impede quebra se o mesmo arquivo for importado 2x
+    const result = await prisma.eleitor.createMany({
+      data: dataToInsert,
+      skipDuplicates: true,
+    });
+
+    // Invalida cache global
+    notificarMudanca(campanhaId);
+
+    // Tentativa otimista de Geocode para o primeiro de cada bairro (opcional/futuro).
+    // O import em massa não fará geocode 1 a 1 imediato para evitar rate limit do Nominatim.
+
+    res.status(201).json({ 
+      message: 'Importação concluída', 
+      inserted: result.count,
+      totalSent: dataToInsert.length
+    });
+  }),
+);
+
 // Listar: autenticado; perfil 'cabo' vê só os próprios
 // Suporta paginação (?page=1&limit=50), busca (?busca=) e filtros (?cidade=&bairro=&status=&cabo_id=&zona=)
 eleitoresRouter.get(
@@ -144,15 +208,15 @@ eleitoresRouter.get(
     }
 
     // Busca textual (nome, telefone, bairro, cidade, local e cabo)
-    if (req.query.busca) {
-      const termo = String(req.query.busca).toLowerCase().trim();
+    const busca = String(req.query.busca || '').toLowerCase().trim();
+    if (busca) {
       where.OR = [
-        { nome_busca: { contains: termo } },
-        { telefone: { contains: termo } },
-        { bairro: { contains: termo, mode: 'insensitive' } },
-        { cidade: { contains: termo, mode: 'insensitive' } },
-        { local_votacao: { contains: termo, mode: 'insensitive' } },
-        { cabo: { nome: { contains: termo, mode: 'insensitive' } } },
+        { nome_busca: { contains: busca } },
+        { telefone: { contains: busca } },
+        { bairro: { contains: busca, mode: 'insensitive' } },
+        { cidade: { contains: busca, mode: 'insensitive' } },
+        { local_votacao: { contains: busca, mode: 'insensitive' } },
+        { cabo: { nome: { contains: busca, mode: 'insensitive' } } },
       ];
     }
 
@@ -165,6 +229,13 @@ eleitoresRouter.get(
     const sortField = SORT_MAP[String(req.query.sort)] || 'created_at';
     const sortDir = String(req.query.dir) === 'asc' ? 'asc' : 'desc';
 
+    // Construção da chave de cache única para esta página e filtros
+    const cid = req.user!.campanha_id || 'global';
+    const cacheKey = `${cid}_eleitores_${req.user!.role}_${req.user!.cabo_id || 'no_cabo'}_p${page}_l${limit}_s${sortField}_${sortDir}_c${req.query.cidade || ''}_b${req.query.bairro || ''}_s${req.query.status || ''}_cb${req.query.cabo_id || ''}_z${req.query.zona || ''}_m${req.query.mes_aniversario || ''}_q${busca}`;
+    
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
     const [eleitores, total] = await Promise.all([
       prisma.eleitor.findMany({
         where,
@@ -176,13 +247,16 @@ eleitoresRouter.get(
       prisma.eleitor.count({ where }),
     ]);
 
-    res.json({
+    const result = {
       data: eleitores,
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-    });
+    };
+
+    cache.set(cacheKey, result, 600); // Salva no cache por 10 min
+    res.json(result);
   }),
 );
 

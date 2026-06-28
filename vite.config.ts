@@ -12,21 +12,51 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // Service Worker auto-destrutivo: limpa o cache antigo e se remove do
-      // navegador. Resolve a "tela azul em branco" causada por cache preso de
-      // deploys anteriores. (Pode reativar o PWA depois, configurado com cuidado.)
-      selfDestroying: true,
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'Gestor de Votos',
-        short_name: 'Gestor de Votos',
+        short_name: 'Gestor Votos',
         description: 'Plataforma Premium de Gestão de Campanhas',
-        theme_color: '#4f46e5',
+        theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
         icons: [
+          {
+            src: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
           {
             src: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png',
             sizes: '512x512',
             type: 'image/png'
+          },
+          {
+            src: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
           }
         ]
       }

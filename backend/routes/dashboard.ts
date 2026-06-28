@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../prismaClient';
 import { requireAuth, wrap, escopoCampanha } from '../middlewares';
+import { cache } from '../lib/cache';
 
 const dashboardRouter = Router();
 
@@ -10,6 +11,13 @@ dashboardRouter.get(
   wrap(async (req, res) => {
     const filtroCidade = req.query.cidade as string;
     const filtroDias = req.query.dias as string;
+    
+    // Configura a chave de cache usando o contexto de campanha + params
+    const cid = req.user!.campanha_id || 'global';
+    const cacheKey = `${cid}_dashboard_${req.user!.role}_${req.user!.cabo_id || 'no_cabo'}_${filtroCidade || 'all'}_${filtroDias || 'all'}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
     const whereBase = {
       ...escopoCampanha(req),
       ...(req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : {}),
@@ -249,7 +257,7 @@ dashboardRouter.get(
     const bairrosTodosCount = bairrosAgg.filter(b => b.bairro).length;
     const cabosAtivosCount = filtroCidade ? mapCabosCount.size : cabos.length;
 
-    res.json({
+    const result = {
       campanha: campanhaAtual,
       kpis: {
         totalEleitores,
@@ -263,7 +271,10 @@ dashboardRouter.get(
       porDia,
       ranking,
       aniversariantes: aniversariantes.slice(0, 10),
-    });
+    };
+
+    cache.set(cacheKey, result, 600); // Salva no cache por 10 min
+    res.json(result);
   })
 );
 

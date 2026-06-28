@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { ThemeProvider } from './components/ThemeProvider'
@@ -9,6 +10,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { Breadcrumbs } from './components/Breadcrumbs'
 import { Header } from './components/layout/Header'
 import { BottomNavWrapper } from './components/layout/BottomNav'
+import { InstallPrompt } from './components/layout/InstallPrompt'
 import { useDocumentTitle } from './hooks/useDocumentTitle'
 import { NaoEncontradoPage } from './pages/NaoEncontradoPage'
 
@@ -51,18 +53,22 @@ function CarregandoPagina() {
 import { useOfflineSync } from './hooks/useOfflineSync'
 import { getSocket } from './lib/socket'
 import { useAuth } from './auth/AuthContext'
+import { useQueryClient } from '@tanstack/react-query'
 
 function AppContent() {
   useOfflineSync()
   useDocumentTitle()
   const { toast } = useToast()
   const { usuario } = useAuth()
+  const queryClient = useQueryClient()
 
   useEffect(() => {
     if (!usuario) return
     const socket = getSocket()
     const handleChanged = () => {
       toast('A base de eleitores foi atualizada em tempo real.', 'info')
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['eleitores'] })
     }
     socket.on('eleitores:changed', handleChanged)
     return () => {
@@ -177,22 +183,34 @@ function AppContent() {
         </ErrorBoundary>
       </main>
       <BottomNavWrapper />
+      <InstallPrompt />
     </div>
   )
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes (invalidates automatically via websocket if data changes)
+      refetchOnWindowFocus: false, // Prevents aggressive refetching when switching tabs
+    },
+  },
+})
+
 export default function App() {
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <ConfirmProvider>
-          <AuthProvider>
-            <BrowserRouter>
-              <AppContent />
-            </BrowserRouter>
-          </AuthProvider>
-        </ConfirmProvider>
-      </ToastProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <ToastProvider>
+          <ConfirmProvider>
+            <AuthProvider>
+              <BrowserRouter>
+                <AppContent />
+              </BrowserRouter>
+            </AuthProvider>
+          </ConfirmProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   )
 }

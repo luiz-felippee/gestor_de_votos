@@ -75,12 +75,16 @@ const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
+import { cache } from './lib/cache';
+
 // --- Tempo real (Socket.io) ---
 const io = new SocketServer(httpServer, { cors: { origin: CORS_ORIGIN } });
 export function notificarMudanca(campanhaId?: string | null) {
   if (campanhaId) {
+    cache.invalidateByPrefix(campanhaId);
     io.to(campanhaId).emit('eleitores:changed');
   } else {
+    cache.flush();
     io.emit('eleitores:changed');
   }
 }
@@ -127,7 +131,7 @@ app.get('/api/health', async (_req, res) => {
 
   res.json({
     ok: true,
-    version: '2026-06-27-features',
+    version: '2026-06-27-cache',
     runtime: 'node-dist',
     db: {
       status: dbStatus,

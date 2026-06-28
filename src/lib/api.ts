@@ -238,6 +238,8 @@ export const api = {
   getDashboardStats: (query: string = '') => request<any>(`/dashboard/stats${query}`),
   createEleitor: (data: unknown) =>
     request<EleitorComCabo>('/eleitores', { method: 'POST', body: data }),
+  importarEleitores: (eleitores: unknown[]) =>
+    request<{ message: string; inserted: number; totalSent: number }>('/eleitores/import', { method: 'POST', body: { eleitores } }),
   updateEleitor: (id: string, data: unknown) =>
     request<EleitorComCabo>(`/eleitores/${id}`, { method: 'PUT', body: data }),
   deleteEleitor: (id: string) =>
