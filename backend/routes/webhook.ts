@@ -4,10 +4,10 @@ import { prisma } from '../prismaClient';
 
 const webhookRouter = Router();
 
-// @ts-ignore
+// Garantindo que a versão da API seja explícita sem '@ts-ignore'
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock', {
-  apiVersion: '2022-11-15',
-} as any);
+  apiVersion: '2024-12-18.acacia' as any, // fallback de tipagem caso o pacote esteja desatualizado com a versão pedida
+});
 
 // Chave do webhook signing (webhook secret)
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock';
@@ -17,7 +17,9 @@ webhookRouter.post('/stripe', async (req: Request, res: Response) => {
 
   if (!sig) return res.status(400).send('Webhook Error: Missing stripe-signature');
 
-  let event: any;
+  // Em stripe v22 (cjs) o namespace Stripe.Event não resolve como anotação;
+  // inferimos o tipo a partir do retorno de constructEvent.
+  let event: ReturnType<typeof stripe.webhooks.constructEvent>;
 
   try {
     // req.body tem que ser o buffer raw gerado pelo express.raw()
@@ -31,7 +33,7 @@ webhookRouter.post('/stripe', async (req: Request, res: Response) => {
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as any;
+        const session = event.data.object as any; // Stripe.Checkout.Session
         // O checkout foi finalizado
         const campanhaId = session.client_reference_id;
         const customerId = session.customer as string;
@@ -55,7 +57,7 @@ webhookRouter.post('/stripe', async (req: Request, res: Response) => {
       
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as any;
+        const subscription = event.data.object as any; // Stripe.Subscription
         const status = subscription.status; // 'active', 'past_due', 'canceled', etc
         const customerId = subscription.customer as string;
         

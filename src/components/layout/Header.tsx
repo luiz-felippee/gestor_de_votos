@@ -3,14 +3,33 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { useTheme } from '../ThemeProvider'
 import { Logo } from '../Logo'
+import { useOfflineSync } from '../../hooks/useOfflineSync'
+import { WifiOff, Loader2 } from 'lucide-react'
 
 export function Header() {
   const { usuario, role, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
+  const { online, pendentes } = useOfflineSync()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      {/* Banner Offline */}
+      {(!online || pendentes > 0) && (
+        <div className={`px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 transition-colors ${!online ? 'bg-amber-500 text-white' : 'bg-brand-500 text-white'}`}>
+          {!online ? (
+            <>
+              <WifiOff className="h-4 w-4" />
+              Você está offline. Trabalhando localmente ({pendentes} na fila).
+            </>
+          ) : (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Sincronizando {pendentes} cadastros pendentes...
+            </>
+          )}
+        </div>
+      )}
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <span className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
           <Logo />

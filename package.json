@@ -19,6 +19,7 @@
     "d3": "^7.9.0",
     "d3-geo": "^3.1.1",
     "html2canvas": "^1.4.1",
+    "idb-keyval": "^6.2.5",
     "leaflet": "^1.9.4",
     "leaflet.heat": "^0.2.0",
     "lucide-react": "^1.17.0",

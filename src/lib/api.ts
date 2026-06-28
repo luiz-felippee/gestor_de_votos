@@ -9,6 +9,7 @@ import type {
   LogAuditoria,
   Campanha,
 } from './types'
+import { saveToOfflineQueue } from './offline'
 
 export const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined) ||
@@ -236,8 +237,19 @@ export const api = {
     return all
   },
   getDashboardStats: (query: string = '') => request<any>(`/dashboard/stats${query}`),
-  createEleitor: (data: unknown) =>
-    request<EleitorComCabo>('/eleitores', { method: 'POST', body: data }),
+  createEleitor: async (data: unknown) => {
+    if (!navigator.onLine) {
+      // Estamos offline. Salva no IndexedDB e forja uma resposta de sucesso pro componente.
+      const offlineItem = await saveToOfflineQueue(data)
+      return {
+        id: offlineItem.tempId,
+        ...data as any,
+        created_at: new Date().toISOString(),
+        _offline: true // Flag pra interface saber que ainda não subiu
+      } as EleitorComCabo
+    }
+    return request<EleitorComCabo>('/eleitores', { method: 'POST', body: data })
+  },
   importarEleitores: (eleitores: unknown[]) =>
     request<{ message: string; inserted: number; totalSent: number }>('/eleitores/import', { method: 'POST', body: { eleitores } }),
   updateEleitor: (id: string, data: unknown) =>

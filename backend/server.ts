@@ -10,8 +10,9 @@
  * Middlewares de autenticação, autorização, rate-limiting e helpers compartilhados
  * ficam em ./middlewares/index.ts — os routers importam de lá diretamente.
  */
-import 'dotenv/config';
+import './config'; // Deve ser a primeira coisa a rodar!
 import express from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import compression from 'compression';
@@ -38,6 +39,12 @@ import { verificarTokenSocket } from './middlewares';
 
 // --- App Express ---
 const app = express();
+
+// Segurança: Protege Express contra web-vulnerabilidades comuns
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" } // Permite carregar imagens de outros domínios se precisar
+}));
+
 app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
@@ -98,7 +105,19 @@ io.on('connection', (socket) => {
   if (payload) socket.join(payload.campanha_id ?? 'global');
 });
 
+import { rateLimit } from 'express-rate-limit';
+
+// Proteção DDoS e Scrape Global para a API
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 300, // Limite de 300 requisições por IP por minuto
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Muitas requisições deste IP, por favor tente novamente em 1 minuto.' }
+});
+
 // --- Routers ---
+app.use('/api', apiLimiter); // Aplica em tudo que começa com /api
 app.use('/api/auth', require('./routes/auth').default);
 app.use('/api/dashboard', require('./routes/dashboard').default);
 app.use('/api', require('./routes/cabos').default);
@@ -110,6 +129,20 @@ app.use('/api', require('./routes/eventos').default);
 app.use('/api', require('./routes/auditoria').default);
 app.use('/api', require('./routes/upload').default);
 app.use('/api/auth', require('./routes/2fa').default);
+
+// --- Error Boundary Universal (Evita vazar Stack Trace) ---
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  logger.error('❌ Unhandled Exception in Express:', { 
+    error: err.message, 
+    stack: err.stack, 
+    path: req.path 
+  });
+  
+  res.status(500).json({ 
+    error: 'Falha interna do servidor.',
+    code: 'ERR_INTERNAL_500'
+  });
+});
 
 // --- Saúde ---
 // Retorna estatísticas detalhadas de uso de memória, latência de banco e uptime.
@@ -131,7 +164,7 @@ app.get('/api/health', async (_req, res) => {
 
   res.json({
     ok: true,
-    version: '2026-06-27-cache',
+    version: '2026-06-28-sec',
     runtime: 'node-dist',
     db: {
       status: dbStatus,

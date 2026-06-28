@@ -6,7 +6,7 @@ import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
 import { LocalVotacaoAutocomplete } from '../components/LocalVotacaoAutocomplete'
-import { saveOffline } from '../hooks/useOfflineSync'
+import { saveToOfflineQueue } from '../lib/offline'
 import { updateFavicon } from '../lib/favicon'
 import type { Campanha } from '../lib/types'
 
@@ -202,7 +202,8 @@ export function CadastroPage() {
     }
 
     if (!navigator.onLine) {
-      saveOffline('/eleitores-public', payload)
+      await saveToOfflineQueue(payload)
+      window.dispatchEvent(new Event('gv_queue_updated'))
       setEnviando(false)
       setSucesso(true)
       return

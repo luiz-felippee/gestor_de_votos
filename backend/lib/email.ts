@@ -73,3 +73,28 @@ export function templateResetSenha(nome: string, link: string): string {
     </div>
   </div>`;
 }
+
+/** Template HTML do e-mail de alerta de erro crítico. */
+export function templateErroCritico(mensagem: string, stack?: string): string {
+  return `
+  <div style="font-family:Segoe UI,Arial,sans-serif;background:#fee2e2;padding:32px">
+    <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:1px solid #fca5a5">
+      <div style="background:linear-gradient(135deg,#dc2626,#991b1b);padding:24px 28px">
+        <span style="color:#fff;font-size:18px;font-weight:800">⚠️ ALERTA CRÍTICO: GESTOR DE VOTOS</span>
+      </div>
+      <div style="padding:28px">
+        <h1 style="font-size:18px;color:#0f172a;margin:0 0 12px">Um erro severo ocorreu no servidor!</h1>
+        <p style="font-size:14px;color:#475569;line-height:1.6;margin:0 0 20px">
+          Ocorreu uma falha no sistema que precisa de sua atenção.
+        </p>
+        <div style="background:#f8fafc;padding:16px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:20px">
+          <p style="font-size:14px;color:#b91c1c;font-weight:700;margin:0 0 8px">${mensagem}</p>
+          ${stack ? `<pre style="font-size:11px;color:#475569;white-space:pre-wrap;word-wrap:break-word;background:#f1f5f9;padding:12px;border-radius:4px;overflow-x:auto;">${stack}</pre>` : ''}
+        </div>
+        <p style="font-size:12px;color:#94a3b8;line-height:1.6;margin:22px 0 0">
+          Você está recebendo isso porque seu e-mail está configurado como ADMIN_ALERT_EMAIL no sistema.
+        </p>
+      </div>
+    </div>
+  </div>`;
+}
