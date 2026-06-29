@@ -75,6 +75,7 @@ model Eleitor {
   secao         Int
   bairro        String
   cidade        String
+  endereco      String?
   cabo_id       String?
   status           StatusEleitor  @default(ativo)
   observacoes      String?

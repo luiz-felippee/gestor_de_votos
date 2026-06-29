@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { api, type EleitorFiltros } from '../lib/api'
 import { getSocket } from '../lib/socket'
 import { useToast } from '../components/Toast'
@@ -9,6 +9,7 @@ import { useConfirm } from '../components/ConfirmDialog'
 import { Printer, Upload, MessageCircle } from 'lucide-react'
 import { ImportModal } from '../components/ImportModal'
 import type { EleitorComCabo, StatusEleitor } from '../lib/types'
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 
 type Coluna =
   | 'nome'
@@ -29,13 +30,7 @@ interface Ordenacao {
 export function PlanilhaPage() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
-
-  // Dados apenas da página atual — paginação/filtros/ordenação no SERVIDOR
-  const [eleitores, setEleitores] = useState<EleitorComCabo[]>([])
-  const [total, setTotal] = useState(0)
-  const [totalPaginas, setTotalPaginas] = useState(1)
-  const [loading, setLoading] = useState(true)
-  const [erro, setErro] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const [busca, setBusca] = useState('')
   const [buscaDeb, setBuscaDeb] = useState('')
@@ -86,34 +81,39 @@ export function PlanilhaPage() {
     setPaginaAtual(1)
   }, [filtros])
 
-  const carregar = useCallback(async () => {
-    setLoading(true)
-    setErro(null)
-    try {
-      const res = await api.getEleitores({ ...filtros, page: paginaAtual, limit: itensPorPagina })
-      setEleitores(res.data ?? [])
-      setTotal(res.total ?? 0)
-      setTotalPaginas(res.totalPages || 1)
-    } catch (e) {
-      setErro((e as Error).message)
-    } finally {
-      setLoading(false)
-    }
-  }, [filtros, paginaAtual])
+  const queryKey = ['eleitores-paginados', { ...filtros, page: paginaAtual, limit: itensPorPagina }]
 
+  const { data: pageData, isLoading: loading, error, isPlaceholderData } = useQuery({
+    queryKey,
+    queryFn: () => api.getEleitores({ ...filtros, page: paginaAtual, limit: itensPorPagina }),
+    placeholderData: keepPreviousData,
+    staleTime: 60 * 1000, // 1 minuto de cache fresco
+  })
+
+  const eleitores = pageData?.data ?? []
+  const total = pageData?.total ?? 0
+  const totalPaginas = pageData?.totalPages || 1
+  const erro = error ? (error as Error).message : null
+
+  // Pré-carrega a próxima página quando os dados chegam (prefetching)
   useEffect(() => {
-    carregar()
-  }, [carregar])
+    if (!isPlaceholderData && paginaAtual < totalPaginas) {
+      queryClient.prefetchQuery({
+        queryKey: ['eleitores-paginados', { ...filtros, page: paginaAtual + 1, limit: itensPorPagina }],
+        queryFn: () => api.getEleitores({ ...filtros, page: paginaAtual + 1, limit: itensPorPagina })
+      })
+    }
+  }, [pageData, isPlaceholderData, paginaAtual, totalPaginas, queryClient, filtros, itensPorPagina])
 
-  // Tempo real: recarrega a página atual quando algo muda no servidor
+  // Tempo real: invalida o cache quando algo muda no servidor
   useEffect(() => {
     const socket = getSocket()
-    const h = () => carregar()
+    const h = () => queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     socket.on('eleitores:changed', h)
     return () => {
       socket.off('eleitores:changed', h)
     }
-  }, [carregar])
+  }, [queryClient])
 
   function ordenarPor(campo: Coluna) {
     setOrdem((o) =>
@@ -128,8 +128,24 @@ export function PlanilhaPage() {
 
   async function salvarEdicao() {
     if (!editId) return
+    const currentEditId = editId
+    
+    // Atualização Otimista no Cache
+    queryClient.setQueryData(queryKey, (old: any) => {
+      if (!old) return old
+      return {
+        ...old,
+        data: old.data.map((e: EleitorComCabo) => 
+          e.id === currentEditId ? { ...e, ...editForm } : e
+        )
+      }
+    })
+
+    setEditId(null)
+    setEditForm({})
+
     try {
-      await api.updateEleitor(editId, {
+      await api.updateEleitor(currentEditId, {
         nome: editForm.nome,
         telefone: editForm.telefone,
         local_votacao: editForm.local_votacao,
@@ -137,6 +153,7 @@ export function PlanilhaPage() {
         secao: Number(editForm.secao),
         bairro: editForm.bairro,
         cidade: editForm.cidade,
+        endereco: editForm.endereco,
         status: editForm.status as StatusEleitor,
         observacoes: editForm.observacoes,
         cpf: editForm.cpf,
@@ -144,13 +161,12 @@ export function PlanilhaPage() {
         data_nascimento: editForm.data_nascimento,
       })
       toast('Eleitor atualizado com sucesso!', 'success')
-      carregar()
+      // Invalida em background para garantir sincronia real
+      queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     } catch (err) {
       toast(`Erro ao salvar: ${(err as Error).message}`, 'error')
-      return
+      queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     }
-    setEditId(null)
-    setEditForm({})
   }
 
   async function anonimizar(e: EleitorComCabo) {
@@ -162,12 +178,24 @@ export function PlanilhaPage() {
     })
     if (!ok) return
 
+    // Atualização Otimista
+    queryClient.setQueryData(queryKey, (old: any) => {
+      if (!old) return old
+      return {
+        ...old,
+        data: old.data.map((item: EleitorComCabo) => 
+          item.id === e.id ? { ...item, nome: 'Anônimo', telefone: '***', cpf: null, titulo_eleitor: null, data_nascimento: null } : item
+        )
+      }
+    })
+
     try {
       await api.anonimizarEleitor(e.id)
       toast('Dados anonimizados com sucesso (LGPD)', 'success')
-      carregar()
+      queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     } catch (err) {
       toast(`Erro ao anonimizar: ${(err as Error).message}`, 'error')
+      queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     }
   }
 
@@ -180,12 +208,23 @@ export function PlanilhaPage() {
     })
     if (!ok) return
 
+    // Atualização Otimista
+    queryClient.setQueryData(queryKey, (old: any) => {
+      if (!old) return old
+      return {
+        ...old,
+        total: old.total - 1,
+        data: old.data.filter((item: EleitorComCabo) => item.id !== e.id)
+      }
+    })
+
     try {
       await api.deleteEleitor(e.id)
       toast('Eleitor excluído com sucesso', 'success')
-      carregar()
+      queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     } catch (err) {
       toast(`Erro ao excluir: ${(err as Error).message}`, 'error')
+      queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     }
   }
 
@@ -249,7 +288,7 @@ export function PlanilhaPage() {
           onClose={() => setShowImport(false)} 
           onSuccess={() => {
             setShowImport(false)
-            carregar()
+            queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
           }} 
         />
       )}
@@ -316,9 +355,81 @@ export function PlanilhaPage() {
         </div>
       )}
 
-      {/* Tabela com Scroll */}
+      {/* Tabela e Cards */}
       <div className="flex-1 min-h-[400px] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-md flex flex-col dark:border-slate-800/80 dark:bg-slate-900/90">
-        <div className="flex-1 overflow-auto relative custom-scrollbar">
+        
+        {/* Mobile View (Cards) */}
+        <div className="md:hidden flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-950 overflow-auto">
+          {loading ? (
+             <div className="flex flex-col items-center justify-center gap-2 py-12">
+               <div className="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+               <span className="text-slate-400 font-medium">Carregando planilha...</span>
+             </div>
+          ) : eleitores.length === 0 ? (
+             <div className="py-12 text-center text-slate-400 font-medium">
+               <svg className="w-12 h-12 mx-auto text-slate-300 mb-3 dark:text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+               Nenhum eleitor encontrado.
+             </div>
+          ) : (
+            eleitores.map((e) => (
+              editId === e.id ? (
+                <div key={e.id} className="bg-brand-50/50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800 rounded-xl p-4 flex flex-col gap-3">
+                  <input className={editInput} placeholder="Nome" value={editForm.nome ?? ''} onChange={(ev) => setCampo('nome', ev.target.value)} />
+                  <input className={editInput} placeholder="Telefone" value={editForm.telefone ?? ''} onChange={(ev) => setCampo('telefone', maskTelefone(ev.target.value))} />
+                  <input className={editInput} placeholder="Local de Votação" value={editForm.local_votacao ?? ''} onChange={(ev) => setCampo('local_votacao', ev.target.value)} />
+                  <div className="flex gap-2">
+                    <input type="number" className={`${editInput} w-1/2`} placeholder="Zona" value={editForm.zona ?? ''} onChange={(ev) => setCampo('zona', Number(ev.target.value))} />
+                    <input type="number" className={`${editInput} w-1/2`} placeholder="Seção" value={editForm.secao ?? ''} onChange={(ev) => setCampo('secao', Number(ev.target.value))} />
+                  </div>
+                  <input className={editInput} placeholder="Endereço (Opcional)" value={editForm.endereco ?? ''} onChange={(ev) => setCampo('endereco', ev.target.value)} />
+                  <input className={editInput} placeholder="Bairro" value={editForm.bairro ?? ''} onChange={(ev) => setCampo('bairro', ev.target.value)} />
+                  <select className={editInput} value={editForm.cidade ?? ''} onChange={(ev) => setCampo('cidade', ev.target.value)}>
+                    {CIDADES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <select className={editInput} value={editForm.status ?? 'ativo'} onChange={(ev) => setCampo('status', ev.target.value as StatusEleitor)}>
+                    {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button onClick={() => setEditId(null)} className="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg dark:bg-slate-800 dark:text-slate-300">Cancelar</button>
+                    <button onClick={salvarEdicao} className="px-4 py-2 text-sm font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg">Salvar</button>
+                  </div>
+                </div>
+              ) : (
+                <div key={e.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col gap-2 relative">
+                  <div className="flex justify-between items-start mb-1">
+                    <div>
+                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base leading-tight">{e.nome}</h3>
+                      <p className="font-semibold text-slate-700 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
+                        {e.telefone}
+                        <a href={`https://wa.me/55${e.telefone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 p-1 rounded-full"><MessageCircle className="h-3.5 w-3.5"/></a>
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${STATUS_STYLES[e.status]}`}>{e.status}</span>
+                  </div>
+                  <div className="text-sm dark:text-slate-300 grid grid-cols-1 gap-1">
+                    <p><span className="font-semibold text-slate-500">Local:</span> {e.local_votacao} <span className="text-[11px] text-brand-600 dark:text-brand-400 font-bold ml-1">(Z:{e.zona} S:{e.secao})</span></p>
+                    <p><span className="font-semibold text-slate-500">Endereço:</span> {e.endereco ? `${e.endereco}, ` : ''}{e.bairro} - {e.cidade}</p>
+                    <p><span className="font-semibold text-slate-500">Indicação:</span> {e.cabo?.nome || '—'}</p>
+                  </div>
+                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/60">
+                     <span className="text-[10px] text-slate-400 font-semibold">{formatDataHora(e.created_at).split(' ')[0]}</span>
+                     <div className="flex gap-1.5">
+                       <button onClick={() => iniciarEdicao(e)} className="p-1.5 text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg dark:text-brand-400 dark:bg-brand-900/30">
+                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                       </button>
+                       <button onClick={() => excluir(e)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg dark:text-red-400 dark:bg-red-900/30">
+                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                       </button>
+                     </div>
+                  </div>
+                </div>
+              )
+            ))
+          )}
+        </div>
+
+        {/* Desktop View (Tabela) */}
+        <div className="hidden md:block flex-1 overflow-auto relative custom-scrollbar">
           <table className="w-full min-w-[1000px] text-left text-sm border-collapse">
             <thead className="sticky top-0 z-20 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
               <tr>
@@ -370,7 +481,8 @@ export function PlanilhaPage() {
                       </Td>
                       <Td>
                         <div className="flex flex-col gap-1">
-                          <input className={editInput} value={editForm.bairro ?? ''} onChange={(ev) => setCampo('bairro', ev.target.value)} />
+                          <input className={editInput} placeholder="Endereço (Opcional)" value={editForm.endereco ?? ''} onChange={(ev) => setCampo('endereco', ev.target.value)} />
+                          <input className={editInput} placeholder="Bairro" value={editForm.bairro ?? ''} onChange={(ev) => setCampo('bairro', ev.target.value)} />
                           <div className="flex gap-1">
                             <select className={`${editInput} flex-1`} value={editForm.cidade ?? ''} onChange={(ev) => setCampo('cidade', ev.target.value)}>
                               {CIDADES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -417,7 +529,12 @@ export function PlanilhaPage() {
                         <p className="text-[11px] text-brand-600 dark:text-brand-400 font-bold uppercase tracking-widest mt-0.5">Z: {e.zona} • S: {e.secao}</p>
                       </Td>
                       <Td className="dark:text-slate-300">
-                        <p className="font-semibold">{e.bairro}</p>
+                        {e.endereco ? (
+                          <p className="font-semibold">{e.endereco}</p>
+                        ) : null}
+                        <p className={e.endereco ? 'text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium' : 'font-semibold'}>
+                          {e.bairro}
+                        </p>
                         <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide mt-0.5">
                           {e.cidade}
                           {e.data_nascimento && ` • NASC: ${e.data_nascimento.split('-').reverse().join('/')}`}

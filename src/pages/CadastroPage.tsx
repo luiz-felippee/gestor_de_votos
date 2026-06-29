@@ -19,6 +19,7 @@ interface FormState {
   secao: string
   bairro: string
   cidade: string
+  endereco: string
   data_nascimento: string
   cpf: string
   titulo_eleitor: string
@@ -35,6 +36,7 @@ const VAZIO: FormState = {
   secao: '',
   bairro: '',
   cidade: '',
+  endereco: '',
   data_nascimento: '',
   cpf: '',
   titulo_eleitor: '',
@@ -191,6 +193,7 @@ export function CadastroPage() {
       secao: Number(form.secao),
       bairro: form.bairro.trim(),
       cidade: form.cidade,
+      endereco: form.endereco.trim() || null,
       data_nascimento: form.data_nascimento || null,
       cpf: form.cpf || null,
       titulo_eleitor: form.titulo_eleitor || null,
@@ -278,7 +281,7 @@ export function CadastroPage() {
         ) : (
           <form
             onSubmit={enviar}
-            className="max-h-[calc(100vh-9rem)] space-y-6 overflow-y-auto px-6 py-6"
+            className="max-h-[calc(100vh-9rem)] space-y-4 overflow-y-auto px-6 py-6"
           >
             {/* Honeypot anti-robô */}
             <input
@@ -342,7 +345,7 @@ export function CadastroPage() {
                   )}
                 </div>
               </Campo>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Campo label="CPF (Opcional)" erro={erros.cpf}>
                   <input
                     type="tel"
@@ -382,7 +385,7 @@ export function CadastroPage() {
                   className={`${inputClass} ${erros.local_votacao ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
                 />
               </Campo>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Campo label="Zona" obrigatorio erro={erros.zona}>
                   <input
                     type="number"
@@ -404,7 +407,17 @@ export function CadastroPage() {
                   />
                 </Campo>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Campo label="Endereço (Rua e Número)" erro={erros.endereco}>
+                <input
+                  type="text"
+                  name="endereco"
+                  value={form.endereco}
+                  onChange={(e) => atualizar('endereco', e.target.value)}
+                  className={`${inputClass} ${erros.endereco ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+                  placeholder="Ex.: Rua Quinze de Novembro, 123"
+                />
+              </Campo>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Campo label="Bairro" obrigatorio erro={erros.bairro}>
                   <input
                     type="text"
@@ -529,7 +542,7 @@ const inputClass =
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <fieldset className="space-y-3">
+    <fieldset className="space-y-4">
       <legend className="mb-1 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
         {titulo}
       </legend>

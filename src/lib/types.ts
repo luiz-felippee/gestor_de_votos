@@ -51,6 +51,7 @@ export interface Eleitor {
   secao: number
   bairro: string
   cidade: string
+  endereco?: string | null
   cabo_id: string | null
   status: StatusEleitor
   observacoes: string | null

@@ -11,9 +11,9 @@ function normalizar(nome: string) {
   return nome.trim().toLowerCase();
 }
 
-async function geocodeAddress(bairro: string, cidade: string): Promise<{ lat: number; lng: number } | null> {
+async function geocodeAddress(bairro: string, cidade: string, endereco?: string | null): Promise<{ lat: number; lng: number } | null> {
   try {
-    const q = [bairro, cidade, 'Pernambuco', 'Brasil']
+    const q = [endereco, bairro, cidade, 'Pernambuco', 'Brasil']
       .map((s) => (s || '').trim())
       .filter(Boolean)
       .join(', ');
@@ -78,6 +78,7 @@ eleitoresRouter.post(
           secao: Number(b.secao),
           bairro: bairroStr,
           cidade: cidadeStr,
+          endereco: b.endereco ? String(b.endereco).trim() : null,
           cabo_id: b.cabo_id || null,
           data_nascimento: b.data_nascimento || null,
           cpf: b.cpf ? String(b.cpf).replace(/\D/g, '') : null,
@@ -90,7 +91,7 @@ eleitoresRouter.post(
       });
 
       // Geocode em background (fire-and-forget) — não bloqueia o response
-      geocodeAddress(bairroStr, cidadeStr).then(coord => {
+      geocodeAddress(bairroStr, cidadeStr, b.endereco).then(coord => {
         if (coord) {
           prisma.eleitor.update({
             where: { id: eleitor.id },
@@ -147,6 +148,7 @@ eleitoresRouter.post(
         secao: Number(e.secao) || 0,
         bairro: bairroStr,
         cidade: cidadeStr,
+        endereco: e.endereco ? String(e.endereco).trim() : null,
         cabo_id: req.user!.role === 'cabo' ? req.user!.cabo_id : (e.cabo_id || null),
         data_nascimento: e.data_nascimento || null,
         cpf: e.cpf ? String(e.cpf).replace(/\D/g, '') : null,
@@ -272,7 +274,7 @@ eleitoresRouter.put(
     try {
       let coord = undefined;
       if (b.bairro && b.cidade) {
-        coord = await geocodeAddress(b.bairro, b.cidade);
+        coord = await geocodeAddress(b.bairro, b.cidade, b.endereco);
       }
 
       const eleitor = await prisma.eleitor.update({
@@ -286,6 +288,7 @@ eleitoresRouter.put(
           secao: b.secao !== undefined ? Number(b.secao) : undefined,
           bairro: b.bairro,
           cidade: b.cidade,
+          endereco: b.endereco !== undefined ? b.endereco : undefined,
           data_nascimento: b.data_nascimento || null,
           cpf: b.cpf ? String(b.cpf).replace(/\D/g, '') : null,
           titulo_eleitor: b.titulo_eleitor ? String(b.titulo_eleitor).replace(/\D/g, '') : null,

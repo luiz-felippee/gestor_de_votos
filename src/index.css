@@ -13,6 +13,11 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Protege todos os ícones para não serem esmagados em telas pequenas */
+svg {
+  flex-shrink: 0;
+}
+
 /* Variante Dark para o fundo */
 .dark body {
   background-color: #020617; /* slate-950 */
@@ -20,13 +25,13 @@ body {
 
 @layer utilities {
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 20px);
+    padding-bottom: max(env(safe-area-inset-bottom), 0.75rem) !important;
   }
   .pt-safe {
-    padding-top: env(safe-area-inset-top, 20px);
+    padding-top: max(env(safe-area-inset-top), 0.75rem) !important;
   }
   .min-h-safe {
-    min-height: calc(100vh - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px));
+    min-height: calc(100dvh - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px));
   }
 }
 
