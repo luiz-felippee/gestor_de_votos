@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { Logo } from '../components/Logo'
+import { prewarmBackend } from '../lib/api'
 
 export function LoginPage() {
   const { signIn, signInWithGoogle, signIn2FA, signUp } = useAuth()
@@ -24,6 +25,12 @@ export function LoginPage() {
   const [step, setStep] = useState<'login' | '2fa'>('login')
   const [pendingUserId, setPendingUserId] = useState<string | null>(null)
   const [token2fa, setToken2fa] = useState('')
+
+  // Pré-aquece o backend assim que a tela abre: enquanto o usuário digita
+  // e-mail/senha, o Render (free) já está acordando, evitando o cold start no "Entrar".
+  useEffect(() => {
+    prewarmBackend()
+  }, [])
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault()

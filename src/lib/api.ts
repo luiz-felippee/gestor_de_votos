@@ -98,6 +98,17 @@ function montarQueryEleitores(p?: EleitorFiltros & { page?: number; limit?: numb
   return q.toString()
 }
 
+// Acorda o backend (Render free dorme após ~15min). Disparado ao abrir a tela de
+// login para que, enquanto o usuário digita, o servidor já esteja quente.
+// Best-effort: falhas são ignoradas de propósito (não deve travar nada).
+export function prewarmBackend(): void {
+  try {
+    fetch(`${API_BASE}/api/health`, { method: 'GET', cache: 'no-store' }).catch(() => {})
+  } catch {
+    /* ignore */
+  }
+}
+
 export const api = {
   base: API_BASE,
 
