@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link id="favicon" rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <meta name="description" content="Gestor de Votos — Plataforma premium de gestão eleitoral, controle de cabos eleitorais e inteligência de base eleitoral." />
     <meta name="keywords" content="eleições, gestão eleitoral, cabos eleitorais, política, campanha eleitoral, gestor de votos" />
     
@@ -11,26 +11,29 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Gestor de Votos — Inteligência Eleitoral" />
     <meta property="og:description" content="Gerencie sua base de eleitores, coordene cabos eleitorais e visualize dados geográficos da sua campanha em tempo real." />
-    <meta property="og:image" content="/logo.png" />
+    <meta property="og:image" content="/icon-512.png" />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:title" content="Gestor de Votos — Inteligência Eleitoral" />
     <meta property="twitter:description" content="Gerencie sua base de eleitores, coordene cabos eleitorais e visualize dados geográficos da sua campanha em tempo real." />
-    <meta property="twitter:image" content="/logo.png" />
+    <meta property="twitter:image" content="/icon-512.png" />
 
     <!-- iOS / PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1041/1041916.png">
+    <meta name="apple-mobile-web-app-title" content="Gestor Votos">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     
     <!-- Cores da barra de navegação/status (Light/Dark dinâmico) -->
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8fafc" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#020617" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#4f46e5" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1e1b4b" />
     
+    <!-- Preload fonte principal para eliminar FOIT -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <title>Gestor de Votos</title>
     <!-- Google Identity Services (login com Google) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -43,6 +46,10 @@
         var isAndroid = /android/i.test(ua);
         if (isIOS) document.documentElement.classList.add('is-ios');
         if (isAndroid) document.documentElement.classList.add('is-android');
+        // Detecta standalone mode (instalado como PWA)
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+          document.documentElement.classList.add('is-pwa');
+        }
       })();
     </script>
     <div id="root"></div>

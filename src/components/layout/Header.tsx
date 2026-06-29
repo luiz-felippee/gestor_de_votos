@@ -49,7 +49,7 @@ export function Header() {
             <nav className="hidden gap-0.5 lg:flex">
               <Item to="/">Painel</Item>
               <Item to="/planilha">Eleitores</Item>
-              <Item to="/mapa">Mapa</Item>
+
               <Item to="/eventos">Agenda</Item>
               <Item to="/cadastro">Cadastro</Item>
 
@@ -128,7 +128,7 @@ export function Header() {
           <nav className="flex flex-col gap-2">
             <MobileItem to="/" onClick={() => setMenuOpen(false)}>Painel Geral</MobileItem>
             <MobileItem to="/planilha" onClick={() => setMenuOpen(false)}>Eleitores</MobileItem>
-            <MobileItem to="/mapa" onClick={() => setMenuOpen(false)}>Mapa de Força</MobileItem>
+
             <MobileItem to="/eventos" onClick={() => setMenuOpen(false)}>Agenda & Eventos</MobileItem>
             {(role === 'admin' || role === 'coordenador') && (
               <MobileItem to="/cabos" onClick={() => setMenuOpen(false)}>Lideranças</MobileItem>

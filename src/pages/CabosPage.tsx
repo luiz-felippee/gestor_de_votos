@@ -459,7 +459,14 @@ function CardCabo({
             {/* Avatar & Ranking */}
             <div className="relative">
               {cabo.foto_url ? (
-                <img src={`${api.base}${cabo.foto_url}`} alt={cabo.nome} className="h-11 w-11 shrink-0 rounded-full object-cover shadow-inner ring-2 ring-white dark:ring-slate-800" />
+                <img 
+                  src={cabo.foto_url.startsWith('http') ? cabo.foto_url : `${api.base}${cabo.foto_url}`} 
+                  alt={cabo.nome} 
+                  className="h-11 w-11 shrink-0 rounded-full object-cover shadow-inner ring-2 ring-white dark:ring-slate-800" 
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`;
+                  }}
+                />
               ) : (
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 text-sm font-bold text-white shadow-inner">
                   {iniciais}

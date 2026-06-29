@@ -31,7 +31,7 @@ const DashboardPage = lazyPage(() => import('./pages/DashboardPage'), 'Dashboard
 const PlanilhaPage = lazyPage(() => import('./pages/PlanilhaPage'), 'PlanilhaPage')
 const CabosPage = lazyPage(() => import('./pages/CabosPage'), 'CabosPage')
 const UsuariosPage = lazyPage(() => import('./pages/UsuariosPage'), 'UsuariosPage')
-const MapaCalorPage = lazyPage(() => import('./pages/MapaCalorPage'), 'MapaCalorPage')
+
 const CadastroLiderancaPage = lazyPage(
   () => import('./pages/CadastroLiderancaPage'),
   'CadastroLiderancaPage',
@@ -80,7 +80,7 @@ function AppContent() {
     <div className="flex min-h-full flex-col">
       <Header />
       <Breadcrumbs />
-      <main className="flex-1">
+      <main className="flex-1 pb-20 lg:pb-0">
         <ErrorBoundary>
           <Suspense fallback={<CarregandoPagina />}>
             <Routes>
@@ -118,14 +118,7 @@ function AppContent() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/mapa"
-                element={
-                  <ProtectedRoute>
-                    <MapaCalorPage />
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/mapa" element={<Navigate to="/" replace />} />
               <Route
                 path="/eventos"
                 element={

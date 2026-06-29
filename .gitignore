@@ -2,3 +2,8 @@ node_modules/
 dist/
 .env
 *.log
+
+# Logs e artefatos de teste
+backend/logs/
+playwright-report/
+test-results/
