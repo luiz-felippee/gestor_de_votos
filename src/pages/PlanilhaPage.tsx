@@ -247,8 +247,8 @@ export function PlanilhaPage() {
 
   const exportBtn =
     'flex-1 sm:flex-none flex justify-center items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:border-brand-500 hover:text-brand-600 hover:shadow-md active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-brand-400 dark:hover:text-brand-400'
-  const selectClass =
-    'w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950'
+  const filtroSelectClass =
+  'w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-base sm:text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950'
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 animate-fade-in flex flex-col h-full">
@@ -298,27 +298,27 @@ export function PlanilhaPage() {
         <div className="relative flex-1 min-w-[250px]">
           <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           <input
-            type="search"
+            type="text"
+            placeholder="Buscar por nome, telefone ou título..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            placeholder="Buscar nome, bairro, cidade, cabo..."
-            className="w-full rounded-xl border-none bg-slate-100 pl-10 pr-4 py-2.5 text-sm font-medium outline-none ring-1 ring-transparent transition-all focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:bg-slate-950"
+            className="w-full rounded-xl border-none bg-slate-100 pl-10 pr-4 py-2.5 text-base sm:text-sm font-medium outline-none ring-1 ring-transparent transition-all focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:bg-slate-950"
           />
         </div>
         <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 hidden lg:block mx-1"></div>
-        <select value={filtroCidade} onChange={(e) => setFiltroCidade(e.target.value)} className={selectClass}>
+        <select value={filtroCidade} onChange={(e) => setFiltroCidade(e.target.value)} className={filtroSelectClass}>
           <option value="">Cidades (Todas)</option>
           {CIDADES.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={selectClass}>
+        <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={filtroSelectClass}>
           <option value="">Status (Todos)</option>
           {STATUS_OPTIONS.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
-        <select value={filtroBairro} onChange={(e) => setFiltroBairro(e.target.value)} className={`${selectClass} max-w-[160px]`}>
+        <select value={filtroBairro} onChange={(e) => setFiltroBairro(e.target.value)} className={`${filtroSelectClass} max-w-[160px]`}>
           <option value="">Bairros</option>
           {bairrosOptions.map((b) => (
             <option key={b} value={b}>{b}</option>
@@ -330,9 +330,9 @@ export function PlanilhaPage() {
           value={filtroZona}
           onChange={(e) => setFiltroZona(e.target.value)}
           placeholder="Zona"
-          className={`${selectClass} max-w-[110px]`}
+          className={`${filtroSelectClass} max-w-[110px]`}
         />
-        <select value={filtroMesAniversario} onChange={(e) => setFiltroMesAniversario(e.target.value)} className={`${selectClass} max-w-[160px]`}>
+        <select value={filtroMesAniversario} onChange={(e) => setFiltroMesAniversario(e.target.value)} className={`${filtroSelectClass} max-w-[160px]`}>
           <option value="">Aniversário (Mês)</option>
           <option value="01">Janeiro</option>
           <option value="02">Fevereiro</option>
@@ -374,19 +374,19 @@ export function PlanilhaPage() {
             eleitores.map((e) => (
               editId === e.id ? (
                 <div key={e.id} className="bg-brand-50/50 dark:bg-brand-900/10 border border-brand-200 dark:border-brand-800 rounded-xl p-4 flex flex-col gap-3">
-                  <input className={editInput} placeholder="Nome" value={editForm.nome ?? ''} onChange={(ev) => setCampo('nome', ev.target.value)} />
-                  <input className={editInput} placeholder="Telefone" value={editForm.telefone ?? ''} onChange={(ev) => setCampo('telefone', maskTelefone(ev.target.value))} />
-                  <input className={editInput} placeholder="Local de Votação" value={editForm.local_votacao ?? ''} onChange={(ev) => setCampo('local_votacao', ev.target.value)} />
+                  <input className={editInputClass} placeholder="Nome" value={editForm.nome ?? ''} onChange={(ev) => setCampo('nome', ev.target.value)} />
+                  <input className={editInputClass} placeholder="Telefone" value={editForm.telefone ?? ''} onChange={(ev) => setCampo('telefone', maskTelefone(ev.target.value))} />
+                  <input className={editInputClass} placeholder="Local de Votação" value={editForm.local_votacao ?? ''} onChange={(ev) => setCampo('local_votacao', ev.target.value)} />
                   <div className="flex gap-2">
-                    <input type="number" className={`${editInput} w-1/2`} placeholder="Zona" value={editForm.zona ?? ''} onChange={(ev) => setCampo('zona', Number(ev.target.value))} />
-                    <input type="number" className={`${editInput} w-1/2`} placeholder="Seção" value={editForm.secao ?? ''} onChange={(ev) => setCampo('secao', Number(ev.target.value))} />
+                    <input type="number" className={`${editInputClass} w-1/2`} placeholder="Zona" value={editForm.zona ?? ''} onChange={(ev) => setCampo('zona', Number(ev.target.value))} />
+                    <input type="number" className={`${editInputClass} w-1/2`} placeholder="Seção" value={editForm.secao ?? ''} onChange={(ev) => setCampo('secao', Number(ev.target.value))} />
                   </div>
-                  <input className={editInput} placeholder="Endereço (Opcional)" value={editForm.endereco ?? ''} onChange={(ev) => setCampo('endereco', ev.target.value)} />
-                  <input className={editInput} placeholder="Bairro" value={editForm.bairro ?? ''} onChange={(ev) => setCampo('bairro', ev.target.value)} />
-                  <select className={editInput} value={editForm.cidade ?? ''} onChange={(ev) => setCampo('cidade', ev.target.value)}>
+                  <input className={editInputClass} placeholder="Endereço (Opcional)" value={editForm.endereco ?? ''} onChange={(ev) => setCampo('endereco', ev.target.value)} />
+                  <input className={editInputClass} placeholder="Bairro" value={editForm.bairro ?? ''} onChange={(ev) => setCampo('bairro', ev.target.value)} />
+                  <select className={editInputClass} value={editForm.cidade ?? ''} onChange={(ev) => setCampo('cidade', ev.target.value)}>
                     {CIDADES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
-                  <select className={editInput} value={editForm.status ?? 'ativo'} onChange={(ev) => setCampo('status', ev.target.value as StatusEleitor)}>
+                  <select className={editInputClass} value={editForm.status ?? 'ativo'} onChange={(ev) => setCampo('status', ev.target.value as StatusEleitor)}>
                     {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                   <div className="flex justify-end gap-2 mt-2">
@@ -465,35 +465,35 @@ export function PlanilhaPage() {
                   editId === e.id ? (
                     <tr key={e.id} className="bg-brand-50/50 dark:bg-brand-900/10">
                       <Td>
-                        <input className={editInput} value={editForm.nome ?? ''} onChange={(ev) => setCampo('nome', ev.target.value)} />
+                        <input className={editInputClass} value={editForm.nome ?? ''} onChange={(ev) => setCampo('nome', ev.target.value)} />
                       </Td>
                       <Td>
-                        <input className={editInput} value={editForm.telefone ?? ''} onChange={(ev) => setCampo('telefone', maskTelefone(ev.target.value))} />
-                        <input className={`${editInput} mt-1 text-xs`} placeholder="CPF" value={editForm.cpf ?? ''} onChange={(ev) => setCampo('cpf', ev.target.value)} />
-                        <input className={`${editInput} mt-1 text-xs`} placeholder="Título" value={editForm.titulo_eleitor ?? ''} onChange={(ev) => setCampo('titulo_eleitor', ev.target.value)} />
+                        <input className={editInputClass} value={editForm.telefone ?? ''} onChange={(ev) => setCampo('telefone', maskTelefone(ev.target.value))} />
+                        <input className={`${editInputClass} mt-1 text-xs`} placeholder="CPF" value={editForm.cpf ?? ''} onChange={(ev) => setCampo('cpf', ev.target.value)} />
+                        <input className={`${editInputClass} mt-1 text-xs`} placeholder="Título" value={editForm.titulo_eleitor ?? ''} onChange={(ev) => setCampo('titulo_eleitor', ev.target.value)} />
                       </Td>
                       <Td>
                         <div className="flex gap-2">
-                          <input className={`${editInput} flex-1`} placeholder="Local" value={editForm.local_votacao ?? ''} onChange={(ev) => setCampo('local_votacao', ev.target.value)} />
-                          <input type="number" className={`${editInput} w-14`} placeholder="Z" value={editForm.zona ?? ''} onChange={(ev) => setCampo('zona', Number(ev.target.value))} />
-                          <input type="number" className={`${editInput} w-14`} placeholder="S" value={editForm.secao ?? ''} onChange={(ev) => setCampo('secao', Number(ev.target.value))} />
+                          <input className={`${editInputClass} flex-1`} placeholder="Local" value={editForm.local_votacao ?? ''} onChange={(ev) => setCampo('local_votacao', ev.target.value)} />
+                          <input type="number" className={`${editInputClass} w-14`} placeholder="Z" value={editForm.zona ?? ''} onChange={(ev) => setCampo('zona', Number(ev.target.value))} />
+                          <input type="number" className={`${editInputClass} w-14`} placeholder="S" value={editForm.secao ?? ''} onChange={(ev) => setCampo('secao', Number(ev.target.value))} />
                         </div>
                       </Td>
                       <Td>
                         <div className="flex flex-col gap-1">
-                          <input className={editInput} placeholder="Endereço (Opcional)" value={editForm.endereco ?? ''} onChange={(ev) => setCampo('endereco', ev.target.value)} />
-                          <input className={editInput} placeholder="Bairro" value={editForm.bairro ?? ''} onChange={(ev) => setCampo('bairro', ev.target.value)} />
+                          <input className={editInputClass} placeholder="Endereço (Opcional)" value={editForm.endereco ?? ''} onChange={(ev) => setCampo('endereco', ev.target.value)} />
+                          <input className={editInputClass} placeholder="Bairro" value={editForm.bairro ?? ''} onChange={(ev) => setCampo('bairro', ev.target.value)} />
                           <div className="flex gap-1">
-                            <select className={`${editInput} flex-1`} value={editForm.cidade ?? ''} onChange={(ev) => setCampo('cidade', ev.target.value)}>
+                            <select className={`${editInputClass} flex-1`} value={editForm.cidade ?? ''} onChange={(ev) => setCampo('cidade', ev.target.value)}>
                               {CIDADES.map((c) => <option key={c} value={c}>{c}</option>)}
                             </select>
-                            <input type="date" title="Data de Nascimento" className={`${editInput} w-6`} value={editForm.data_nascimento ?? ''} onChange={(ev) => setCampo('data_nascimento', ev.target.value)} />
+                            <input type="date" title="Data de Nascimento" className={`${editInputClass} w-6`} value={editForm.data_nascimento ?? ''} onChange={(ev) => setCampo('data_nascimento', ev.target.value)} />
                           </div>
                         </div>
                       </Td>
                       <Td className="text-slate-500 font-medium">{e.cabo?.nome ?? '—'}</Td>
                       <Td>
-                        <select className={editInput} value={editForm.status ?? 'ativo'} onChange={(ev) => setCampo('status', ev.target.value as StatusEleitor)}>
+                        <select className={editInputClass} value={editForm.status ?? 'ativo'} onChange={(ev) => setCampo('status', ev.target.value as StatusEleitor)}>
                           {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
                       </Td>
@@ -608,8 +608,8 @@ export function PlanilhaPage() {
   )
 }
 
-const editInput =
-  'w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm font-medium outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 placeholder:text-slate-400'
+const editInputClass =
+  'w-full rounded-md border border-slate-300 px-2 py-1.5 text-base sm:text-sm font-medium outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 placeholder:text-slate-400'
 
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-5 py-4 ${className}`}>{children}</td>

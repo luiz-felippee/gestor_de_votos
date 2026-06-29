@@ -120,9 +120,9 @@ export function Header() {
                 </button>
               </div>
             </div>
-          ) : (
+          ) : location.pathname !== '/login' ? (
             <Item to="/login">Entrar</Item>
-          )}
+          ) : null}
         </div>
       </header>
 

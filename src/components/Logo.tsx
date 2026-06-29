@@ -8,7 +8,7 @@ export function Logo({ iconClassName = "h-11 w-11" }: { className?: string, icon
       style={{ backgroundColor: '#4f46e5' }}
     >
       <img
-        src="/icon-192.png?v=2"
+        src="/icon-192.png?v=3"
         alt="Gestor de Votos"
         className="h-full w-full scale-110 object-cover"
       />

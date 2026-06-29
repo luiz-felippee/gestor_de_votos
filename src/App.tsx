@@ -9,7 +9,6 @@ import { ConfirmProvider } from './components/ConfirmDialog'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Breadcrumbs } from './components/Breadcrumbs'
 import { Header } from './components/layout/Header'
-import { BottomNavWrapper } from './components/layout/BottomNav'
 import { InstallPrompt } from './components/layout/InstallPrompt'
 import { useDocumentTitle } from './hooks/useDocumentTitle'
 import { NaoEncontradoPage } from './pages/NaoEncontradoPage'
@@ -80,7 +79,7 @@ function AppContent() {
     <div className="flex min-h-full flex-col">
       <Header />
       <Breadcrumbs />
-      <main className="flex-1 pb-20 lg:pb-0">
+      <main className="flex-1">
         <ErrorBoundary>
           <Suspense fallback={<CarregandoPagina />}>
             <Routes>
@@ -175,7 +174,6 @@ function AppContent() {
           </Suspense>
         </ErrorBoundary>
       </main>
-      <BottomNavWrapper />
       <InstallPrompt />
     </div>
   )

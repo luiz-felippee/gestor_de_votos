@@ -41,15 +41,14 @@ export function DashboardPage() {
   const [modoMapa, setModoMapa] = useState<'calor' | 'mapa'>('calor')
   const [exportando, setExportando] = useState(false)
 
-  const [hasShownOnboarding, setHasShownOnboarding] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
-    if (!loading && stats && stats.kpis.totalEleitores === 0 && !hasShownOnboarding) {
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding') === 'true'
+    if (!loading && stats && stats.kpis.totalEleitores === 0 && !hasSeenOnboarding) {
       setShowOnboarding(true)
-      setHasShownOnboarding(true)
     }
-  }, [loading, stats, hasShownOnboarding])
+  }, [loading, stats])
 
   // Filtra eleitores por cabo e período (para o mapa e painéis laterais)
   const eleitores = useMemo(() => {
@@ -295,13 +294,13 @@ export function DashboardPage() {
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Mapa (2/3) */}
-          <div ref={mapaRef} className="lg:col-span-2">
+          <div ref={mapaRef} className="lg:col-span-2 -mx-4 sm:mx-0">
             <MapaEstrategico 
               eleitores={eleitores}
               cidadeSelecionada={filtroCidade || null}
               onCidadeSelect={(c) => setFiltroCidade(c || '')}
               modoVisualizacao={modoMapa}
-              className="h-[360px] sm:h-[460px] lg:h-[520px]"
+              className="h-[360px] sm:h-[460px] lg:h-[520px] sm:rounded-2xl border-y sm:border border-slate-200 dark:border-slate-800"
             />
           </div>
 
@@ -502,7 +501,10 @@ export function DashboardPage() {
       </Painel>
 
       {showOnboarding && (
-        <OnboardingModal onClose={() => setShowOnboarding(false)} />
+        <OnboardingModal onClose={() => {
+          setShowOnboarding(false)
+          localStorage.setItem('hasSeenOnboarding', 'true')
+        }} />
       )}
     </div>
   )

@@ -56,6 +56,19 @@ html.is-android body {
   overscroll-behavior-y: contain;
 }
 
+/* Previne o 'pull-to-refresh' e saltos de rolagem quando instalado como PWA */
+@media (display-mode: standalone) {
+  html, body {
+    overscroll-behavior-y: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input, textarea {
+    -webkit-user-select: auto;
+    user-select: auto;
+  }
+}
+
 /* Mapa: pulso no marcador da cidade líder */
 @keyframes pulseLider {
   0%,

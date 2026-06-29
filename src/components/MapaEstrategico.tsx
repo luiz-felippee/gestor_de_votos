@@ -197,7 +197,7 @@ export function MapaEstrategico({ eleitores, cidadeSelecionada, onCidadeSelect, 
   }
 
   return (
-    <div className={telaCheia ? 'fixed inset-0 z-[2000] bg-white dark:bg-slate-950' : `relative w-full rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm ${className || ''}`}>
+    <div className={telaCheia ? 'fixed inset-0 z-[2000] bg-white dark:bg-slate-950' : `relative w-full sm:rounded-2xl overflow-hidden border-y sm:border-x sm:border-y border-slate-200 dark:border-slate-800 shadow-sm ${className || ''}`}>
       <button
         onClick={() => setTelaCheia((v) => !v)}
         className="absolute right-3 top-3 z-[1000] flex items-center gap-1.5 rounded-lg border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-lg backdrop-blur transition hover:bg-white active:scale-95 dark:border-slate-700/70 dark:bg-slate-900/85 dark:text-slate-200"
