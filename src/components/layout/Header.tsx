@@ -1,149 +1,237 @@
-import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { useTheme } from '../ThemeProvider'
 import { Logo } from '../Logo'
 import { useOfflineSync } from '../../hooks/useOfflineSync'
-import { WifiOff, Loader2 } from 'lucide-react'
+import {
+  WifiOff, Loader2, Home, Users, CalendarDays, UserPlus,
+  Network, FileText, CreditCard, Building2, User,
+  LogOut, Sun, Moon, Menu, X, ChevronRight
+} from 'lucide-react'
 
 export function Header() {
   const { usuario, role, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const [menuOpen, setMenuOpen] = useState(false)
   const { online, pendentes } = useOfflineSync()
+  const location = useLocation()
+  const drawerRef = useRef<HTMLDivElement>(null)
+
+  // Fecha o menu quando a rota muda
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [location.pathname])
+
+  // Trava o scroll do body quando o menu está aberto
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [menuOpen])
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 pt-safe">
-      {/* Banner Offline */}
-      {(!online || pendentes > 0) && (
-        <div className={`px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 transition-colors ${!online ? 'bg-amber-500 text-white' : 'bg-brand-500 text-white'}`}>
-          {!online ? (
-            <>
-              <WifiOff className="h-4 w-4" />
-              Você está offline. Trabalhando localmente ({pendentes} na fila).
-            </>
+    <>
+      <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 pt-safe">
+        {/* Banner Offline */}
+        {(!online || pendentes > 0) && (
+          <div className={`px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 transition-colors ${!online ? 'bg-amber-500 text-white' : 'bg-brand-500 text-white'}`}>
+            {!online ? (
+              <>
+                <WifiOff className="h-4 w-4" />
+                Você está offline. Trabalhando localmente ({pendentes} na fila).
+              </>
+            ) : (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sincronizando {pendentes} cadastros pendentes...
+              </>
+            )}
+          </div>
+        )}
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+          <span className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+            <Logo />
+            <span className="flex flex-col leading-tight">
+              <span className="hidden sm:inline">Gestor de Votos</span>
+              {usuario?.campanha_nome && (
+                <span className="text-[11px] font-semibold text-brand-600 dark:text-brand-400">
+                  {usuario.super_admin ? '★ ' : ''}
+                  {usuario.campanha_nome}
+                </span>
+              )}
+            </span>
+          </span>
+
+          {usuario ? (
+            <div className="flex items-center gap-5">
+              {/* Desktop Nav */}
+              <nav className="hidden gap-0.5 lg:flex">
+                <Item to="/">Painel</Item>
+                <Item to="/planilha">Eleitores</Item>
+                <Item to="/eventos">Agenda</Item>
+                <Item to="/cadastro">Cadastro</Item>
+                {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
+                  <Dropdown title="Administração">
+                    {(role === 'admin' || role === 'coordenador') && (
+                      <DropdownItem to="/cabos">Lideranças</DropdownItem>
+                    )}
+                    {usuario?.super_admin && <DropdownItem to="/campanhas">Campanhas</DropdownItem>}
+                    {role === 'admin' && <DropdownItem to="/usuarios">Usuários</DropdownItem>}
+                    {role === 'admin' && <DropdownItem to="/auditoria">Auditoria</DropdownItem>}
+                    {(role === 'admin' || role === 'coordenador') && <DropdownItem to="/assinatura">Assinatura</DropdownItem>}
+                  </Dropdown>
+                )}
+              </nav>
+              <div className="flex items-center gap-3 border-l border-slate-200 pl-5 dark:border-slate-700">
+                <NavLink to="/perfil" className="hidden flex-col text-right sm:flex hover:opacity-80 transition-opacity">
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    {usuario?.nome ?? 'Usuário'}
+                  </span>
+                  {role && (
+                    <span className="text-[10px] font-medium tracking-widest text-brand-500 uppercase dark:text-brand-400">
+                      {role}
+                    </span>
+                  )}
+                </NavLink>
+                <button
+                  onClick={toggleTheme}
+                  title="Alternar tema"
+                  className="hidden lg:flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 hover:text-slate-900 active:scale-95 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                >
+                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </button>
+                <button
+                  onClick={() => signOut()}
+                  className="hidden lg:flex h-9 items-center justify-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-200 hover:text-slate-900 active:scale-95 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                >
+                  Sair
+                </button>
+                {/* Hamburger - Mobile Only */}
+                <button
+                  onClick={() => setMenuOpen(true)}
+                  className="lg:hidden flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:text-slate-400"
+                  aria-label="Abrir menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
           ) : (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Sincronizando {pendentes} cadastros pendentes...
-            </>
+            <Item to="/login">Entrar</Item>
           )}
         </div>
-      )}
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <span className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-          <Logo />
-          <span className="flex flex-col leading-tight">
-            <span className="hidden sm:inline">Gestor de Votos</span>
-            {usuario?.campanha_nome && (
-              <span className="text-[11px] font-semibold text-brand-600 dark:text-brand-400">
-                {usuario.super_admin ? '★ ' : ''}
-                {usuario.campanha_nome}
-              </span>
-            )}
-          </span>
-        </span>
+      </header>
 
-        {usuario ? (
-          <div className="flex items-center gap-5">
-            <nav className="hidden gap-0.5 lg:flex">
-              <Item to="/">Painel</Item>
-              <Item to="/planilha">Eleitores</Item>
+      {/* ========== MOBILE DRAWER ========== */}
+      {usuario && (
+        <>
+          {/* Overlay escuro */}
+          <div
+            className={`fixed inset-0 z-[998] bg-black/50 backdrop-blur-sm transition-opacity duration-300 lg:hidden ${
+              menuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => setMenuOpen(false)}
+          />
 
-              <Item to="/eventos">Agenda</Item>
-              <Item to="/cadastro">Cadastro</Item>
+          {/* Drawer lateral */}
+          <div
+            ref={drawerRef}
+            className={`fixed top-0 right-0 z-[999] h-full w-[85vw] max-w-[320px] bg-white dark:bg-slate-900 shadow-2xl transition-transform duration-300 ease-out lg:hidden flex flex-col ${
+              menuOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
+          >
+            {/* Header do Drawer */}
+            <div className="flex items-center justify-between px-5 pt-safe pb-2 pt-4 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-lg font-bold text-slate-800 dark:text-white">Menu</span>
+              <button
+                onClick={() => setMenuOpen(false)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:text-slate-400"
+                aria-label="Fechar menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
+            {/* Perfil do Usuário */}
+            <NavLink
+              to="/perfil"
+              onClick={() => setMenuOpen(false)}
+              className="mx-4 mt-4 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-brand-50 to-indigo-50 p-4 transition hover:from-brand-100 dark:from-brand-950/50 dark:to-indigo-950/50 dark:hover:from-brand-900/50"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white text-lg font-bold shadow-md">
+                {(usuario?.nome ?? 'U').charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-slate-800 dark:text-white truncate">{usuario?.nome ?? 'Usuário'}</p>
+                {role && (
+                  <p className="text-[11px] font-semibold text-brand-600 dark:text-brand-400 uppercase tracking-wider">{role}</p>
+                )}
+                {usuario?.campanha_nome && (
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{usuario.campanha_nome}</p>
+                )}
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+            </NavLink>
+
+            {/* Links de Navegação */}
+            <nav className="flex-1 overflow-y-auto px-4 mt-4 space-y-1">
+              {/* Seção Principal */}
+              <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Navegação</p>
+              <MobileDrawerItem to="/" icon={<Home className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Painel Geral</MobileDrawerItem>
+              <MobileDrawerItem to="/planilha" icon={<Users className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Eleitores</MobileDrawerItem>
+              <MobileDrawerItem to="/cadastro" icon={<UserPlus className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Novo Cadastro</MobileDrawerItem>
+              <MobileDrawerItem to="/eventos" icon={<CalendarDays className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Agenda & Eventos</MobileDrawerItem>
+
+              {/* Seção Admin */}
               {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
-                <Dropdown title="Administração">
+                <>
+                  <div className="my-3 border-t border-slate-100 dark:border-slate-800" />
+                  <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Administração</p>
+
                   {(role === 'admin' || role === 'coordenador') && (
-                    <DropdownItem to="/cabos">Lideranças</DropdownItem>
+                    <MobileDrawerItem to="/cabos" icon={<Network className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Lideranças</MobileDrawerItem>
                   )}
-                  {usuario?.super_admin && <DropdownItem to="/campanhas">Campanhas</DropdownItem>}
-                  {role === 'admin' && <DropdownItem to="/usuarios">Usuários</DropdownItem>}
-                  {role === 'admin' && <DropdownItem to="/auditoria">Auditoria</DropdownItem>}
-                  {(role === 'admin' || role === 'coordenador') && <DropdownItem to="/assinatura">Assinatura</DropdownItem>}
-                </Dropdown>
+                  {usuario?.super_admin && (
+                    <MobileDrawerItem to="/campanhas" icon={<Building2 className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Campanhas</MobileDrawerItem>
+                  )}
+                  {role === 'admin' && (
+                    <MobileDrawerItem to="/usuarios" icon={<User className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Usuários</MobileDrawerItem>
+                  )}
+                  {role === 'admin' && (
+                    <MobileDrawerItem to="/auditoria" icon={<FileText className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Auditoria</MobileDrawerItem>
+                  )}
+                  {(role === 'admin' || role === 'coordenador') && (
+                    <MobileDrawerItem to="/assinatura" icon={<CreditCard className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Assinatura</MobileDrawerItem>
+                  )}
+                </>
               )}
             </nav>
-            <div className="flex items-center gap-3 border-l border-slate-200 pl-5 dark:border-slate-700">
-              <NavLink to="/perfil" className="hidden flex-col text-right sm:flex hover:opacity-80 transition-opacity">
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                  {usuario?.nome ?? 'Usuário'}
-                </span>
-                {role && (
-                  <span className="text-[10px] font-medium tracking-widest text-brand-500 uppercase dark:text-brand-400">
-                    {role}
-                  </span>
-                )}
-              </NavLink>
+
+            {/* Footer do Drawer */}
+            <div className="border-t border-slate-100 dark:border-slate-800 p-4 pb-safe space-y-2">
               <button
-                onClick={toggleTheme}
-                title="Alternar tema"
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 hover:text-slate-900 active:scale-95 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                onClick={() => { toggleTheme(); setMenuOpen(false) }}
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 active:scale-[0.98] dark:text-slate-300 dark:hover:bg-slate-800"
               >
-                {theme === 'dark' ? (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                ) : (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                )}
+                {theme === 'dark' ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5 text-indigo-500" />}
+                {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
               </button>
               <button
-                onClick={() => signOut()}
-                className="flex h-9 items-center justify-center rounded-xl bg-slate-100 px-4 text-sm font-medium text-slate-600 transition hover:bg-slate-200 hover:text-slate-900 active:scale-95 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                onClick={() => { signOut(); setMenuOpen(false) }}
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 active:scale-[0.98] dark:text-red-400 dark:hover:bg-red-950/30"
               >
-                Sair
-              </button>
-              <button
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="lg:hidden flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:text-slate-400"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16m-7 6h7" />
-                </svg>
+                <LogOut className="h-5 w-5" />
+                Sair da Conta
               </button>
             </div>
           </div>
-        ) : (
-          <Item to="/login">Entrar</Item>
-        )}
-      </div>
-
-      {/* Menu Mobile Dropdown */}
-      {usuario && menuOpen && (
-        <div className="lg:hidden border-t border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-900 shadow-inner">
-          <NavLink to="/perfil" onClick={() => setMenuOpen(false)} className="mb-4 flex flex-col border-b border-slate-200 pb-4 dark:border-slate-800 hover:opacity-80 transition-opacity">
-            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-              {usuario?.nome ?? 'Usuário'}
-            </span>
-            {role && (
-              <span className="text-[10px] font-bold tracking-widest text-brand-500 uppercase dark:text-brand-400 mt-0.5">
-                {role}
-              </span>
-            )}
-          </NavLink>
-          <nav className="flex flex-col gap-2">
-            <MobileItem to="/" onClick={() => setMenuOpen(false)}>Painel Geral</MobileItem>
-            <MobileItem to="/planilha" onClick={() => setMenuOpen(false)}>Eleitores</MobileItem>
-
-            <MobileItem to="/eventos" onClick={() => setMenuOpen(false)}>Agenda & Eventos</MobileItem>
-            {(role === 'admin' || role === 'coordenador') && (
-              <MobileItem to="/cabos" onClick={() => setMenuOpen(false)}>Lideranças</MobileItem>
-            )}
-            {(role === 'admin' || role === 'coordenador') && (
-              <MobileItem to="/assinatura" onClick={() => setMenuOpen(false)}>Assinatura</MobileItem>
-            )}
-            {usuario?.super_admin && <MobileItem to="/campanhas" onClick={() => setMenuOpen(false)}>Campanhas</MobileItem>}
-            {role === 'admin' && <MobileItem to="/usuarios" onClick={() => setMenuOpen(false)}>Usuários</MobileItem>}
-            {role === 'admin' && <MobileItem to="/auditoria" onClick={() => setMenuOpen(false)}>Auditoria</MobileItem>}
-            <MobileItem to="/cadastro" onClick={() => setMenuOpen(false)}>Novo Cadastro</MobileItem>
-          </nav>
-        </div>
+        </>
       )}
-    </header>
+    </>
   )
 }
 
@@ -197,20 +285,23 @@ function DropdownItem({ to, children }: { to: string; children: React.ReactNode 
   )
 }
 
-function MobileItem({ to, onClick, children }: { to: string; onClick: () => void; children: React.ReactNode }) {
+function MobileDrawerItem({ to, icon, onClick, children }: { to: string; icon: React.ReactNode; onClick: () => void; children: React.ReactNode }) {
   return (
     <NavLink
       to={to}
       onClick={onClick}
       className={({ isActive }) =>
-        `rounded-lg px-4 py-3 text-base font-semibold transition-colors ${
+        `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-all active:scale-[0.98] ${
           isActive
-            ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300'
-            : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+            ? 'bg-brand-50 text-brand-700 shadow-sm dark:bg-brand-500/10 dark:text-brand-300'
+            : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/70'
         }`
       }
     >
-      {children}
+      {icon}
+      <span className="flex-1">{children}</span>
+      <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600" />
     </NavLink>
   )
 }
+
