@@ -3,6 +3,11 @@
   command = "npm run build"
   publish = "dist"
 
+# Vite 8 (rolldown) exige Node 20.19+/22.12+. Fixa a versão para o build
+# não quebrar num Node antigo padrão do Netlify.
+[build.environment]
+  NODE_VERSION = "22"
+
 # SPA: todas as rotas (/cadastro, /planilha, ...) caem no index.html
 # para o React Router resolver no cliente.
 [[redirects]]
