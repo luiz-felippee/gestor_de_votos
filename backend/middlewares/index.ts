@@ -56,7 +56,7 @@ export function assinarToken(u: {
       token_version: u.token_version,
     },
     JWT_SECRET,
-    { expiresIn: '7d' },
+    { expiresIn: '30d' },
   );
 }
 
