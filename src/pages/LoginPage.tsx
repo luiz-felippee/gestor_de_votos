@@ -131,7 +131,7 @@ export function LoginPage() {
   }, [googleClientId])
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-[100dvh]">
       {/* Lado Esquerdo - Branding (Visível apenas em telas grandes) */}
       <div className="relative hidden w-0 flex-1 lg:block bg-slate-900">
         <div className="absolute inset-0 bg-gradient-to-br from-brand-900 via-slate-900 to-indigo-950 opacity-90" />

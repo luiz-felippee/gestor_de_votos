@@ -11,6 +11,7 @@ import { useConfirm } from '../components/ConfirmDialog'
 import { Map as MapIcon } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import { useTheme } from '../components/ThemeProvider'
+import { SplashScreen } from '../components/layout/SplashScreen'
 
 // Gráficos (recharts) em chunk separado — o painel pinta KPIs/perfil na hora.
 const DashboardCharts = lazy(() => import('../components/DashboardCharts'))
@@ -68,35 +69,7 @@ export function DashboardPage() {
   }
 
   if (loading || !stats) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-8 animate-pulse">
-        {/* Skeleton do header */}
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="h-9 w-48 rounded-lg bg-slate-200 dark:bg-slate-800" />
-          <div className="flex gap-2 w-full sm:w-auto">
-            <div className="h-10 w-36 rounded-lg bg-slate-200 dark:bg-slate-800" />
-            <div className="h-10 w-36 rounded-lg bg-slate-200 dark:bg-slate-800" />
-          </div>
-        </div>
-        {/* Skeleton dos KPIs */}
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-              <div className="h-4 w-28 rounded bg-slate-200 dark:bg-slate-700" />
-              <div className="mt-3 h-8 w-20 rounded bg-slate-200 dark:bg-slate-700" />
-            </div>
-          ))}
-        </div>
-        {/* Skeleton do mapa */}
-        <div className="mb-6 h-[500px] rounded-2xl border border-slate-200 bg-slate-100/60 dark:border-slate-800 dark:bg-slate-800/40" />
-        {/* Skeleton dos gráficos */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-[320px] rounded-2xl border border-slate-200 bg-slate-100/60 dark:border-slate-800 dark:bg-slate-800/40" />
-          ))}
-        </div>
-      </div>
-    )
+    return <SplashScreen />
   }
 
   const {
