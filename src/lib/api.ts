@@ -248,6 +248,7 @@ export const api = {
     return all
   },
   getDashboardStats: (query: string = '') => request<any>(`/dashboard/stats${query}`),
+  getMapaPontos: (query: string = '') => request<any>(`/dashboard/mapa-pontos${query}`),
   createEleitor: async (data: unknown) => {
     if (!navigator.onLine) {
       // Estamos offline. Salva no IndexedDB e forja uma resposta de sucesso pro componente.

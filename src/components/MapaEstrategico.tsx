@@ -122,7 +122,8 @@ function calcularBounds(geo: any): LatLngBoundsExpression {
 }
 
 interface MapaEstrategicoProps {
-  eleitores: any[]
+  pontosGeo: { id: string; cidade: string | null; lat: number | null; lng: number | null }[]
+  statsPorCidade: { label: string; total: number }[]
   cidadeSelecionada: string | null
   onCidadeSelect: (cidade: string | null) => void
   modoVisualizacao: 'calor' | 'mapa'
@@ -130,7 +131,7 @@ interface MapaEstrategicoProps {
   className?: string
 }
 
-export function MapaEstrategico({ eleitores, cidadeSelecionada, onCidadeSelect, modoVisualizacao, height = '400px', className }: MapaEstrategicoProps) {
+export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, onCidadeSelect, modoVisualizacao, height = '400px', className }: MapaEstrategicoProps) {
   const { theme } = useTheme()
   const tema = theme === 'dark' ? TILES.dark : TILES.light
   
@@ -150,19 +151,19 @@ export function MapaEstrategico({ eleitores, cidadeSelecionada, onCidadeSelect, 
 
   const countPorCidadeNorm = useMemo(() => {
     const m = new Map<string, number>()
-    for (const e of eleitores) {
-      if (!e.cidade) continue
-      const k = normalizar(e.cidade)
-      m.set(k, (m.get(k) || 0) + 1)
+    for (const s of statsPorCidade) {
+      if (!s.label) continue
+      const k = normalizar(s.label)
+      m.set(k, (m.get(k) || 0) + s.total)
     }
     return m
-  }, [eleitores])
+  }, [statsPorCidade])
   
   const maxChoropleth = Math.max(1, ...countPorCidadeNorm.values())
 
   const pontosCalor = useMemo(() => {
     const arr: [number, number, number][] = []
-    for (const e of eleitores) {
+    for (const e of pontosGeo) {
       if (e.lat != null && e.lng != null) {
         arr.push([e.lat, e.lng, 0.9])
       } else if (e.cidade) {
@@ -171,7 +172,7 @@ export function MapaEstrategico({ eleitores, cidadeSelecionada, onCidadeSelect, 
       }
     }
     return arr
-  }, [eleitores])
+  }, [pontosGeo])
 
   const pontos = useMemo(() => {
     const pts: { cidade: string; count: number; lat: number; lng: number }[] = []

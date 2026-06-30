@@ -5,9 +5,9 @@ import { useTheme } from '../ThemeProvider'
 import { Logo } from '../Logo'
 import { useOfflineSync } from '../../hooks/useOfflineSync'
 import {
-  WifiOff, Loader2, Home, Users, CalendarDays, UserPlus,
+  WifiOff, Loader2, Home, Users, CalendarDays,
   Network, FileText, CreditCard, Building2, User,
-  LogOut, Sun, Moon, Menu, X, ChevronRight
+  LogOut, Sun, Moon, Menu, X, ChevronRight, MessageCircle
 } from 'lucide-react'
 
 export function Header() {
@@ -73,7 +73,7 @@ export function Header() {
                 <Item to="/">Painel</Item>
                 <Item to="/planilha">Eleitores</Item>
                 <Item to="/eventos">Agenda</Item>
-                <Item to="/cadastro">Cadastro</Item>
+                <Item to="/whatsapp">WhatsApp</Item>
                 {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
                   <Dropdown title="Administração">
                     {(role === 'admin' || role === 'coordenador') && (
@@ -183,7 +183,7 @@ export function Header() {
               <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Navegação</p>
               <MobileDrawerItem to="/" icon={<Home className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Painel Geral</MobileDrawerItem>
               <MobileDrawerItem to="/planilha" icon={<Users className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Eleitores</MobileDrawerItem>
-              <MobileDrawerItem to="/cadastro" icon={<UserPlus className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Novo Cadastro</MobileDrawerItem>
+              <MobileDrawerItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>WhatsApp</MobileDrawerItem>
               <MobileDrawerItem to="/eventos" icon={<CalendarDays className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Agenda & Eventos</MobileDrawerItem>
 
               {/* Seção Admin */}

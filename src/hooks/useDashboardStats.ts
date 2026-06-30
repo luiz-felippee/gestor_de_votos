@@ -18,13 +18,14 @@ export interface DashboardStats {
   aniversariantes: { id: string; nome: string; telefone: string | null; data_nascimento: string; diffDias: number; bairro: string | null; cidade: string | null }[]
 }
 
-export function useDashboardStats(cidade?: string, dias?: string) {
+export function useDashboardStats(cidade?: string, dias?: string, cabo?: string) {
   const { data, isLoading, error } = useQuery<DashboardStats>({
-    queryKey: ['dashboard', cidade, dias],
+    queryKey: ['dashboard', cidade, dias, cabo],
     queryFn: async () => {
       const params = new URLSearchParams()
       if (cidade) params.set('cidade', cidade)
       if (dias) params.set('dias', dias)
+      if (cabo) params.set('cabo', cabo)
       const query = params.toString() ? `?${params.toString()}` : ''
       return api.getDashboardStats(query)
     },

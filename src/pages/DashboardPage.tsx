@@ -1,11 +1,11 @@
-import { Suspense, lazy, useState, useEffect, useMemo, useRef } from 'react'
+import { Suspense, lazy, useState, useEffect, useRef } from 'react'
 import { OnboardingModal } from '../components/OnboardingModal'
 import { useDashboardStats } from '../hooks/useDashboardStats'
 import { api } from '../lib/api'
 import { CIDADES } from '../lib/constants'
 import { RankingLiderancas } from '../components/RankingLiderancas'
 import { MapaEstrategico } from '../components/MapaEstrategico'
-import { useEleitores } from '../hooks/useEleitores'
+import { useMapaPontos } from '../hooks/useMapaPontos'
 import { useCabos } from '../hooks/useCabos'
 import { useConfirm } from '../components/ConfirmDialog'
 import { Map as MapIcon } from 'lucide-react'
@@ -15,23 +15,12 @@ import { useTheme } from '../components/ThemeProvider'
 // Gráficos (recharts) em chunk separado — o painel pinta KPIs/perfil na hora.
 const DashboardCharts = lazy(() => import('../components/DashboardCharts'))
 
-/* ---- Helpers ---- */
-function normalizar(s: string) {
-  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
-}
-
-interface BairroItem {
-  cidade: string
-  bairro: string
-  count: number
-}
-
 export function DashboardPage() {
   const [filtroCidade, setFiltroCidade] = useState('')
   const [filtroPeriodo, setFiltroPeriodo] = useState('') // '' = todos
   const [caboFiltro, setCaboFiltro] = useState('')
-  const { stats, loading } = useDashboardStats(filtroCidade, filtroPeriodo)
-  const { eleitores: todosEleitores } = useEleitores()
+  const { stats, loading } = useDashboardStats(filtroCidade, filtroPeriodo, caboFiltro)
+  const { pontos: pontosGeo } = useMapaPontos(filtroCidade, filtroPeriodo, caboFiltro)
   const { cabos } = useCabos()
   const { alert } = useConfirm()
   const { theme } = useTheme()
@@ -50,54 +39,11 @@ export function DashboardPage() {
     }
   }, [loading, stats])
 
-  // Filtra eleitores por cabo e período (para o mapa e painéis laterais)
-  const eleitores = useMemo(() => {
-    let lista = todosEleitores
-    if (caboFiltro) lista = lista.filter((e) => e.cabo_id === caboFiltro)
-    if (filtroPeriodo) {
-      const limite = Date.now() - Number(filtroPeriodo) * 24 * 60 * 60 * 1000
-      lista = lista.filter((e) => new Date(e.created_at).getTime() >= limite)
-    }
-    if (filtroCidade) {
-      const cidadeNorm = normalizar(filtroCidade)
-      lista = lista.filter((e) => e.cidade && normalizar(e.cidade) === cidadeNorm)
-    }
-    return lista
-  }, [todosEleitores, caboFiltro, filtroPeriodo, filtroCidade])
+  const cidadesComVotos = stats 
+    ? [...stats.porCidade].sort((a, b) => b.total - a.total).slice(0, 10).map(x => [x.label, x.total] as [string, number])
+    : []
 
-  // Agregações para painéis laterais
-  const { contagemPorCidade, bairrosList } = useMemo(() => {
-    const cidadeMap = new Map<string, number>()
-    const bairrosMap = new Map<string, Map<string, number>>()
-
-    for (const e of eleitores) {
-      if (!e.cidade) continue
-      const cidade = e.cidade.trim()
-      cidadeMap.set(cidade, (cidadeMap.get(cidade) || 0) + 1)
-
-      if (e.bairro) {
-        if (!bairrosMap.has(cidade)) bairrosMap.set(cidade, new Map())
-        const bm = bairrosMap.get(cidade)!
-        const bairro = e.bairro.trim()
-        bm.set(bairro, (bm.get(bairro) || 0) + 1)
-      }
-    }
-
-    const bairrosList: BairroItem[] = []
-    for (const [cidade, bm] of bairrosMap)
-      for (const [bairro, count] of bm) bairrosList.push({ cidade, bairro, count })
-    bairrosList.sort((a, b) => b.count - a.count)
-
-    return { contagemPorCidade: cidadeMap, bairrosList }
-  }, [eleitores])
-
-  const cidadesComVotos = [...contagemPorCidade.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-
-  const bairrosFiltrados = filtroCidade
-    ? bairrosList.filter((b) => normalizar(b.cidade) === normalizar(filtroCidade))
-    : bairrosList
+  const bairrosFiltrados = stats ? stats.porBairro.map(x => ({ cidade: filtroCidade || '', bairro: x.label, count: x.total })) : []
   const maxBairro = bairrosFiltrados.length > 0 ? bairrosFiltrados[0].count : 1
 
   // Exportar imagem do mapa
@@ -296,7 +242,8 @@ export function DashboardPage() {
           {/* Mapa (2/3) */}
           <div ref={mapaRef} className="lg:col-span-2 -mx-4 sm:mx-0">
             <MapaEstrategico 
-              eleitores={eleitores}
+              pontosGeo={pontosGeo}
+              statsPorCidade={stats ? stats.porCidade : []}
               cidadeSelecionada={filtroCidade || null}
               onCidadeSelect={(c) => setFiltroCidade(c || '')}
               modoVisualizacao={modoMapa}

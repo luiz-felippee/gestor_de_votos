@@ -38,6 +38,7 @@ const CadastroLiderancaPage = lazyPage(
 const EventosPage = lazyPage(() => import('./pages/EventosPage'), 'EventosPage')
 const AuditoriaPage = lazyPage(() => import('./pages/AuditoriaPage'), 'AuditoriaPage')
 const CampanhasPage = lazyPage(() => import('./pages/CampanhasPage'), 'CampanhasPage')
+const WhatsAppPage = lazyPage(() => import('./pages/WhatsAppPage'), 'WhatsAppPage')
 const BillingPage = lazyPage(() => import('./pages/BillingPage').then(m => ({ BillingPage: m.BillingPage })), 'BillingPage')
 const PerfilPage = lazyPage(() => import('./pages/PerfilPage').then(m => ({ PerfilPage: m.PerfilPage })), 'PerfilPage')
 
@@ -106,6 +107,14 @@ function AppContent() {
                 element={
                   <ProtectedRoute>
                     <PlanilhaPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/whatsapp"
+                element={
+                  <ProtectedRoute>
+                    <WhatsAppPage />
                   </ProtectedRoute>
                 }
               />

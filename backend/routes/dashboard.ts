@@ -11,16 +11,17 @@ dashboardRouter.get(
   wrap(async (req, res) => {
     const filtroCidade = req.query.cidade as string;
     const filtroDias = req.query.dias as string;
+    const filtroCabo = req.query.cabo as string;
     
     // Configura a chave de cache usando o contexto de campanha + params
     const cid = req.user!.campanha_id || 'global';
-    const cacheKey = `${cid}_dashboard_${req.user!.role}_${req.user!.cabo_id || 'no_cabo'}_${filtroCidade || 'all'}_${filtroDias || 'all'}`;
+    const cacheKey = `${cid}_dashboard_${req.user!.role}_${req.user!.cabo_id || 'no_cabo'}_${filtroCidade || 'all'}_${filtroDias || 'all'}_${filtroCabo || 'all'}`;
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
 
     const whereBase = {
       ...escopoCampanha(req),
-      ...(req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : {}),
+      ...(req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : (filtroCabo ? { cabo_id: filtroCabo } : {})),
     };
 
     // Filtro temporal opcional
@@ -280,3 +281,51 @@ dashboardRouter.get(
 
 export default dashboardRouter;
 
+dashboardRouter.get(
+  '/mapa-pontos',
+  requireAuth,
+  wrap(async (req, res) => {
+    const filtroCidade = req.query.cidade as string;
+    const filtroDias = req.query.dias as string;
+    const filtroCabo = req.query.cabo as string;
+
+    const cid = req.user!.campanha_id || 'global';
+    const cacheKey = `${cid}_mapa_${req.user!.role}_${req.user!.cabo_id || 'no_cabo'}_${filtroCidade || 'all'}_${filtroDias || 'all'}_${filtroCabo || 'all'}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
+    const whereBase = {
+      ...escopoCampanha(req),
+      ...(req.user!.role === 'cabo' ? { cabo_id: req.user!.cabo_id } : (filtroCabo ? { cabo_id: filtroCabo } : {})),
+    };
+
+    let whereData = { ...whereBase };
+    if (filtroDias) {
+      const dias = parseInt(filtroDias, 10);
+      if (!isNaN(dias)) {
+        const dataLimite = new Date();
+        dataLimite.setDate(dataLimite.getDate() - dias);
+        whereData = {
+          ...whereData,
+          // @ts-ignore
+          created_at: { gte: dataLimite },
+        };
+      }
+    }
+
+    const whereFiltrado = filtroCidade ? { ...whereData, cidade: filtroCidade } : whereData;
+
+    const pontos = await prisma.eleitor.findMany({
+      where: whereFiltrado,
+      select: {
+        id: true,
+        cidade: true,
+        lat: true,
+        lng: true,
+      },
+    });
+
+    cache.set(cacheKey, pontos, 600);
+    res.json(pontos);
+  })
+);
