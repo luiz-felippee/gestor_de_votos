@@ -6,7 +6,7 @@ import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
 import { compressImage } from '../lib/imageOptimization'
 import { useConfirm } from '../components/ConfirmDialog'
-import { useToast } from '../components/Toast'
+import { toast } from 'sonner'
 import type { Campanha } from '../lib/types'
 
 interface FormState {
@@ -36,7 +36,6 @@ const VAZIO: FormState = {
 export function CadastroLiderancaPage() {
   const { campanhaSlug } = useParams() // Rota: /c/:campanhaSlug/cadastro-lideranca
   const { alert } = useConfirm()
-  const { toast } = useToast()
   const [form, setForm] = useState<FormState>(VAZIO)
   const [website, setWebsite] = useState('') // honeypot (anti-robô)
   const [enviando, setEnviando] = useState(false)
@@ -113,6 +112,7 @@ export function CadastroLiderancaPage() {
     }
     setEnviando(false)
     setSucesso(true)
+    toast.success('Cadastro finalizado com sucesso!')
   }
 
   function novoCadastro() {
@@ -183,7 +183,7 @@ export function CadastroLiderancaPage() {
                     onClick={async () => {
                       try {
                         await navigator.clipboard.writeText(linkGerado);
-                        toast('Link copiado com sucesso!', 'success');
+                        toast.success('Link copiado com sucesso!');
                       } catch {
                         alert(linkGerado, 'Copiar Link');
                       }
@@ -241,25 +241,27 @@ export function CadastroLiderancaPage() {
                   placeholder="Ex.: João Silva"
                 />
               </Campo>
-              <Campo label="WhatsApp / Telefone" obrigatorio error={errosCampos.telefone}>
-                <input
-                  id="campo-telefone"
-                  type="tel"
-                  inputMode="numeric"
-                  value={form.telefone}
-                  onChange={(e) => atualizar('telefone', maskTelefone(e.target.value))}
-                  className={`${inputClass} ${errosCampos.telefone ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="(11) 91234-5678"
-                />
-              </Campo>
-              <Campo label="Data de Nascimento (Opcional)">
-                <input
-                  type="date"
-                  value={form.data_nascimento}
-                  onChange={(e) => atualizar('data_nascimento', e.target.value)}
-                  className={inputClass}
-                />
-              </Campo>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Campo label="WhatsApp / Telefone" obrigatorio error={errosCampos.telefone}>
+                  <input
+                    id="campo-telefone"
+                    type="tel"
+                    inputMode="numeric"
+                    value={form.telefone}
+                    onChange={(e) => atualizar('telefone', maskTelefone(e.target.value))}
+                    className={`${inputClass} ${errosCampos.telefone ? 'border-red-500 focus:ring-red-500' : ''}`}
+                    placeholder="(11) 91234-5678"
+                  />
+                </Campo>
+                <Campo label="Data de Nascimento (Opcional)">
+                  <input
+                    type="date"
+                    value={form.data_nascimento}
+                    onChange={(e) => atualizar('data_nascimento', e.target.value)}
+                    className={inputClass}
+                  />
+                </Campo>
+              </div>
             </Secao>
 
             <Secao titulo="Local de Atuação">

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
-import { useToast } from '../components/Toast'
+import { toast } from 'sonner'
 import { getOfflineQueue, clearOfflineQueue } from '../lib/offline'
 
 export function useOfflineSync() {
   const [online, setOnline] = useState(navigator.onLine)
   const [pendentes, setPendentes] = useState<number>(0)
-  const { toast } = useToast()
 
   useEffect(() => {
     const checkQueue = async () => {
@@ -30,7 +29,7 @@ export function useOfflineSync() {
           
           await clearOfflineQueue()
           setPendentes(0)
-          toast(`Sincronização offline concluída! ${res.inserted} cadastros enviados.`, 'success')
+          toast.success(`Sincronização offline concluída! ${res.inserted} cadastros enviados.`)
           window.dispatchEvent(new Event('gv_eleitores_updated')) // força recarregar
         } catch (err) {
           console.error('Falha na sincronização offline:', err)

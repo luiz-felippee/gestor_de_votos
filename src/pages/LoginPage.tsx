@@ -51,6 +51,7 @@ export function LoginPage() {
       return
     }
     
+    sessionStorage.setItem('justLoggedIn', 'true')
     navigate(destino, { replace: true })
   }
 
@@ -68,6 +69,7 @@ export function LoginPage() {
       return
     }
     
+    sessionStorage.setItem('justLoggedIn', 'true')
     navigate(destino, { replace: true })
   }
 
@@ -110,6 +112,7 @@ export function LoginPage() {
             setPendingUserId(res.userId!)
             setStep('2fa')
           } else {
+            sessionStorage.setItem('justLoggedIn', 'true')
             navigate(destino, { replace: true })
           }
         },

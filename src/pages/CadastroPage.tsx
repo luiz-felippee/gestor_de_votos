@@ -307,26 +307,28 @@ export function CadastroPage() {
                   placeholder="Ex.: José da Silva"
                 />
               </Campo>
-              <Campo label="Telefone / WhatsApp" obrigatorio erro={erros.telefone}>
-                <input
-                  type="tel"
-                  name="telefone"
-                  inputMode="numeric"
-                  value={form.telefone}
-                  onChange={(e) => atualizar('telefone', maskTelefone(e.target.value))}
-                  className={`${inputClass} ${erros.telefone ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
-                  placeholder="(11) 91234-5678"
-                />
-              </Campo>
-              <Campo label="Data de Nascimento (Opcional)" erro={erros.data_nascimento}>
-                <input
-                  type="date"
-                  name="data_nascimento"
-                  value={form.data_nascimento}
-                  onChange={(e) => atualizar('data_nascimento', e.target.value)}
-                  className={inputClass}
-                />
-              </Campo>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Campo label="Telefone / WhatsApp" obrigatorio erro={erros.telefone}>
+                  <input
+                    type="tel"
+                    name="telefone"
+                    inputMode="numeric"
+                    value={form.telefone}
+                    onChange={(e) => atualizar('telefone', maskTelefone(e.target.value))}
+                    className={`${inputClass} ${erros.telefone ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : ''}`}
+                    placeholder="(11) 91234-5678"
+                  />
+                </Campo>
+                <Campo label="Data de Nascimento (Opcional)" erro={erros.data_nascimento}>
+                  <input
+                    type="date"
+                    name="data_nascimento"
+                    value={form.data_nascimento}
+                    onChange={(e) => atualizar('data_nascimento', e.target.value)}
+                    className={inputClass}
+                  />
+                </Campo>
+              </div>
               <Campo label="CEP" erro={erros.cep}>
                 <div className="relative">
                   <input

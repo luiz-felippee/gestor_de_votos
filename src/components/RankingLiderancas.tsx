@@ -1,5 +1,6 @@
-import { Trophy, Medal } from 'lucide-react'
+import { Trophy, Medal, Users } from 'lucide-react'
 import { api } from '../lib/api'
+import { EmptyState } from './EmptyState'
 
 interface Props {
   ranking: { id: string; nome: string; meta: number; total: number; foto_url?: string | null }[]
@@ -10,10 +11,12 @@ export function RankingLiderancas({ ranking }: Props) {
 
   if (top5.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900 mt-6">
-        <Trophy className="mb-3 h-12 w-12 text-slate-300 dark:text-slate-600" />
-        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Nenhuma liderança cadastrada ainda.</p>
-      </div>
+      <EmptyState
+        icon={Users}
+        title="Nenhuma liderança cadastrada"
+        description="Assim que seus cabos eleitorais começarem a recrutar eleitores, o ranking aparecerá aqui."
+        className="mt-6"
+      />
     )
   }
 

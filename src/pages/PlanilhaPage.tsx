@@ -1,13 +1,14 @@
 import { useState, useEffect, useMemo } from 'react'
 import { api, type EleitorFiltros } from '../lib/api'
 import { getSocket } from '../lib/socket'
-import { useToast } from '../components/Toast'
+import { toast } from 'sonner'
 import { CIDADES, STATUS_OPTIONS, STATUS_STYLES } from '../lib/constants'
 import { formatDataHora, maskTelefone } from '../lib/format'
 import { exportarCSV, exportarXLSX } from '../lib/export'
 import { useConfirm } from '../components/ConfirmDialog'
-import { Printer, Upload, MessageCircle } from 'lucide-react'
+import { Printer, Upload, MessageCircle, Users } from 'lucide-react'
 import { ImportModal } from '../components/ImportModal'
+import { EmptyState } from '../components/EmptyState'
 import type { EleitorComCabo, StatusEleitor } from '../lib/types'
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 
@@ -28,7 +29,6 @@ interface Ordenacao {
 }
 
 export function PlanilhaPage() {
-  const { toast } = useToast()
   const { confirm } = useConfirm()
   const queryClient = useQueryClient()
 
@@ -160,11 +160,11 @@ export function PlanilhaPage() {
         titulo_eleitor: editForm.titulo_eleitor,
         data_nascimento: editForm.data_nascimento,
       })
-      toast('Eleitor atualizado com sucesso!', 'success')
+      toast.success('Alterações salvas com sucesso!')
       // Invalida em background para garantir sincronia real
       queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
-    } catch (err) {
-      toast(`Erro ao salvar: ${(err as Error).message}`, 'error')
+    } catch (error: any) {
+      toast.error('Erro ao atualizar eleitor: ' + error.message)
       queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     }
   }
@@ -191,10 +191,10 @@ export function PlanilhaPage() {
 
     try {
       await api.anonimizarEleitor(e.id)
-      toast('Dados anonimizados com sucesso (LGPD)', 'success')
+      toast.success('Dados anonimizados com sucesso (LGPD)')
       queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     } catch (err) {
-      toast(`Erro ao anonimizar: ${(err as Error).message}`, 'error')
+      toast.error(`Erro ao anonimizar: ${(err as Error).message}`)
       queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     }
   }
@@ -220,10 +220,10 @@ export function PlanilhaPage() {
 
     try {
       await api.deleteEleitor(e.id)
-      toast('Eleitor excluído com sucesso', 'success')
+      toast.success('Eleitor excluído com sucesso')
       queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
-    } catch (err) {
-      toast(`Erro ao excluir: ${(err as Error).message}`, 'error')
+    } catch (error: any) {
+      toast.error('Erro ao excluir eleitor')
       queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
     }
   }
@@ -238,8 +238,9 @@ export function PlanilhaPage() {
       const todos = await api.getEleitoresFiltrados(filtros)
       if (tipo === 'xlsx') exportarXLSX(todos)
       else exportarCSV(todos)
-    } catch (e) {
-      toast(`Erro ao exportar: ${(e as Error).message}`, 'error')
+      toast.success('Eleitores exportados com sucesso!')
+    } catch (error) {
+      toast.error('Erro ao exportar dados')
     } finally {
       setExportando(false)
     }
@@ -366,10 +367,12 @@ export function PlanilhaPage() {
                <span className="text-slate-400 font-medium">Carregando planilha...</span>
              </div>
           ) : eleitores.length === 0 ? (
-             <div className="py-12 text-center text-slate-400 font-medium">
-               <svg className="w-12 h-12 mx-auto text-slate-300 mb-3 dark:text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-               Nenhum eleitor encontrado.
-             </div>
+            <EmptyState
+              icon={Users}
+              title="Nenhum eleitor encontrado"
+              description="Nenhum eleitor corresponde aos filtros e buscas atuais."
+              className="border-none bg-transparent"
+            />
           ) : (
             eleitores.map((e) => (
               editId === e.id ? (
@@ -455,9 +458,13 @@ export function PlanilhaPage() {
                 </tr>
               ) : eleitores.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-16 text-center text-slate-400 font-medium">
-                    <svg className="w-12 h-12 mx-auto text-slate-300 mb-3 dark:text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                    Nenhum eleitor encontrado na busca atual.
+                  <td colSpan={8} className="p-4">
+                    <EmptyState
+                      icon={Users}
+                      title="Nenhum eleitor encontrado"
+                      description="A busca atual não retornou nenhum eleitor."
+                      className="border-none bg-transparent"
+                    />
                   </td>
                 </tr>
               ) : (
@@ -487,7 +494,7 @@ export function PlanilhaPage() {
                             <select className={`${editInputClass} flex-1`} value={editForm.cidade ?? ''} onChange={(ev) => setCampo('cidade', ev.target.value)}>
                               {CIDADES.map((c) => <option key={c} value={c}>{c}</option>)}
                             </select>
-                            <input type="date" title="Data de Nascimento" className={`${editInputClass} w-6`} value={editForm.data_nascimento ?? ''} onChange={(ev) => setCampo('data_nascimento', ev.target.value)} />
+                            <input type="date" title="Data de Nascimento" className={`${editInputClass} w-32`} value={editForm.data_nascimento ?? ''} onChange={(ev) => setCampo('data_nascimento', ev.target.value)} />
                           </div>
                         </div>
                       </Td>

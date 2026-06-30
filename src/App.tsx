@@ -4,13 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { ThemeProvider } from './components/ThemeProvider'
-import { ToastProvider, useToast } from './components/Toast'
+import { Toaster, toast } from 'sonner'
 import { ConfirmProvider } from './components/ConfirmDialog'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Breadcrumbs } from './components/Breadcrumbs'
 import { Header } from './components/layout/Header'
 import { InstallPrompt } from './components/layout/InstallPrompt'
 import { useDocumentTitle } from './hooks/useDocumentTitle'
+import { useNetworkStatus } from './hooks/useNetworkStatus'
 import { NaoEncontradoPage } from './pages/NaoEncontradoPage'
 
 // Leves / críticas: carregam de imediato (formulário público e login)
@@ -58,7 +59,6 @@ import { useQueryClient } from '@tanstack/react-query'
 function AppContent() {
   useOfflineSync()
   useDocumentTitle()
-  const { toast } = useToast()
   const { usuario } = useAuth()
   const queryClient = useQueryClient()
 
@@ -66,7 +66,7 @@ function AppContent() {
     if (!usuario) return
     const socket = getSocket()
     const handleChanged = () => {
-      toast('A base de eleitores foi atualizada em tempo real.', 'info')
+      toast.info('A base de eleitores foi atualizada em tempo real.')
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['eleitores'] })
     }
@@ -74,7 +74,7 @@ function AppContent() {
     return () => {
       socket.off('eleitores:changed', handleChanged)
     }
-  }, [usuario, toast])
+  }, [usuario])
 
   return (
     <div className="flex min-h-full flex-col">
@@ -197,19 +197,36 @@ const queryClient = new QueryClient({
   },
 })
 
+function NetworkOptimizer() {
+  const { isSlow } = useNetworkStatus()
+  
+  useEffect(() => {
+    // Ajusta o staleTime global de acordo com a rede
+    queryClient.setDefaultOptions({
+      queries: {
+        staleTime: isSlow ? 1000 * 60 * 60 : 1000 * 60 * 5, // 1 hr se estiver lento, 5 min normal
+        refetchOnWindowFocus: false,
+        retry: isSlow ? 1 : 3, // tenta menos vezes se a rede estiver caindo
+      },
+    })
+  }, [isSlow])
+  
+  return null
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <NetworkOptimizer />
       <ThemeProvider>
-        <ToastProvider>
-          <ConfirmProvider>
-            <AuthProvider>
-              <BrowserRouter>
-                <AppContent />
-              </BrowserRouter>
-            </AuthProvider>
-          </ConfirmProvider>
-        </ToastProvider>
+        <ConfirmProvider>
+          <AuthProvider>
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
+          </AuthProvider>
+        </ConfirmProvider>
+        <Toaster position="bottom-right" richColors />
       </ThemeProvider>
     </QueryClientProvider>
   )
