@@ -236,8 +236,8 @@ export function PlanilhaPage() {
     setExportando(true)
     try {
       const todos = await api.getEleitoresFiltrados(filtros)
-      if (tipo === 'xlsx') exportarXLSX(todos)
-      else exportarCSV(todos)
+      if (tipo === 'xlsx') await exportarXLSX(todos)
+      else await exportarCSV(todos)
       toast.success('Eleitores exportados com sucesso!')
     } catch (error) {
       toast.error('Erro ao exportar dados')

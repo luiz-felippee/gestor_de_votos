@@ -91,13 +91,14 @@ model Eleitor {
   cabo          CaboEleitoral? @relation(fields: [cabo_id], references: [id], onDelete: SetNull)
 
   @@unique([nome_busca, zona, secao])
-  // Índices para acelerar filtros/ordenação da planilha, dashboard e mapa
-  @@index([campanha_id])
+  // Índices para acelerar filtros/ordenação da planilha, dashboard e mapa.
+  // Compostos: cobrem o caso dominante (escopo da campanha + ordenação por
+  // data e o filtro por cabo), evitando sort e varredura de tabela.
+  @@index([campanha_id, created_at])
+  @@index([campanha_id, cabo_id])
   @@index([cidade])
   @@index([bairro])
-  @@index([cabo_id])
   @@index([status])
-  @@index([created_at])
   @@index([nome_busca])
   @@index([telefone])
   @@map("eleitores")

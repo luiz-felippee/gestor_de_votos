@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react'
-import * as XLSX from 'xlsx'
 import { UploadCloud, FileType2, AlertCircle, CheckCircle2, X } from 'lucide-react'
 import { api } from '../lib/api'
+
+// 'xlsx' é pesado (~450KB): carrega sob demanda, só ao selecionar/importar arquivo.
+const carregarXLSX = () => import('xlsx')
 
 interface ImportModalProps {
   onClose: () => void
@@ -24,6 +26,7 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
     setPreview([])
 
     try {
+      const XLSX = await carregarXLSX()
       const data = await selectedFile.arrayBuffer()
       const workbook = XLSX.read(data)
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
@@ -40,6 +43,7 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
     setError(null)
     
     try {
+      const XLSX = await carregarXLSX()
       const data = await file.arrayBuffer()
       const workbook = XLSX.read(data)
       const worksheet = workbook.Sheets[workbook.SheetNames[0]]
