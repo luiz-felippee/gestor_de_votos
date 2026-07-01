@@ -82,7 +82,7 @@ function ZoomNaCidade({
   const anterior = useRef<string | null>(null)
   useEffect(() => {
     if (cidade && centro) {
-      map.flyTo(centro, 12, { duration: 1.2 })
+      map.flyTo(centro, isMobile ? 9 : 10, { duration: 1.2 })
     } else if (!cidade && anterior.current) {
       map.flyToBounds(boundsPE, { duration: 1.2 })
     }

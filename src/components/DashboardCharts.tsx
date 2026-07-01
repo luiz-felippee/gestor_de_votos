@@ -1,9 +1,6 @@
 import {
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
   AreaChart,
   Area,
   XAxis,
@@ -13,8 +10,6 @@ import {
   CartesianGrid,
 } from 'recharts'
 
-const CORES_ZONA = ['#3b82f6', '#f97316', '#14b8a6', '#f43f5e', '#eab308', '#8b5cf6', '#10b981', '#06b6d4', '#ec4899', '#64748b', '#6366f1', '#a855f7']
-
 interface Fatia {
   label: string
   total: number
@@ -22,27 +17,14 @@ interface Fatia {
 
 interface Props {
   porCidade: Fatia[]
-  porLocalVotacao: Fatia[]
+
   porBairro: Fatia[]
   porDia: Fatia[]
-  totalEleitores: number
 }
 
 // Gráficos pesados (recharts) carregados em um chunk separado para o painel
 // inicial pintar os KPIs/perfil na hora, sem esperar a biblioteca de gráficos.
-export default function DashboardCharts({ porCidade, porLocalVotacao, porBairro, porDia, totalEleitores }: Props) {
-  // Processamento para o gráfico de Locais de Votação (Top 5 + Outros, Ordenado)
-  const locaisOrdenados = [...porLocalVotacao].sort((a, b) => b.total - a.total);
-  let locaisProcessados = locaisOrdenados;
-  if (locaisOrdenados.length > 6) {
-    const top5 = locaisOrdenados.slice(0, 5);
-    const outrosTotal = locaisOrdenados.slice(5).reduce((acc, curr) => acc + curr.total, 0);
-    if (outrosTotal > 0) {
-      top5.push({ label: 'Outros locais', total: outrosTotal });
-    }
-    locaisProcessados = top5;
-  }
-  const maxVotosLocal = Math.max(...locaisProcessados.map((z) => z.total), 1);
+export default function DashboardCharts({ porCidade, porBairro, porDia }: Props) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -83,99 +65,7 @@ export default function DashboardCharts({ porCidade, porLocalVotacao, porBairro,
         </ResponsiveContainer>
       </Painel>
 
-      <Painel titulo="Distribuição por local de votação">
-        <div className="flex flex-col xl:flex-row items-center gap-6">
-          <div className="relative flex-shrink-0" style={{ width: 220, height: 260 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <defs>
-                  {CORES_ZONA.map((cor, i) => (
-                    <linearGradient key={i} id={`zonaGrad${i}`} x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor={cor} stopOpacity={1} />
-                      <stop offset="100%" stopColor={cor} stopOpacity={0.7} />
-                    </linearGradient>
-                  ))}
-                </defs>
-                <Pie
-                  data={locaisProcessados}
-                  dataKey="total"
-                  nameKey="label"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={65}
-                  outerRadius={105}
-                  paddingAngle={3}
-                  cornerRadius={4}
-                  stroke="none"
-                >
-                  {locaisProcessados.map((entry, i) => (
-                    <Cell key={i} fill={entry.label === 'Outros locais' ? '#475569' : `url(#zonaGrad${i % CORES_ZONA.length})`} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.92)',
-                    border: 'none',
-                    borderRadius: '10px',
-                    color: '#fff',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                    padding: '8px 14px',
-                  }}
-                  formatter={(value: any) => [`${value} eleitores`, '']}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            {/* Número total no centro (perfeitamente centralizado) */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-3xl font-extrabold text-slate-800 dark:text-white">{totalEleitores}</span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">total</span>
-            </div>
-          </div>
 
-          {/* Legenda lateral */}
-          <div className="flex-1 w-full min-w-0 space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
-            {locaisProcessados.map((z, i) => {
-              const pct = totalEleitores > 0 ? Math.round((z.total / totalEleitores) * 100) : 0
-              const widthBarra = Math.round((z.total / maxVotosLocal) * 100)
-              const color = z.label === 'Outros locais' ? '#475569' : CORES_ZONA[i % CORES_ZONA.length]
-
-              return (
-                <div key={z.label} className="flex items-start gap-3 group py-0.5">
-                  <div
-                    className="w-3.5 h-3.5 rounded-full flex-shrink-0 ring-2 ring-white dark:ring-slate-900 shadow-sm mt-0.5"
-                    style={{ backgroundColor: color }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-[13px] leading-tight font-medium text-slate-700 dark:text-slate-300 line-clamp-2" title={z.label}>
-                        {z.label}
-                      </span>
-                      <span className="text-xs tabular-nums font-bold text-slate-500 dark:text-slate-400 flex-shrink-0 mt-0.5">
-                        {z.total}
-                        <span className="ml-1 text-[10px] font-normal text-slate-400 dark:text-slate-500">({pct}%)</span>
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${widthBarra}%`,
-                          backgroundColor: color,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-            {locaisProcessados.length === 0 && (
-              <p className="text-sm text-slate-400 dark:text-slate-500 italic">Nenhum dado disponível</p>
-            )}
-          </div>
-        </div>
-      </Painel>
 
       <Painel titulo="Top 10 bairros">
         <ResponsiveContainer width="100%" height={280}>

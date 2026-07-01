@@ -6,7 +6,7 @@ import { Logo } from '../Logo'
 import { useOfflineSync } from '../../hooks/useOfflineSync'
 import {
   WifiOff, Loader2, Home, Users, CalendarDays,
-  Network, FileText, CreditCard, Building2, User,
+  Network, FileText, Building2, User,
   LogOut, Sun, Moon, Menu, X, ChevronRight, MessageCircle
 } from 'lucide-react'
 
@@ -82,7 +82,7 @@ export function Header() {
                     {usuario?.super_admin && <DropdownItem to="/campanhas">Campanhas</DropdownItem>}
                     {role === 'admin' && <DropdownItem to="/usuarios">Usuários</DropdownItem>}
                     {role === 'admin' && <DropdownItem to="/auditoria">Auditoria</DropdownItem>}
-                    {(role === 'admin' || role === 'coordenador') && <DropdownItem to="/assinatura">Assinatura</DropdownItem>}
+
                   </Dropdown>
                 )}
               </nav>
@@ -204,9 +204,7 @@ export function Header() {
                   {role === 'admin' && (
                     <MobileDrawerItem to="/auditoria" icon={<FileText className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Auditoria</MobileDrawerItem>
                   )}
-                  {(role === 'admin' || role === 'coordenador') && (
-                    <MobileDrawerItem to="/assinatura" icon={<CreditCard className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Assinatura</MobileDrawerItem>
-                  )}
+
                 </>
               )}
             </nav>

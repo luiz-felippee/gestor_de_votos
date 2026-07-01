@@ -40,7 +40,7 @@ const EventosPage = lazyPage(() => import('./pages/EventosPage'), 'EventosPage')
 const AuditoriaPage = lazyPage(() => import('./pages/AuditoriaPage'), 'AuditoriaPage')
 const CampanhasPage = lazyPage(() => import('./pages/CampanhasPage'), 'CampanhasPage')
 const WhatsAppPage = lazyPage(() => import('./pages/WhatsAppPage'), 'WhatsAppPage')
-const BillingPage = lazyPage(() => import('./pages/BillingPage').then(m => ({ BillingPage: m.BillingPage })), 'BillingPage')
+
 const PerfilPage = lazyPage(() => import('./pages/PerfilPage').then(m => ({ PerfilPage: m.PerfilPage })), 'PerfilPage')
 
 function CarregandoPagina() {
@@ -167,14 +167,7 @@ function AppContent() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/assinatura"
-                element={
-                  <ProtectedRoute roles={['admin', 'coordenador']}>
-                    <BillingPage />
-                  </ProtectedRoute>
-                }
-              />
+
 
               {/* Custom 404 Route */}
               <Route path="/404" element={<NaoEncontradoPage />} />

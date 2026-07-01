@@ -37,14 +37,14 @@ export function PlanilhaPage() {
   const [filtroCidade, setFiltroCidade] = useState('')
   const [filtroStatus, setFiltroStatus] = useState('')
   const [filtroBairro, setFiltroBairro] = useState('')
-  const [filtroZona, setFiltroZona] = useState('')
-  const [filtroMesAniversario, setFiltroMesAniversario] = useState('')
+  const [filtroCabo, setFiltroCabo] = useState('')
   const [ordem, setOrdem] = useState<Ordenacao>({ campo: 'created_at', dir: 'desc' })
 
   const [paginaAtual, setPaginaAtual] = useState(1)
   const itensPorPagina = 50
 
   const [bairrosOptions, setBairrosOptions] = useState<string[]>([])
+  const [cabosOptions, setCabosOptions] = useState<{id: string, nome: string}[]>([])
   const [exportando, setExportando] = useState(false)
   const [showImport, setShowImport] = useState(false)
 
@@ -57,9 +57,10 @@ export function PlanilhaPage() {
     return () => clearTimeout(t)
   }, [busca])
 
-  // Lista de bairros para o filtro (distintos da campanha)
+  // Lista de bairros e cabos para o filtro
   useEffect(() => {
     api.getBairros().then(setBairrosOptions).catch(() => {})
+    api.getCabos().then(setCabosOptions).catch(() => {})
   }, [])
 
   const filtros: EleitorFiltros = useMemo(
@@ -68,12 +69,11 @@ export function PlanilhaPage() {
       cidade: filtroCidade || undefined,
       status: filtroStatus || undefined,
       bairro: filtroBairro || undefined,
-      zona: filtroZona ? Number(filtroZona) : undefined,
-      mes_aniversario: filtroMesAniversario || undefined,
+      cabo_id: filtroCabo || undefined,
       sort: ordem.campo,
       dir: ordem.dir,
     }),
-    [buscaDeb, filtroCidade, filtroStatus, filtroBairro, filtroZona, filtroMesAniversario, ordem],
+    [buscaDeb, filtroCidade, filtroStatus, filtroBairro, filtroCabo, ordem],
   )
 
   // Filtros mudaram → volta para a página 1
@@ -325,28 +325,11 @@ export function PlanilhaPage() {
             <option key={b} value={b}>{b}</option>
           ))}
         </select>
-        <input
-          type="number"
-          min={1}
-          value={filtroZona}
-          onChange={(e) => setFiltroZona(e.target.value)}
-          placeholder="Zona"
-          className={`${filtroSelectClass} max-w-[110px]`}
-        />
-        <select value={filtroMesAniversario} onChange={(e) => setFiltroMesAniversario(e.target.value)} className={`${filtroSelectClass} max-w-[160px]`}>
-          <option value="">Aniversário (Mês)</option>
-          <option value="01">Janeiro</option>
-          <option value="02">Fevereiro</option>
-          <option value="03">Março</option>
-          <option value="04">Abril</option>
-          <option value="05">Maio</option>
-          <option value="06">Junho</option>
-          <option value="07">Julho</option>
-          <option value="08">Agosto</option>
-          <option value="09">Setembro</option>
-          <option value="10">Outubro</option>
-          <option value="11">Novembro</option>
-          <option value="12">Dezembro</option>
+        <select value={filtroCabo} onChange={(e) => setFiltroCabo(e.target.value)} className={`${filtroSelectClass} max-w-[200px]`}>
+          <option value="">Lideranças (Todas)</option>
+          {cabosOptions.map((c) => (
+            <option key={c.id} value={c.id}>{c.nome}</option>
+          ))}
         </select>
       </div>
 

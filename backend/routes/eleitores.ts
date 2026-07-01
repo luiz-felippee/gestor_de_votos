@@ -66,6 +66,29 @@ eleitoresRouter.post(
     }
 
     try {
+      const phoneBase = String(b.telefone).replace(/\D/g, '');
+      if (phoneBase.length >= 10) {
+        const phoneMasked11 = phoneBase.length === 11 ? `(${phoneBase.substring(0, 2)}) ${phoneBase.substring(2, 7)}-${phoneBase.substring(7)}` : null;
+        const phoneMasked10 = phoneBase.length === 10 ? `(${phoneBase.substring(0, 2)}) ${phoneBase.substring(2, 6)}-${phoneBase.substring(6)}` : null;
+        
+        const existing = await prisma.eleitor.findFirst({
+          where: {
+            campanha_id: campanhaId,
+            OR: [
+              { telefone: String(b.telefone) },
+              { telefone: phoneBase },
+              ...(phoneMasked11 ? [{ telefone: phoneMasked11 }] : []),
+              ...(phoneMasked10 ? [{ telefone: phoneMasked10 }] : [])
+            ]
+          },
+          select: { id: true }
+        });
+        
+        if (existing) {
+          return res.status(409).json({ error: 'Já existe um eleitor cadastrado com este telefone.' });
+        }
+      }
+
       // Cria o eleitor imediatamente (sem esperar geocode)
       const eleitor = await prisma.eleitor.create({
         data: {
@@ -133,7 +156,7 @@ eleitoresRouter.post(
     const campanhaId: string | null = req.user!.campanha_id ?? null;
 
     // Pré-processa os eleitores para garantir que os campos necessários existem
-    const dataToInsert = eleitores.map((e: any) => {
+    const rawData = eleitores.map((e: any) => {
       const bairroStr = String(e.bairro || 'Não informado').trim();
       const cidadeStr = String(e.cidade || 'Não informada').trim();
       const nomeStr = String(e.nome || '').trim();
@@ -156,10 +179,29 @@ eleitoresRouter.post(
         status: (e.status as StatusEleitor) || 'ativo',
         observacoes: e.observacoes?.trim() || null,
       };
-    }).filter((e: any) => e.nome && e.telefone); // Filtra linhas vazias inválidas
+    });
+
+    // Prepara a verificação de duplicatas por telefone
+    const existingDb = await prisma.eleitor.findMany({
+      where: { campanha_id: campanhaId },
+      select: { telefone: true }
+    });
+    const phoneSet = new Set<string>();
+    for (const e of existingDb) {
+      const d = String(e.telefone || '').replace(/\D/g, '');
+      if (d) phoneSet.add(d);
+    }
+
+    const dataToInsert = rawData.filter((e: any) => {
+      const digits = String(e.telefone || '').replace(/\D/g, '');
+      if (!e.nome || !digits) return false; // Faltam dados
+      if (phoneSet.has(digits)) return false; // Duplicado
+      phoneSet.add(digits); // Adiciona para evitar dupes dentro da própria planilha
+      return true;
+    });
 
     if (dataToInsert.length === 0) {
-      return res.status(400).json({ error: 'Nenhum eleitor válido encontrado para importação.' });
+      return res.status(400).json({ error: 'Nenhum eleitor novo encontrado. Todos já estão cadastrados ou faltam dados.' });
     }
 
     // Usar createMany com skipDuplicates impede quebra se o mesmo arquivo for importado 2x

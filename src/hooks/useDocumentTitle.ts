@@ -10,7 +10,6 @@ const TITLES: Record<string, string> = {
   '/usuarios': 'Usuários | Gestor de Votos',
   '/auditoria': 'Auditoria | Gestor de Votos',
   '/campanhas': 'Campanhas | Gestor de Votos',
-  '/assinatura': 'Assinatura | Gestor de Votos',
   '/login': 'Entrar | Gestor de Votos',
   '/esqueci-senha': 'Recuperar Senha | Gestor de Votos',
   '/resetar-senha': 'Redefinir Senha | Gestor de Votos',

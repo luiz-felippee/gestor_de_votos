@@ -3,6 +3,9 @@ import { api } from '../lib/api'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { MessageCircle, Check, Send, Search, Users, Shield, Zap } from 'lucide-react'
 import { maskTelefone } from '../lib/format'
+import type { EleitorComCabo, CaboEleitoral } from '../lib/types'
+
+type Contato = EleitorComCabo | CaboEleitoral;
 
 const TEMPLATES_PRONTOS = [
   { label: 'Saudação Simples', texto: 'Olá {nome}, tudo bem? Como posso te ajudar hoje?' },
@@ -16,9 +19,19 @@ export function WhatsAppPage() {
   const [busca, setBusca] = useState('')
   const [buscaDeb, setBuscaDeb] = useState('')
   const [mensagem, setMensagem] = useState('Olá {nome}, tudo bem?')
-  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
-  const [enviados, setEnviados] = useState<Set<string>>(new Set())
+  const [selecionados, setSelecionados] = useState<Map<string, { id: string, nome: string, telefone: string }>>(new Map())
+  const [enviados, setEnviados] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('whatsapp_enviados')
+      if (saved) return new Set(JSON.parse(saved))
+    } catch {}
+    return new Set()
+  })
   const [pagina, setPagina] = useState(1)
+
+  useEffect(() => {
+    localStorage.setItem('whatsapp_enviados', JSON.stringify(Array.from(enviados)))
+  }, [enviados])
   const itensPorPagina = 50
 
   useEffect(() => {
@@ -27,7 +40,7 @@ export function WhatsAppPage() {
   }, [busca])
 
   // Eleitores Query
-  const { data: eleitoresData, isLoading: loadingEleitores } = useQuery({
+  const { data: eleitoresData, isLoading: loadingEleitores, isError: erroEleitores } = useQuery({
     queryKey: ['eleitores-whatsapp', { busca: buscaDeb, page: pagina, limit: itensPorPagina }],
     queryFn: () => api.getEleitores({ busca: buscaDeb, page: pagina, limit: itensPorPagina }),
     placeholderData: keepPreviousData,
@@ -35,7 +48,7 @@ export function WhatsAppPage() {
   })
 
   // Cabos Query
-  const { data: cabosData, isLoading: loadingCabos } = useQuery({
+  const { data: cabosData, isLoading: loadingCabos, isError: erroCabos } = useQuery({
     queryKey: ['cabos-whatsapp', { busca: buscaDeb }],
     queryFn: () => api.getCabos(),
     enabled: aba === 'cabos'
@@ -57,31 +70,36 @@ export function WhatsAppPage() {
   const totalPaginas = aba === 'eleitores' ? (eleitoresData?.totalPages || 1) : Math.ceil(listaVigente.length / itensPorPagina) || 1
   
   // se for cabo, a gente fatia no front
-  const listaExibida = aba === 'cabos' ? listaVigente.slice((pagina - 1) * itensPorPagina, pagina * itensPorPagina) : listaVigente
+  const listaExibida: Contato[] = aba === 'cabos' ? listaVigente.slice((pagina - 1) * itensPorPagina, pagina * itensPorPagina) : listaVigente
 
-  function handleSelect(id: string) {
+  function handleSelect(contato: Contato) {
     setSelecionados(prev => {
-      const n = new Set(prev)
-      if (n.has(id)) n.delete(id)
-      else n.add(id)
+      const n = new Map(prev)
+      if (n.has(contato.id)) n.delete(contato.id)
+      else n.set(contato.id, { id: contato.id, nome: contato.nome, telefone: contato.telefone })
       return n
     })
   }
 
   function handleSelectAll() {
     // Apenas os itens válidos (com telefone)
-    const validos = listaExibida.filter((i: any) => i.telefone && i.telefone.length >= 10)
-    if (selecionados.size === validos.length && validos.length > 0) {
-      setSelecionados(new Set())
-    } else {
-      setSelecionados(new Set(validos.map((i: any) => i.id)))
-    }
+    const validos = listaExibida.filter((i) => i.telefone && i.telefone.length >= 10)
+    const allSelected = validos.every(v => selecionados.has(v.id))
+    
+    setSelecionados(prev => {
+      const n = new Map(prev)
+      if (allSelected && validos.length > 0) {
+        validos.forEach(v => n.delete(v.id))
+      } else {
+        validos.forEach(v => n.set(v.id, { id: v.id, nome: v.nome, telefone: v.telefone }))
+      }
+      return n
+    })
   }
 
   const pessoasSelecionadas = useMemo(() => {
-    // Aqui assumimos que o envio só acontece da página atual para simplificar.
-    return listaExibida.filter((i: any) => selecionados.has(i.id))
-  }, [selecionados, listaExibida])
+    return Array.from(selecionados.values())
+  }, [selecionados])
 
   const [pessoaAtualEnvio, setPessoaAtualEnvio] = useState<number>(0)
 
@@ -90,10 +108,20 @@ export function WhatsAppPage() {
     setPessoaAtualEnvio(0)
   }, [selecionados])
 
-  function dispararWhatsApp(pessoa: any, index: number) {
-    const nomeCurto = pessoa.nome.split(' ')[0]
-    const msgFinal = mensagem.replace(/\{nome\}/gi, nomeCurto)
-    const url = `https://wa.me/55${pessoa.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(msgFinal)}`
+  function dispararWhatsApp(pessoa: { id: string, nome: string, telefone: string }, index: number) {
+    const nomeCompleto = pessoa.nome
+    const nomeCurto = nomeCompleto.split(' ')[0]
+    const msgFinal = mensagem
+      .replace(/\{nome\}/gi, nomeCurto)
+      .replace(/\{nomeCompleto\}/gi, nomeCompleto)
+      .replace(/\{telefone\}/gi, pessoa.telefone || '')
+      
+    const apenasDigitos = pessoa.telefone.replace(/\D/g, '')
+    const numeroFinal = (apenasDigitos.startsWith('55') && apenasDigitos.length >= 12) 
+      ? apenasDigitos 
+      : `55${apenasDigitos}`
+      
+    const url = `https://wa.me/${numeroFinal}?text=${encodeURIComponent(msgFinal)}`
     
     // Abre a aba do whatsapp
     window.open(url, '_blank')
@@ -110,12 +138,12 @@ export function WhatsAppPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 animate-fade-in flex flex-col lg:flex-row h-[calc(100vh-64px)] gap-6">
+    <div className="mx-auto max-w-7xl px-4 py-4 sm:py-8 animate-fade-in flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-64px)] gap-6">
       
       {/* Coluna Esquerda: Listagem */}
       <div className="flex-1 flex flex-col min-h-0">
         <div className="mb-6 shrink-0">
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
             <MessageCircle className="h-8 w-8 text-brand-600 dark:text-brand-400" />
             Central WhatsApp
           </h1>
@@ -127,8 +155,8 @@ export function WhatsAppPage() {
         {/* Abas */}
         <div className="flex rounded-lg bg-slate-100 p-1 mb-6 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 w-full sm:w-fit shrink-0">
           <button
-            onClick={() => { setAba('eleitores'); setPagina(1); setSelecionados(new Set()) }}
-            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-bold transition-all ${
+            onClick={() => { setAba('eleitores'); setPagina(1); setSelecionados(new Map()) }}
+            className={`flex-1 sm:flex-none justify-center flex items-center gap-2 rounded-md px-4 py-2 text-sm font-bold transition-all ${
               aba === 'eleitores'
                 ? 'bg-white text-brand-600 shadow-sm dark:bg-slate-900 dark:text-brand-400'
                 : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
@@ -137,8 +165,8 @@ export function WhatsAppPage() {
             <Users className="h-4 w-4" /> Eleitores
           </button>
           <button
-            onClick={() => { setAba('cabos'); setPagina(1); setSelecionados(new Set()) }}
-            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-bold transition-all ${
+            onClick={() => { setAba('cabos'); setPagina(1); setSelecionados(new Map()) }}
+            className={`flex-1 sm:flex-none justify-center flex items-center gap-2 rounded-md px-4 py-2 text-sm font-bold transition-all ${
               aba === 'cabos'
                 ? 'bg-white text-brand-600 shadow-sm dark:bg-slate-900 dark:text-brand-400'
                 : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
@@ -159,7 +187,7 @@ export function WhatsAppPage() {
           />
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex-1 min-h-[400px] lg:min-h-0 max-h-[600px] lg:max-h-none flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex-1 overflow-x-auto overflow-y-auto relative">
             <table className="w-full text-left text-sm border-collapse min-w-[500px]">
               <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm dark:bg-slate-950">
@@ -168,7 +196,10 @@ export function WhatsAppPage() {
                     <input 
                       type="checkbox" 
                       className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                      checked={selecionados.size > 0 && selecionados.size === listaExibida.filter((i: any) => i.telefone && i.telefone.length >= 10).length}
+                      checked={
+                        listaExibida.filter((i) => i.telefone && i.telefone.length >= 10).length > 0 && 
+                        listaExibida.filter((i) => i.telefone && i.telefone.length >= 10).every((i) => selecionados.has(i.id))
+                      }
                       onChange={handleSelectAll}
                     />
                   </th>
@@ -180,24 +211,26 @@ export function WhatsAppPage() {
               <tbody>
                 {loadingEleitores || loadingCabos ? (
                   <tr><td colSpan={4} className="text-center py-10 text-slate-500">Carregando...</td></tr>
+                ) : erroEleitores || erroCabos ? (
+                  <tr><td colSpan={4} className="text-center py-10 text-red-500">Erro ao carregar dados. Tente novamente.</td></tr>
                 ) : listaExibida.length === 0 ? (
                   <tr><td colSpan={4} className="text-center py-10 text-slate-500">Nenhum registro encontrado.</td></tr>
                 ) : (
-                  listaExibida.map((item: any) => {
+                  listaExibida.map((item) => {
                     const enviou = enviados.has(item.id)
                     const invalidPhone = !item.telefone || item.telefone.length < 10
                     return (
                       <tr 
                         key={item.id} 
                         className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50 cursor-pointer ${selecionados.has(item.id) ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}
-                        onClick={() => !invalidPhone && handleSelect(item.id)}
+                        onClick={() => !invalidPhone && handleSelect(item)}
                       >
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <input 
                             type="checkbox" 
                             className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 disabled:opacity-50"
                             checked={selecionados.has(item.id)}
-                            onChange={() => handleSelect(item.id)}
+                            onChange={() => handleSelect(item)}
                             disabled={invalidPhone}
                           />
                         </td>
@@ -233,14 +266,14 @@ export function WhatsAppPage() {
             <div className="flex gap-1">
               <button
                 disabled={pagina === 1}
-                onClick={() => { setPagina((p) => p - 1); setSelecionados(new Set()) }}
+                onClick={() => setPagina((p) => p - 1)}
                 className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
               >
                 Anterior
               </button>
               <button
                 disabled={pagina >= totalPaginas}
-                onClick={() => { setPagina((p) => p + 1); setSelecionados(new Set()) }}
+                onClick={() => setPagina((p) => p + 1)}
                 className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
               >
                 Próxima
@@ -251,7 +284,7 @@ export function WhatsAppPage() {
       </div>
 
       {/* Coluna Direita: Painel de Envio */}
-      <div className="w-full lg:w-[400px] flex flex-col gap-6 shrink-0 h-full">
+      <div className="w-full lg:w-[400px] flex flex-col gap-6 shrink-0 lg:h-full">
         
         {/* Editor de Mensagem */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 shrink-0">
@@ -279,7 +312,7 @@ export function WhatsAppPage() {
           </div>
           
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-            Use <strong className="text-brand-600 dark:text-brand-400">{`{nome}`}</strong> para trocar pelo primeiro nome da pessoa.
+            Use <strong className="text-brand-600 dark:text-brand-400">{`{nome}`}</strong>, <strong className="text-brand-600 dark:text-brand-400">{`{nomeCompleto}`}</strong> ou <strong className="text-brand-600 dark:text-brand-400">{`{telefone}`}</strong> para personalizar.
           </p>
           <textarea
             value={mensagem}
@@ -291,7 +324,7 @@ export function WhatsAppPage() {
         </div>
 
         {/* Fila de Envios */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex-1 min-h-0 flex flex-col">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 flex-1 min-h-[400px] lg:min-h-0 flex flex-col">
           <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
             Fila de Envios
             <span className="ml-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
@@ -307,7 +340,7 @@ export function WhatsAppPage() {
                 </p>
               </div>
             ) : (
-              pessoasSelecionadas.map((p: any, idx: number) => {
+              pessoasSelecionadas.map((p, idx: number) => {
                 const enviado = enviados.has(p.id)
                 const atual = pessoaAtualEnvio === idx && !enviado
                 return (

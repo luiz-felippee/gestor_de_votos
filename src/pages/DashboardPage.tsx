@@ -119,7 +119,6 @@ export function DashboardPage() {
     kpis,
     porCidade,
     porBairro,
-    porLocalVotacao,
     porDia,
     ranking,
     aniversariantes,
@@ -430,10 +429,8 @@ export function DashboardPage() {
         >
           <DashboardCharts
             porCidade={porCidade}
-            porLocalVotacao={porLocalVotacao}
             porBairro={porBairro}
             porDia={porDia}
-            totalEleitores={kpis.totalEleitores}
           />
         </Suspense>
       </LazyMount>

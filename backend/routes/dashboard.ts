@@ -165,12 +165,16 @@ dashboardRouter.get(
       .filter(c => c.cidade)
       .map(c => ({ label: c.cidade, total: c._count.id }));
 
-    const porBairro = bairrosAgg
-      .filter(b => b.bairro)
-      .map(b => {
-        const bNorm = b.bairro.trim().toLowerCase().replace(/(?:^|\s)\S/g, a => a.toUpperCase());
-        return { label: bNorm, total: b._count.id };
-      });
+    const bairrosMap = new Map<string, number>();
+    for (const b of bairrosAgg) {
+      if (!b.bairro) continue;
+      const bNorm = b.bairro.trim().toLowerCase().replace(/(?:^|\s)\S/g, a => a.toUpperCase());
+      bairrosMap.set(bNorm, (bairrosMap.get(bNorm) || 0) + b._count.id);
+    }
+    const porBairro = Array.from(bairrosMap.entries())
+      .map(([label, total]) => ({ label, total }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
 
     // Locais de votação com agrupamento dos "Outros"
     let porLocalVotacao = locaisAgg
