@@ -18,8 +18,15 @@ export function LazyMount({ children, fallback, rootMargin = '200px', className 
     const el = ref.current
     if (!el) return
 
-    // Fallback: Se o browser não suportar IntersectionObserver, carrega na hora
+    // Fallback: sem IntersectionObserver, carrega na hora
     if (!('IntersectionObserver' in window)) {
+      setIntersecting(true)
+      return
+    }
+
+    // Se o elemento não tiver caixa/layout (ex.: display:contents ou tamanho 0),
+    // o observer nunca dispara — então montamos imediatamente para não travar.
+    if (el.offsetWidth === 0 && el.offsetHeight === 0) {
       setIntersecting(true)
       return
     }
@@ -39,7 +46,7 @@ export function LazyMount({ children, fallback, rootMargin = '200px', className 
   }, [isIntersecting, rootMargin])
 
   return (
-    <div ref={ref} className={`contents ${className}`}>
+    <div ref={ref} className={className}>
       {isIntersecting ? children : fallback}
     </div>
   )
