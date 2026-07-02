@@ -134,7 +134,7 @@ export function LoginPage() {
   }, [googleClientId])
 
   return (
-    <div className="flex min-h-screen min-h-[100dvh] bg-slate-50 dark:bg-slate-900 lg:bg-transparent items-center justify-center lg:items-stretch lg:justify-start">
+    <div className="fixed inset-0 flex bg-slate-50 dark:bg-slate-900 lg:bg-transparent items-center justify-center lg:items-stretch lg:justify-start overflow-hidden">
       {/* Lado Esquerdo - Branding (Visível apenas em telas grandes) */}
       <div className="relative hidden w-0 flex-1 lg:block bg-slate-900">
         <div className="absolute inset-0 bg-gradient-to-br from-brand-900 via-slate-900 to-indigo-950 opacity-90" />
@@ -176,8 +176,8 @@ export function LoginPage() {
       {/* Lado Direito - Formulário */}
       <div className="flex flex-1 flex-col items-center justify-center w-full p-4 sm:p-6 lg:flex-none lg:w-[480px] xl:w-[560px] lg:px-8 bg-transparent lg:bg-white lg:dark:bg-slate-950">
         <div className="mx-auto w-full max-w-[400px] lg:w-[380px] bg-white dark:bg-slate-950 lg:bg-transparent lg:dark:bg-transparent p-6 sm:p-8 lg:p-0 rounded-3xl shadow-xl lg:shadow-none border border-slate-200 dark:border-slate-800 lg:border-transparent lg:dark:border-transparent">
-          <div className="text-center lg:text-left mb-8 lg:mb-10">
-            <div className="lg:hidden mb-8 flex items-center justify-center gap-3">
+          <div className="text-center lg:text-left mb-6 lg:mb-10">
+            <div className="lg:hidden mb-6 flex items-center justify-center gap-3">
               <Logo className="h-12 w-auto" iconClassName="h-12 w-12" />
               <span className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Gestor de Votos</span>
             </div>
