@@ -433,8 +433,9 @@ function CardCabo({
     .toUpperCase()
 
   async function copiar() {
+    const mensagem = `Faça seu cadastro com a liderança *${cabo.nome}* para apoiar *${usuario?.campanha_nome || 'nossa campanha'}*!\n\nAcesse o link:\n${link}`
     try {
-      await navigator.clipboard.writeText(link)
+      await navigator.clipboard.writeText(mensagem)
       setCopiado(true)
       setTimeout(() => setCopiado(false), 2000)
     } catch {
