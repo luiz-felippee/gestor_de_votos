@@ -1,0 +1,16 @@
+name: Keep-Alive Backend (Render)
+
+on:
+  schedule:
+    # Roda a cada 10 minutos
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Permite rodar manualmente no painel do GitHub
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping API Health Check
+        run: |
+          echo "Pingando: https://gestor-votos-api.onrender.com/api/health"
+          curl -f "https://gestor-votos-api.onrender.com/api/health" || echo "Ping falhou, mas o workflow continua."
