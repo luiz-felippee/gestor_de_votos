@@ -56,6 +56,9 @@ const CORS_ORIGIN: '*' | string[] = CORS_LIST.includes('*') ? '*' : CORS_LIST;
 
 app.use(cors({ origin: CORS_ORIGIN }));
 
+// Servir os arquivos de upload estaticamente
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Middleware de Logging estruturado para requisições HTTP
 app.use((req, res, next) => {
   const start = Date.now();

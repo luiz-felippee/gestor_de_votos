@@ -7,12 +7,12 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
-import { requireAuth } from '../middlewares';
+
 
 const router = Router();
 
 // --- Configuração do Multer ---
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+const uploadsDir = path.join(process.cwd(), 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 // Usar memory storage em vez de disk storage para podermos comprimir a imagem antes de salvar
@@ -23,8 +23,8 @@ const upload = multer({
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
-// POST /api/upload
-router.post('/upload', requireAuth, upload.single('foto'), async (req, res) => {
+// POST /api/upload (Tornamos público para permitir upload durante o cadastro)
+router.post('/upload', upload.single('foto'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
   }
