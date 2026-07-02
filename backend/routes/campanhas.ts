@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { prisma } from '../prismaClient';
 import { requireAuth, requireSuperAdmin, wrap, gerarSlug } from '../middlewares';
 

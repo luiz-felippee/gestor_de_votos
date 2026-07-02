@@ -14,7 +14,7 @@ import './config'; // Deve ser a primeira coisa a rodar!
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import compression from 'compression';
 import path from 'path';
 import fs from 'fs';

@@ -98,7 +98,7 @@ mfaRouter.post(
     if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
     // Exige a senha atual para garantir que não foi um computador deixado aberto
-    const bcrypt = require('bcryptjs');
+    const bcrypt = require('bcrypt');
     const isMatch = await bcrypt.compare(senha, usuario.senha_hash);
     
     if (!isMatch) {
