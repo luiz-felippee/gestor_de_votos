@@ -255,13 +255,35 @@ export function CadastroPage() {
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             {sucesso ? 'Cadastro realizado!' : (campanha?.nome ? `Apoio: ${campanha.nome}` : 'Apoio à Campanha')}
           </h1>
-          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
-            {sucesso
-              ? 'Os dados foram registrados com sucesso.'
-              : nomeCaboDoLink
-                ? `Indicação de ${nomeCaboDoLink}`
+          
+          {caboEncontrado && !sucesso ? (
+            <div className="mt-4 flex items-center gap-3 rounded-xl bg-slate-50 p-3 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50">
+              {caboEncontrado.foto_url ? (
+                <img 
+                  src={caboEncontrado.foto_url.startsWith('http') ? caboEncontrado.foto_url : `${api.base}${caboEncontrado.foto_url}`} 
+                  alt={caboEncontrado.nome} 
+                  className="h-12 w-12 rounded-full object-cover shadow-sm ring-2 ring-white dark:ring-slate-800" 
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(caboEncontrado.nome)}&background=random`;
+                  }}
+                />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 text-lg font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-800">
+                  {caboEncontrado.nome.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Indicado por liderança</p>
+                <p className="font-bold text-slate-800 dark:text-slate-100">{caboEncontrado.nome}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+              {sucesso
+                ? 'Os dados foram registrados com sucesso.'
                 : 'Preencha seus dados para fazer parte do projeto.'}
-          </p>
+            </p>
+          )}
         </div>
 
         {sucesso ? (
