@@ -35,7 +35,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 pt-safe">
+      <header className="shrink-0 sticky top-0 z-50 w-full border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 pt-safe">
         {/* Banner Offline */}
         {(!online || pendentes > 0) && (
           <div className={`px-4 py-2 text-xs font-bold flex items-center justify-center gap-2 transition-colors ${!online ? 'bg-amber-500 text-white' : 'bg-brand-500 text-white'}`}>

@@ -77,10 +77,10 @@ function AppContent() {
   }, [usuario])
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex h-[100dvh] flex-col overflow-hidden">
       <Header />
       <Breadcrumbs />
-      <main className="flex-1">
+      <main className="flex-1 overflow-y-auto">
         <ErrorBoundary>
           <Suspense fallback={<CarregandoPagina />}>
             <Routes>
