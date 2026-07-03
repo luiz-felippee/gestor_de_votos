@@ -52,9 +52,23 @@ const CORS_LIST = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean);
-const CORS_ORIGIN: '*' | string[] = CORS_LIST.includes('*') ? '*' : CORS_LIST;
 
-app.use(cors({ origin: CORS_ORIGIN }));
+// Libera: itens do CORS_ORIGIN, qualquer subdomínio *.vercel.app / *.netlify.app
+// (produção + previews) e requisições sem origin (curl/health/apps nativos).
+function corsOrigin(
+  origin: string | undefined,
+  cb: (err: Error | null, allow?: boolean) => void,
+) {
+  if (!origin) return cb(null, true);
+  if (CORS_LIST.includes('*') || CORS_LIST.includes(origin)) return cb(null, true);
+  try {
+    const host = new URL(origin).hostname;
+    if (host.endsWith('.vercel.app') || host.endsWith('.netlify.app')) return cb(null, true);
+  } catch { /* origin inválida → bloqueia abaixo */ }
+  return cb(new Error('Origem não permitida pelo CORS.'));
+}
+
+app.use(cors({ origin: corsOrigin }));
 
 // Servir os arquivos de upload estaticamente
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -88,7 +102,7 @@ app.use('/uploads', express.static(uploadsDir));
 import { cache } from './lib/cache';
 
 // --- Tempo real (Socket.io) ---
-const io = new SocketServer(httpServer, { cors: { origin: CORS_ORIGIN } });
+const io = new SocketServer(httpServer, { cors: { origin: corsOrigin } });
 export function notificarMudanca(campanhaId?: string | null) {
   if (campanhaId) {
     cache.invalidateByPrefix(campanhaId);
