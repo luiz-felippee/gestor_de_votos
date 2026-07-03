@@ -28,6 +28,7 @@ export function WhatsAppPage() {
     return new Set()
   })
   const [pagina, setPagina] = useState(1)
+  const [plataforma, setPlataforma] = useState<'padrao' | 'web'>('padrao')
 
   useEffect(() => {
     localStorage.setItem('whatsapp_enviados', JSON.stringify(Array.from(enviados)))
@@ -121,7 +122,9 @@ export function WhatsAppPage() {
       ? apenasDigitos 
       : `55${apenasDigitos}`
       
-    const url = `https://wa.me/${numeroFinal}?text=${encodeURIComponent(msgFinal)}`
+    const url = plataforma === 'web'
+      ? `https://web.whatsapp.com/send?phone=${numeroFinal}&text=${encodeURIComponent(msgFinal)}`
+      : `https://wa.me/${numeroFinal}?text=${encodeURIComponent(msgFinal)}`
     
     // Abre a aba do whatsapp
     window.open(url, '_blank')
@@ -311,16 +314,48 @@ export function WhatsAppPage() {
             </div>
           </div>
           
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-            Use <strong className="text-brand-600 dark:text-brand-400">{`{nome}`}</strong>, <strong className="text-brand-600 dark:text-brand-400">{`{nomeCompleto}`}</strong> ou <strong className="text-brand-600 dark:text-brand-400">{`{telefone}`}</strong> para personalizar.
-          </p>
-          <textarea
-            value={mensagem}
-            onChange={(e) => setMensagem(e.target.value)}
-            rows={5}
-            className="w-full rounded-xl border border-slate-300 bg-white p-3 text-base sm:text-sm font-medium outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 placeholder:text-slate-400 resize-none"
-            placeholder="Digite a mensagem..."
-          />
+          <div className="flex flex-col gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-1">Inserir:</span>
+              <button onClick={() => setMensagem(m => m + '{nome}')} className="px-2 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-md text-xs font-bold transition dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50">Nome Curto</button>
+              <button onClick={() => setMensagem(m => m + '{nomeCompleto}')} className="px-2 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-md text-xs font-bold transition dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50">Nome Completo</button>
+              <button onClick={() => setMensagem(m => m + '{telefone}')} className="px-2 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-md text-xs font-bold transition dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50">Telefone</button>
+            </div>
+            
+            <textarea
+              value={mensagem}
+              onChange={(e) => setMensagem(e.target.value)}
+              rows={5}
+              className="w-full rounded-xl border border-slate-300 bg-white p-3 text-base sm:text-sm font-medium outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 placeholder:text-slate-400 resize-none"
+              placeholder="Digite a mensagem..."
+            />
+            
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Plataforma:</span>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="plataforma" 
+                  value="padrao" 
+                  checked={plataforma === 'padrao'} 
+                  onChange={() => setPlataforma('padrao')}
+                  className="text-brand-600 focus:ring-brand-500" 
+                />
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Padrão (App/Celular)</span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input 
+                  type="radio" 
+                  name="plataforma" 
+                  value="web" 
+                  checked={plataforma === 'web'} 
+                  onChange={() => setPlataforma('web')}
+                  className="text-brand-600 focus:ring-brand-500" 
+                />
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">WhatsApp Web</span>
+              </label>
+            </div>
+          </div>
         </div>
 
         {/* Fila de Envios */}

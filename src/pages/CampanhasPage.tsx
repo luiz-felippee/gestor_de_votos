@@ -139,12 +139,27 @@ export function CampanhasPage() {
           </div>
           <div className="flex-1">
             <Campo label="Foto do Candidato">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setArquivoFoto(e.target.files?.[0] || null)}
-                className="w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:text-slate-400 dark:file:bg-brand-900/30 dark:file:text-brand-400"
-              />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <input
+                  key={arquivoFoto ? arquivoFoto.name : (form.foto_url || 'empty')}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setArquivoFoto(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:text-slate-400 dark:file:bg-brand-900/30 dark:file:text-brand-400"
+                />
+                {(arquivoFoto || form.foto_url) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setArquivoFoto(null)
+                      if (form.foto_url) set('foto_url', '')
+                    }}
+                    className="text-sm font-bold text-red-500 hover:text-red-700 transition-colors whitespace-nowrap"
+                  >
+                    Excluir foto
+                  </button>
+                )}
+              </div>
             </Campo>
           </div>
         </div>

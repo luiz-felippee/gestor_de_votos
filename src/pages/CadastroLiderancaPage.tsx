@@ -223,13 +223,28 @@ export function CadastroLiderancaPage() {
             {/* Seção: dados pessoais */}
             <Secao titulo="Seus Dados">
               <Campo label="Sua Foto" obrigatorio error={errosCampos.foto}>
-                <input
-                  id="campo-foto"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setArquivoFoto(e.target.files?.[0] || null)}
-                  className={`w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-sm file:font-bold file:text-teal-700 hover:file:bg-teal-100 dark:text-slate-400 dark:file:bg-teal-900/30 dark:file:text-teal-400`}
-                />
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <input
+                    key={arquivoFoto ? arquivoFoto.name : 'empty'}
+                    id="campo-foto"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      setArquivoFoto(e.target.files?.[0] || null)
+                      setErrosCampos(prev => ({ ...prev, foto: '' }))
+                    }}
+                    className={`w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-sm file:font-bold file:text-teal-700 hover:file:bg-teal-100 dark:text-slate-400 dark:file:bg-teal-900/30 dark:file:text-teal-400`}
+                  />
+                  {arquivoFoto && (
+                    <button
+                      type="button"
+                      onClick={() => setArquivoFoto(null)}
+                      className="text-sm font-bold text-red-500 hover:text-red-700 transition-colors whitespace-nowrap"
+                    >
+                      Excluir foto
+                    </button>
+                  )}
+                </div>
               </Campo>
               <Campo label="Nome completo" obrigatorio error={errosCampos.nome}>
                 <input

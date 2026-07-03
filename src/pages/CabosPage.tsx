@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
-import { Copy, Link as LinkIcon, CheckCircle2 } from 'lucide-react'
+import { Copy, Link as LinkIcon, CheckCircle2, MessageCircle } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { useCabos } from '../hooks/useCabos'
@@ -202,12 +202,27 @@ export function CabosPage() {
           </div>
           <div className="flex-1">
             <Campo label="Foto da Liderança (Obrigatório)">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setArquivoFoto(e.target.files?.[0] || null)}
-                className="w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:text-slate-400 dark:file:bg-brand-900/30 dark:file:text-brand-400"
-              />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <input
+                  key={arquivoFoto ? arquivoFoto.name : (form.foto_url || 'empty')}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setArquivoFoto(e.target.files?.[0] || null)}
+                  className="w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:text-slate-400 dark:file:bg-brand-900/30 dark:file:text-brand-400"
+                />
+                {(arquivoFoto || form.foto_url) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setArquivoFoto(null)
+                      if (form.foto_url) atualizar('foto_url', '')
+                    }}
+                    className="text-sm font-bold text-red-500 hover:text-red-700 transition-colors whitespace-nowrap"
+                  >
+                    Excluir foto
+                  </button>
+                )}
+              </div>
               <p className="mt-1 text-xs text-slate-400">Envie uma foto clara do rosto (JPG ou PNG).</p>
             </Campo>
           </div>
@@ -425,13 +440,6 @@ function CardCabo({
   const pct = meta > 0 ? Math.min(100, Math.round((realizado / meta) * 100)) : 0
   const qrId = `qr-${cabo.id}`
 
-  const iniciais = cabo.nome
-    .split(' ')
-    .slice(0, 2)
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-
   async function copiar() {
     const mensagem = `Faça seu cadastro com a liderança *${cabo.nome}* para apoiar *${usuario?.campanha_nome || 'nossa campanha'}*!\n\nAcesse o link:\n${link}`
     try {
@@ -459,20 +467,14 @@ function CardCabo({
           <div className="flex items-center gap-3.5">
             {/* Avatar & Ranking */}
             <div className="relative">
-              {cabo.foto_url ? (
-                <img 
-                  src={cabo.foto_url.startsWith('http') ? cabo.foto_url : `${api.base}${cabo.foto_url}`} 
-                  alt={cabo.nome} 
-                  className="h-11 w-11 shrink-0 rounded-full object-cover shadow-inner ring-2 ring-white dark:ring-slate-800" 
-                  onError={(e) => {
-                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`;
-                  }}
-                />
-              ) : (
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 text-sm font-bold text-white shadow-inner">
-                  {iniciais}
-                </div>
-              )}
+              <img 
+                src={cabo.foto_url ? (cabo.foto_url.startsWith('http') ? cabo.foto_url : `${api.base}${cabo.foto_url}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`}
+                alt={cabo.nome} 
+                className="h-11 w-11 shrink-0 rounded-full object-cover shadow-inner ring-2 ring-white dark:ring-slate-800" 
+                onError={(e) => {
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`;
+                }}
+              />
               {posicaoRanking !== undefined && (
                 <div className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white shadow-sm text-[10px] font-black ${
                   posicaoRanking === 1 ? 'bg-yellow-400 text-yellow-900' :
@@ -495,11 +497,20 @@ function CardCabo({
                 )}
               </h3>
               <div className="mt-0.5 flex items-center gap-3 text-xs font-medium text-slate-500 dark:text-slate-400">
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 group/phone">
                   <svg className="h-3.5 w-3.5 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                   {cabo.telefone}
+                  <a 
+                    href={`https://wa.me/55${cabo.telefone.replace(/\D/g, '')}`} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    title="Conversar no WhatsApp"
+                    className="text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300 opacity-0 group-hover/phone:opacity-100 transition-opacity ml-1"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                  </a>
                 </span>
               </div>
             </div>

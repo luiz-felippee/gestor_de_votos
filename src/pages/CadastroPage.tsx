@@ -101,7 +101,6 @@ export function CadastroPage() {
     }
   }, [caboEncontrado])
 
-  const nomeCaboDoLink = caboEncontrado?.nome || null
   const caboTravado = Boolean(caboEncontrado)
 
   function atualizar<K extends keyof FormState>(campo: K, valor: FormState[K]) {
@@ -258,20 +257,14 @@ export function CadastroPage() {
           
           {caboEncontrado && !sucesso ? (
             <div className="mt-4 flex items-center gap-3 rounded-xl bg-slate-50 p-3 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50">
-              {caboEncontrado.foto_url ? (
-                <img 
-                  src={caboEncontrado.foto_url.startsWith('http') ? caboEncontrado.foto_url : `${api.base}${caboEncontrado.foto_url}`} 
-                  alt={caboEncontrado.nome} 
-                  className="h-12 w-12 rounded-full object-cover shadow-sm ring-2 ring-white dark:ring-slate-800" 
-                  onError={(e) => {
-                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(caboEncontrado.nome)}&background=random`;
-                  }}
-                />
-              ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 text-lg font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-800">
-                  {caboEncontrado.nome.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <img 
+                src={caboEncontrado.foto_url ? (caboEncontrado.foto_url.startsWith('http') ? caboEncontrado.foto_url : `${api.base}${caboEncontrado.foto_url}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(caboEncontrado.nome)}&background=random`} 
+                alt={caboEncontrado.nome} 
+                className="h-12 w-12 rounded-full object-cover shadow-sm ring-2 ring-white dark:ring-slate-800" 
+                onError={(e) => {
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(caboEncontrado.nome)}&background=random`;
+                }}
+              />
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Indicado por liderança</p>
                 <p className="font-bold text-slate-800 dark:text-slate-100">{caboEncontrado.nome}</p>

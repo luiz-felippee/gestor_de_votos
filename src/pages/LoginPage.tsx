@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { AlertCircle, Eye, EyeOff } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 import { Logo } from '../components/Logo'
 import { prewarmBackend } from '../lib/api'
 
@@ -26,8 +26,7 @@ export function LoginPage() {
   const [pendingUserId, setPendingUserId] = useState<string | null>(null)
   const [token2fa, setToken2fa] = useState('')
 
-  // Pré-aquece o backend assim que a tela abre: enquanto o usuário digita
-  // e-mail/senha, o Render (free) já está acordando, evitando o cold start no "Entrar".
+  // Pré-aquece o backend
   useEffect(() => {
     prewarmBackend()
   }, [])
@@ -91,7 +90,6 @@ export function LoginPage() {
     setLoading(false)
   }
 
-  // Inicializa o botão "Entrar com Google" (Google Identity Services).
   useEffect(() => {
     if (!googleClientId) return
     let cancelado = false
@@ -99,7 +97,7 @@ export function LoginPage() {
       if (cancelado) return
       const g = (window as unknown as { google?: any }).google
       if (!g?.accounts?.id || !googleBtnRef.current) {
-        setTimeout(tryInit, 200) // GSI ainda carregando
+        setTimeout(tryInit, 200)
         return
       }
       g.accounts.id.initialize({
@@ -122,7 +120,7 @@ export function LoginPage() {
         theme: 'outline',
         size: 'large',
         text: 'continue_with',
-        shape: 'pill',
+        shape: 'rectangular',
         width: 320,
       })
     }
@@ -130,149 +128,171 @@ export function LoginPage() {
     return () => {
       cancelado = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleClientId])
 
   return (
-    <div className="fixed inset-0 flex bg-slate-50 dark:bg-slate-900 lg:bg-transparent items-center justify-center lg:items-stretch lg:justify-start overflow-hidden">
-      {/* Lado Esquerdo - Branding (Visível apenas em telas grandes) */}
-      <div className="relative hidden w-0 flex-1 lg:block bg-slate-900">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand-900 via-slate-900 to-indigo-950 opacity-90" />
-        {/* Padrão decorativo */}
-        <svg className="absolute inset-0 h-full w-full opacity-10" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <pattern id="grid-pattern" width="32" height="32" patternUnits="userSpaceOnUse">
-              <path d="M0 32V.5H32" fill="none" stroke="currentColor" strokeOpacity="0.2"></path>
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid-pattern)"></rect>
-        </svg>
-
-        {/* Logo fixo no topo */}
-        <div className="absolute top-12 left-12 lg:top-20 lg:left-20 flex items-center gap-3 animate-fade-in">
-          <Logo className="h-12 w-auto" iconClassName="h-12 w-12" />
-          <span className="text-2xl font-bold tracking-tight text-white">Gestor de Votos</span>
+    <div className="fixed inset-0 flex bg-white dark:bg-slate-950 font-sans selection:bg-brand-500/30">
+      
+      {/* Esquerda - Branding (Mesh Gradient e Tipografia Polida) */}
+      <div className="relative hidden w-full lg:flex lg:w-1/2 flex-col justify-between overflow-hidden bg-slate-950 px-12 py-16 xl:px-20 xl:py-20">
+        {/* Mesh Gradient Background */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-brand-600/30 blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-[0%] -right-[10%] w-[60%] h-[60%] rounded-full bg-indigo-600/20 blur-[100px] mix-blend-screen animate-pulse" style={{ animationDuration: '12s', animationDelay: '2s' }} />
+          <div className="absolute top-[40%] left-[20%] w-[50%] h-[50%] rounded-full bg-emerald-500/10 blur-[100px] mix-blend-screen" />
+          {/* Subtle noise texture over gradient */}
+          <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJhIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC42NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIvPjwvc3ZnPg==')]" />
         </div>
 
-        {/* Texto principal — subido para o centro com animação de entrada escalonada */}
-        <div className="absolute inset-0 flex flex-col justify-center p-12 lg:p-20">
-          <div className="max-w-xl">
-            <h1
-              className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl mb-6 leading-tight animate-slide-up"
-              style={{ animationDelay: '120ms', animationFillMode: 'both' }}
-            >
-              A inteligência por trás de campanhas vitoriosas.
-            </h1>
-            <p
-              className="text-lg text-slate-300 font-medium animate-slide-up"
-              style={{ animationDelay: '300ms', animationFillMode: 'both' }}
-            >
-              Gestor de Votos é a plataforma completa para gerenciamento de lideranças, eleitores e da sua base eleitoral.
-            </p>
+        {/* Top Logo */}
+        <div className="relative z-10 flex items-center gap-3">
+          <Logo className="h-10 w-auto text-white" iconClassName="h-10 w-10 text-brand-400" />
+          <span className="text-xl font-bold tracking-tight text-white">Gestor de Votos</span>
+        </div>
+
+        {/* Center Content */}
+        <div className="relative z-10 max-w-lg mt-20">
+          <h1 className="text-5xl xl:text-6xl font-extrabold tracking-tight text-white leading-[1.1] mb-6">
+            Eleve sua <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-indigo-400">Campanha</span> ao próximo nível.
+          </h1>
+          <p className="text-lg text-slate-400 font-medium leading-relaxed">
+            A plataforma definitiva para líderes políticos. Mapeie lideranças, engaje eleitores e acompanhe metas em tempo real com inteligência de dados.
+          </p>
+        </div>
+
+        {/* Bottom Features */}
+        <div className="relative z-10 grid grid-cols-2 gap-8 pt-20">
+          <div className="flex flex-col gap-2">
+             <CheckCircle2 className="h-6 w-6 text-brand-400" />
+             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Gestão Descentralizada</h3>
+             <p className="text-sm text-slate-400">Distribua metas e acompanhe o desempenho de cada liderança.</p>
+          </div>
+          <div className="flex flex-col gap-2">
+             <CheckCircle2 className="h-6 w-6 text-indigo-400" />
+             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Mapas Inteligentes</h3>
+             <p className="text-sm text-slate-400">Visualize a distribuição dos seus votos de forma geográfica.</p>
           </div>
         </div>
       </div>
 
-      {/* Lado Direito - Formulário */}
-      <div className="flex flex-1 flex-col items-center justify-center w-full p-4 sm:p-6 lg:flex-none lg:w-[480px] xl:w-[560px] lg:px-8 bg-transparent lg:bg-white lg:dark:bg-slate-950">
-        <div className="mx-auto w-full max-w-[400px] lg:w-[380px] bg-white dark:bg-slate-950 lg:bg-transparent lg:dark:bg-transparent p-6 sm:p-8 lg:p-0 rounded-3xl shadow-xl lg:shadow-none border border-slate-200 dark:border-slate-800 lg:border-transparent lg:dark:border-transparent">
-          <div className="text-center lg:text-left mb-6 lg:mb-10">
+      {/* Direita - Formulário minimalista */}
+      <div className="flex w-full lg:w-1/2 items-center justify-center p-6 sm:p-12 relative">
+        <div className="w-full max-w-[420px]">
+          
+          {/* Logo Mobile */}
+          <div className="flex lg:hidden items-center justify-center gap-3 mb-12">
+            <Logo className="h-10 w-auto" iconClassName="h-10 w-10 text-brand-600 dark:text-brand-500" />
+            <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Gestor de Votos</span>
+          </div>
+
+          <div className="mb-10 text-center lg:text-left">
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              {step === 'login' ? 'Bem-vindo de volta' : 'Autenticação em Duas Etapas'}
+              {step === 'login' ? 'Acesse sua conta' : 'Verificação de Segurança'}
             </h2>
-            <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 font-medium">
               {step === 'login' 
-                ? 'Faça login para acessar o painel de controle da campanha.'
+                ? 'Insira suas credenciais para entrar na plataforma.'
                 : 'Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.'}
             </p>
           </div>
 
           {step === 'login' ? (
-            <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                E-mail
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={inputClass}
-                autoComplete="email"
-                placeholder="seu@email.com"
-              />
-            </div>
+            <form onSubmit={handleLogin} className="space-y-6">
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 ml-1">
+                    E-mail
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={inputClass}
+                    autoComplete="email"
+                    placeholder="voce@exemplo.com"
+                  />
+                </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">
-                  Senha
-                </label>
-                <Link to="/esqueci-senha" className="text-sm font-medium text-brand-600 hover:text-brand-500 dark:text-brand-400">
-                  Esqueci minha senha
-                </Link>
+                <div>
+                  <div className="flex items-center justify-between mb-2 ml-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      Senha
+                    </label>
+                    <Link to="/esqueci-senha" className="text-xs font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">
+                      Esqueci a senha
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={mostrarSenha ? "text" : "password"}
+                      value={senha}
+                      onChange={(e) => setSenha(e.target.value)}
+                      className={`${inputClass} pr-12`}
+                      autoComplete="current-password"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMostrarSenha(!mostrarSenha)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                      tabIndex={-1}
+                    >
+                      {mostrarSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="relative">
-                <input
-                  type={mostrarSenha ? "text" : "password"}
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  className={`${inputClass} pr-10`}
-                  autoComplete="current-password"
-                  placeholder="••••••••"
-                />
+
+              {erro && (
+                <div className="rounded-xl bg-red-50 p-4 border border-red-100 flex items-start gap-3 dark:bg-red-500/10 dark:border-red-500/20 animate-in fade-in slide-in-from-bottom-2">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm font-medium text-red-800 dark:text-red-400">{erro}</p>
+                </div>
+              )}
+
+              {msgSucesso && (
+                <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-100 flex items-start gap-3 dark:bg-emerald-500/10 dark:border-emerald-500/20 animate-in fade-in slide-in-from-bottom-2">
+                  <p className="text-sm font-medium text-emerald-800 dark:text-emerald-400">{msgSucesso}</p>
+                </div>
+              )}
+
+              <div className="pt-2 flex flex-col gap-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={btnPrimaryClass}
+                >
+                  {loading ? 'Entrando...' : 'Entrar na Plataforma'}
+                </button>
+                
                 <button
                   type="button"
-                  onClick={() => setMostrarSenha(!mostrarSenha)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                  tabIndex={-1}
+                  onClick={handleSignup}
+                  disabled={loading}
+                  className={btnSecondaryClass}
                 >
-                  {mostrarSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  Criar Nova Conta
                 </button>
               </div>
-            </div>
 
-            {erro && (
-              <div className="rounded-lg bg-red-50 p-3 border border-red-100 flex items-start gap-3 dark:bg-red-500/10 dark:border-red-500/20">
-                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm font-medium text-red-800 dark:text-red-400">{erro}</p>
-              </div>
-            )}
-
-            {msgSucesso && (
-              <div className="rounded-lg bg-emerald-50 p-3 border border-emerald-100 flex items-start gap-3 dark:bg-emerald-500/10 dark:border-emerald-500/20">
-                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-400">{msgSucesso}</p>
-              </div>
-            )}
-
-            <div className="pt-2 flex flex-col gap-3">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex w-full justify-center rounded-xl bg-brand-600 px-4 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-70 dark:focus:ring-offset-slate-950"
-              >
-                {loading ? 'Entrando...' : 'Entrar na Plataforma'}
-              </button>
-              <button
-                type="button"
-                onClick={handleSignup}
-                disabled={loading}
-                className="w-full justify-center rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-70 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80"
-              >
-                Criar Nova Conta
-              </button>
-            </div>
-
-            {googleClientId && (
-              <div className="mt-4 flex justify-center">
-                <div ref={googleBtnRef} />
-              </div>
-            )}
-          </form>
+              {googleClientId && (
+                <>
+                  <div className="relative flex items-center py-2">
+                    <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+                    <span className="flex-shrink-0 mx-4 text-xs font-bold uppercase tracking-wider text-slate-400">OU</span>
+                    <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+                  </div>
+                  <div className="flex justify-center w-full">
+                    <div ref={googleBtnRef} className="w-full flex justify-center [&>div]:w-full" />
+                  </div>
+                </>
+              )}
+            </form>
           ) : (
-            <form onSubmit={handle2FASubmit} className="space-y-5 animate-fade-in">
+            <form onSubmit={handle2FASubmit} className="space-y-6 animate-in fade-in slide-in-from-right-4">
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 ml-1">
                   Código de Autenticação (6 dígitos)
                 </label>
                 <input
@@ -282,7 +302,7 @@ export function LoginPage() {
                   maxLength={6}
                   value={token2fa}
                   onChange={(e) => setToken2fa(e.target.value.replace(/\D/g, ''))}
-                  className={`${inputClass} text-center text-2xl tracking-[0.5em] font-mono py-4`}
+                  className={`${inputClass} text-center text-3xl tracking-[0.3em] font-mono py-5 shadow-inner bg-slate-50 dark:bg-slate-900/50`}
                   autoComplete="one-time-code"
                   placeholder="000000"
                   autoFocus
@@ -290,17 +310,17 @@ export function LoginPage() {
               </div>
 
               {erro && (
-                <div className="rounded-lg bg-red-50 p-3 border border-red-100 flex items-start gap-3 dark:bg-red-500/10 dark:border-red-500/20">
+                <div className="rounded-xl bg-red-50 p-4 border border-red-100 flex items-start gap-3 dark:bg-red-500/10 dark:border-red-500/20">
                   <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
                   <p className="text-sm font-medium text-red-800 dark:text-red-400">{erro}</p>
                 </div>
               )}
 
-              <div className="pt-2 flex flex-col gap-3">
+              <div className="pt-2 flex flex-col gap-4">
                 <button
                   type="submit"
                   disabled={loading || token2fa.length < 6}
-                  className="flex w-full justify-center rounded-xl bg-brand-600 px-4 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-70 dark:focus:ring-offset-slate-950"
+                  className={btnPrimaryClass}
                 >
                   {loading ? 'Verificando...' : 'Verificar e Entrar'}
                 </button>
@@ -312,7 +332,7 @@ export function LoginPage() {
                     setToken2fa('')
                     setErro(null)
                   }}
-                  className="w-full justify-center rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80"
+                  className={btnSecondaryClass}
                 >
                   Voltar
                 </button>
@@ -325,5 +345,12 @@ export function LoginPage() {
   )
 }
 
+// Estilos premium extraídos para manter o código limpo
 const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base sm:text-sm font-medium outline-none transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-brand-500/40'
+  'w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3.5 text-base sm:text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-[3px] focus:ring-brand-500/20 dark:border-slate-800 dark:bg-slate-900/30 dark:text-white dark:focus:bg-slate-900'
+
+const btnPrimaryClass =
+  'flex w-full justify-center items-center rounded-xl bg-slate-900 dark:bg-brand-600 px-4 py-4 text-sm font-bold text-white shadow-lg shadow-slate-900/20 dark:shadow-brand-500/20 transition-all hover:scale-[1.01] hover:shadow-slate-900/30 dark:hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-95 disabled:opacity-70 dark:focus:ring-offset-slate-950'
+
+const btnSecondaryClass =
+  'w-full justify-center rounded-xl border-2 border-slate-200 bg-transparent px-4 py-3.5 text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 disabled:opacity-70 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/50'

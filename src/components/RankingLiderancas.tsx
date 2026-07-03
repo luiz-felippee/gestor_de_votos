@@ -57,20 +57,14 @@ export function RankingLiderancas({ ranking }: Props) {
 
               {/* Foto do Cabo */}
               <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-white shadow-sm dark:border-slate-700">
-                {cabo.foto_url ? (
-                  <img 
-                    src={cabo.foto_url.startsWith('http') ? cabo.foto_url : `${api.base}${cabo.foto_url}`} 
-                    alt={cabo.nome} 
-                    className="h-full w-full object-cover" 
-                    onError={(e) => {
-                      e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`;
-                    }}
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-brand-100 text-brand-600 dark:bg-brand-900 dark:text-brand-300">
-                    <span className="font-bold">{cabo.nome.charAt(0)}</span>
-                  </div>
-                )}
+                <img 
+                  src={cabo.foto_url ? (cabo.foto_url.startsWith('http') ? cabo.foto_url : `${api.base}${cabo.foto_url}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`} 
+                  alt={cabo.nome} 
+                  className="h-full w-full object-cover" 
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`;
+                  }}
+                />
               </div>
 
               {/* Nome e Barra de Progresso */}
