@@ -131,170 +131,160 @@ export function LoginPage() {
   }, [googleClientId])
 
   return (
-    <div className="fixed inset-0 flex bg-white dark:bg-slate-950 font-sans selection:bg-brand-500/30">
-      
-      {/* Esquerda - Branding (Mesh Gradient e Tipografia Polida) */}
-      <div className="relative hidden w-full lg:flex lg:w-1/2 flex-col justify-between overflow-hidden bg-slate-950 px-12 py-16 xl:px-20 xl:py-20">
-        {/* Mesh Gradient Background */}
-        <div className="absolute inset-0 z-0">
-          <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-brand-600/30 blur-[120px] mix-blend-screen animate-pulse" style={{ animationDuration: '8s' }} />
-          <div className="absolute bottom-[0%] -right-[10%] w-[60%] h-[60%] rounded-full bg-indigo-600/20 blur-[100px] mix-blend-screen animate-pulse" style={{ animationDuration: '12s', animationDelay: '2s' }} />
-          <div className="absolute top-[40%] left-[20%] w-[50%] h-[50%] rounded-full bg-emerald-500/10 blur-[100px] mix-blend-screen" />
-          {/* Subtle noise texture over gradient */}
-          <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay bg-[url('data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjAwIDIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJhIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC42NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIvPjwvc3ZnPg==')]" />
+    <div className="fixed inset-0 z-50 grid overflow-y-auto bg-white dark:bg-slate-950 font-sans lg:grid-cols-2">
+
+      {/* Esquerda — Painel de marca (desktop) */}
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-12 xl:p-16 lg:flex">
+        {/* Acentos de gradiente sutis */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-brand-600/25 blur-3xl" />
+          <div className="absolute -bottom-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-indigo-600/20 blur-3xl" />
+          <div className="absolute inset-0 opacity-[0.04] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:26px_26px]" />
         </div>
 
-        {/* Top Logo */}
+        {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <Logo className="h-10 w-auto text-white" iconClassName="h-10 w-10 text-brand-400" />
-          <span className="text-xl font-bold tracking-tight text-white">Gestor de Votos</span>
+          <Logo iconClassName="h-10 w-10" />
+          <span className="text-lg font-bold tracking-tight text-white">Gestor de Votos</span>
         </div>
 
-        {/* Center Content */}
-        <div className="relative z-10 max-w-lg mt-20">
-          <h1 className="text-5xl xl:text-6xl font-extrabold tracking-tight text-white leading-[1.1] mb-6">
-            Eleve sua <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-indigo-400">Campanha</span> ao próximo nível.
+        {/* Conteúdo central */}
+        <div className="relative z-10 max-w-md">
+          <h1 className="text-4xl font-extrabold leading-[1.12] tracking-tight text-white xl:text-5xl">
+            A inteligência por trás de{' '}
+            <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
+              campanhas vitoriosas
+            </span>.
           </h1>
-          <p className="text-lg text-slate-400 font-medium leading-relaxed">
-            A plataforma definitiva para líderes políticos. Mapeie lideranças, engaje eleitores e acompanhe metas em tempo real com inteligência de dados.
+          <p className="mt-5 text-base leading-relaxed text-slate-400">
+            Mapeie lideranças, engaje eleitores e acompanhe metas em tempo real — tudo em uma única plataforma.
           </p>
+
+          <ul className="mt-10 space-y-5">
+            {[
+              ['Gestão descentralizada', 'Distribua metas e acompanhe o desempenho de cada liderança.'],
+              ['Mapas inteligentes', 'Visualize a distribuição dos seus votos de forma geográfica.'],
+              ['Dados em tempo real', 'Decisões rápidas com o painel sempre atualizado.'],
+            ].map(([titulo, desc]) => (
+              <li key={titulo} className="flex items-start gap-3.5">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-400" />
+                <div>
+                  <p className="text-sm font-semibold text-white">{titulo}</p>
+                  <p className="text-sm text-slate-400">{desc}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Bottom Features */}
-        <div className="relative z-10 grid grid-cols-2 gap-8 pt-20">
-          <div className="flex flex-col gap-2">
-             <CheckCircle2 className="h-6 w-6 text-brand-400" />
-             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Gestão Descentralizada</h3>
-             <p className="text-sm text-slate-400">Distribua metas e acompanhe o desempenho de cada liderança.</p>
-          </div>
-          <div className="flex flex-col gap-2">
-             <CheckCircle2 className="h-6 w-6 text-indigo-400" />
-             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Mapas Inteligentes</h3>
-             <p className="text-sm text-slate-400">Visualize a distribuição dos seus votos de forma geográfica.</p>
-          </div>
-        </div>
+        {/* Rodapé */}
+        <p className="relative z-10 text-xs text-slate-500">
+          © {new Date().getFullYear()} Gestor de Votos · Conexão segura e dados criptografados
+        </p>
       </div>
 
-      {/* Direita - Formulário minimalista */}
-      <div className="flex w-full lg:w-1/2 items-center justify-center p-6 sm:p-12 relative">
-        <div className="w-full max-w-[420px]">
-          
-          {/* Logo Mobile */}
-          <div className="flex lg:hidden items-center justify-center gap-3 mb-12">
-            <Logo className="h-10 w-auto" iconClassName="h-10 w-10 text-brand-600 dark:text-brand-500" />
-            <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Gestor de Votos</span>
+      {/* Direita — Formulário */}
+      <div className="flex items-center justify-center px-6 py-10 sm:px-10">
+        <div className="w-full max-w-md">
+
+          {/* Logo (mobile) */}
+          <div className="mb-10 flex items-center gap-3 lg:hidden">
+            <Logo iconClassName="h-10 w-10" />
+            <span className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Gestor de Votos</span>
           </div>
 
-          <div className="mb-10 text-center lg:text-left">
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              {step === 'login' ? 'Acesse sua conta' : 'Verificação de Segurança'}
+          <div className="mb-8">
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+              {step === 'login' ? 'Acesse sua conta' : 'Verificação de segurança'}
             </h2>
-            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400 font-medium">
-              {step === 'login' 
+            <p className="mt-2 text-sm font-medium text-slate-500 dark:text-slate-400">
+              {step === 'login'
                 ? 'Insira suas credenciais para entrar na plataforma.'
                 : 'Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.'}
             </p>
           </div>
 
           {step === 'login' ? (
-            <form onSubmit={handleLogin} className="space-y-6">
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 ml-1">
-                    E-mail
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={inputClass}
-                    autoComplete="email"
-                    placeholder="voce@exemplo.com"
-                  />
-                </div>
+            <form onSubmit={handleLogin} className="space-y-5">
 
-                <div>
-                  <div className="flex items-center justify-between mb-2 ml-1">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Senha
-                    </label>
-                    <Link to="/esqueci-senha" className="text-xs font-bold text-brand-600 hover:text-brand-700 dark:text-brand-400 transition-colors">
-                      Esqueci a senha
-                    </Link>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type={mostrarSenha ? "text" : "password"}
-                      value={senha}
-                      onChange={(e) => setSenha(e.target.value)}
-                      className={`${inputClass} pr-12`}
-                      autoComplete="current-password"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setMostrarSenha(!mostrarSenha)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                      tabIndex={-1}
-                    >
-                      {mostrarSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
+              <div>
+                <label className={labelClass}>E-mail</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputClass}
+                  autoComplete="email"
+                  placeholder="voce@exemplo.com"
+                />
+              </div>
+
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className={labelClass + ' mb-0'}>Senha</label>
+                  <Link to="/esqueci-senha" className="text-sm font-semibold text-brand-600 transition-colors hover:text-brand-500 dark:text-brand-400">
+                    Esqueci a senha
+                  </Link>
+                </div>
+                <div className="relative">
+                  <input
+                    type={mostrarSenha ? 'text' : 'password'}
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    className={`${inputClass} pr-12`}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarSenha(!mostrarSenha)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-300"
+                    tabIndex={-1}
+                    aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {mostrarSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
 
               {erro && (
-                <div className="rounded-xl bg-red-50 p-4 border border-red-100 flex items-start gap-3 dark:bg-red-500/10 dark:border-red-500/20 animate-in fade-in slide-in-from-bottom-2">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-lg border border-red-100 bg-red-50 p-3.5 dark:border-red-500/20 dark:bg-red-500/10">
+                  <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-500" />
                   <p className="text-sm font-medium text-red-800 dark:text-red-400">{erro}</p>
                 </div>
               )}
 
               {msgSucesso && (
-                <div className="rounded-xl bg-emerald-50 p-4 border border-emerald-100 flex items-start gap-3 dark:bg-emerald-500/10 dark:border-emerald-500/20 animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex items-start gap-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3.5 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-600 dark:text-emerald-500" />
                   <p className="text-sm font-medium text-emerald-800 dark:text-emerald-400">{msgSucesso}</p>
                 </div>
               )}
 
-              <div className="pt-2 flex flex-col gap-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={btnPrimaryClass}
-                >
-                  {loading ? 'Entrando...' : 'Entrar na Plataforma'}
+              <div className="flex flex-col gap-3 pt-1">
+                <button type="submit" disabled={loading} className={btnPrimaryClass}>
+                  {loading ? 'Entrando...' : 'Entrar na plataforma'}
                 </button>
-                
-                <button
-                  type="button"
-                  onClick={handleSignup}
-                  disabled={loading}
-                  className={btnSecondaryClass}
-                >
-                  Criar Nova Conta
+                <button type="button" onClick={handleSignup} disabled={loading} className={btnSecondaryClass}>
+                  Criar nova conta
                 </button>
               </div>
 
               {googleClientId && (
                 <>
-                  <div className="relative flex items-center py-2">
-                    <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
-                    <span className="flex-shrink-0 mx-4 text-xs font-bold uppercase tracking-wider text-slate-400">OU</span>
-                    <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+                  <div className="flex items-center gap-4 py-1">
+                    <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">ou</span>
+                    <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
                   </div>
-                  <div className="flex justify-center w-full">
-                    <div ref={googleBtnRef} className="w-full flex justify-center [&>div]:w-full" />
-                  </div>
+                  <div ref={googleBtnRef} className="flex w-full justify-center [&>div]:w-full" />
                 </>
               )}
             </form>
           ) : (
-            <form onSubmit={handle2FASubmit} className="space-y-6 animate-in fade-in slide-in-from-right-4">
+            <form onSubmit={handle2FASubmit} className="space-y-5">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2 ml-1">
-                  Código de Autenticação (6 dígitos)
-                </label>
+                <label className={labelClass}>Código de autenticação (6 dígitos)</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -302,7 +292,7 @@ export function LoginPage() {
                   maxLength={6}
                   value={token2fa}
                   onChange={(e) => setToken2fa(e.target.value.replace(/\D/g, ''))}
-                  className={`${inputClass} text-center text-3xl tracking-[0.3em] font-mono py-5 shadow-inner bg-slate-50 dark:bg-slate-900/50`}
+                  className={`${inputClass} py-4 text-center font-mono text-3xl tracking-[0.4em]`}
                   autoComplete="one-time-code"
                   placeholder="000000"
                   autoFocus
@@ -310,19 +300,15 @@ export function LoginPage() {
               </div>
 
               {erro && (
-                <div className="rounded-xl bg-red-50 p-4 border border-red-100 flex items-start gap-3 dark:bg-red-500/10 dark:border-red-500/20">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-lg border border-red-100 bg-red-50 p-3.5 dark:border-red-500/20 dark:bg-red-500/10">
+                  <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-500" />
                   <p className="text-sm font-medium text-red-800 dark:text-red-400">{erro}</p>
                 </div>
               )}
 
-              <div className="pt-2 flex flex-col gap-4">
-                <button
-                  type="submit"
-                  disabled={loading || token2fa.length < 6}
-                  className={btnPrimaryClass}
-                >
-                  {loading ? 'Verificando...' : 'Verificar e Entrar'}
+              <div className="flex flex-col gap-3 pt-1">
+                <button type="submit" disabled={loading || token2fa.length < 6} className={btnPrimaryClass}>
+                  {loading ? 'Verificando...' : 'Verificar e entrar'}
                 </button>
                 <button
                   type="button"
@@ -345,12 +331,15 @@ export function LoginPage() {
   )
 }
 
-// Estilos premium extraídos para manter o código limpo
+// Estilos compartilhados — tema-consciente e consistente entre mobile/desktop.
+const labelClass =
+  'mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300'
+
 const inputClass =
-  'w-full rounded-xl border border-slate-200 bg-white/50 px-4 py-3.5 text-base sm:text-sm font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-[3px] focus:ring-brand-500/20 dark:border-slate-800 dark:bg-slate-900/30 dark:text-white dark:focus:bg-slate-900'
+  'w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-3 text-base font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 sm:text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-900'
 
 const btnPrimaryClass =
-  'flex w-full justify-center items-center rounded-xl bg-slate-900 dark:bg-brand-600 px-4 py-4 text-sm font-bold text-white shadow-lg shadow-slate-900/20 dark:shadow-brand-500/20 transition-all hover:scale-[1.01] hover:shadow-slate-900/30 dark:hover:bg-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-95 disabled:opacity-70 dark:focus:ring-offset-slate-950'
+  'flex w-full items-center justify-center rounded-lg bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-[0.99] disabled:opacity-60 dark:focus:ring-offset-slate-950'
 
 const btnSecondaryClass =
-  'w-full justify-center rounded-xl border-2 border-slate-200 bg-transparent px-4 py-3.5 text-sm font-bold text-slate-700 transition-all hover:bg-slate-50 disabled:opacity-70 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800/50'
+  'w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60'
