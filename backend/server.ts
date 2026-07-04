@@ -16,8 +16,6 @@ import helmet from 'helmet';
 import cors from 'cors';
 import bcrypt from 'bcrypt';
 import compression from 'compression';
-import path from 'path';
-import fs from 'fs';
 import { createServer } from 'node:http';
 import { Server as SocketServer } from 'socket.io';
 import { prisma } from './prismaClient';
@@ -70,9 +68,6 @@ function corsOrigin(
 
 app.use(cors({ origin: corsOrigin }));
 
-// Servir os arquivos de upload estaticamente
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-
 // Middleware de Logging estruturado para requisições HTTP
 app.use((req, res, next) => {
   const start = Date.now();
@@ -93,11 +88,6 @@ app.use('/api/webhook', express.raw({ type: 'application/json' }), require('./ro
 
 app.use(express.json());
 app.use(compression());
-
-// --- Arquivos estáticos de uploads ---
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-app.use('/uploads', express.static(uploadsDir));
 
 import { cache } from './lib/cache';
 

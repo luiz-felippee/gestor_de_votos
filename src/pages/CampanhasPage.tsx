@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../lib/api'
+import { resolverFotoUrl } from '../lib/fotoUrl'
 import { useAuth } from '../auth/AuthContext'
 import { formatDataHora } from '../lib/format'
 import { compressImage } from '../lib/imageOptimization'
@@ -130,7 +131,7 @@ export function CampanhasPage() {
             {arquivoFoto ? (
               <img src={URL.createObjectURL(arquivoFoto)} alt="Preview" className="h-full w-full object-cover" />
             ) : form.foto_url ? (
-              <img src={form.foto_url.startsWith('http') ? form.foto_url : `${api.base}${form.foto_url}`} alt="Preview" className="h-full w-full object-cover" />
+              <img src={resolverFotoUrl(form.foto_url)!} alt="Preview" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-slate-300 dark:text-slate-600">
                 <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>

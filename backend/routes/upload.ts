@@ -1,21 +1,16 @@
 /**
  * Rota de Upload genérico (autenticado + validação de tipo).
- * Extraída do server.ts para melhor organização.
+ * 
+ * As imagens são comprimidas com Sharp e retornadas como Data URLs (Base64)
+ * para serem salvas diretamente no banco de dados. Isso evita o problema de
+ * perda de arquivos em plataformas com filesystem efêmero (Render, Railway, etc.).
  */
 import { Router } from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import sharp from 'sharp';
-
 
 const router = Router();
 
-// --- Configuração do Multer ---
-const uploadsDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-// Usar memory storage em vez de disk storage para podermos comprimir a imagem antes de salvar
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 64 * 1024 * 1024 } // 64 MB max
@@ -33,22 +28,22 @@ router.post('/upload', upload.single('foto'), async (req, res) => {
   }
 
   try {
-    // Gerar um nome único com extensão webp
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.webp`;
-    const outputPath = path.join(uploadsDir, filename);
-
     // Comprimir a imagem usando Sharp:
-    // 1. Redimensiona para no máximo 800px de largura/altura mantendo a proporção (sem esticar)
+    // 1. Redimensiona para no máximo 800px de largura/altura mantendo a proporção
     // 2. Converte sempre para WebP com qualidade 80 para drástica redução de peso
-    await sharp(req.file.buffer)
+    const compressedBuffer = await sharp(req.file.buffer)
       .resize(800, 800, {
-        fit: 'inside', // Garante que a imagem caiba numa caixa 800x800, sem cortar e sem distorcer
-        withoutEnlargement: true // Não aumenta imagens que já são menores que 800px
+        fit: 'inside',
+        withoutEnlargement: true
       })
       .webp({ quality: 80 })
-      .toFile(outputPath);
+      .toBuffer();
 
-    res.json({ url: `/uploads/${filename}` });
+    // Converter para Data URL Base64 — armazenável diretamente no banco
+    const base64 = compressedBuffer.toString('base64');
+    const dataUrl = `data:image/webp;base64,${base64}`;
+
+    res.json({ url: dataUrl });
   } catch (error) {
     console.error('Erro ao processar imagem:', error);
     res.status(500).json({ error: 'Erro ao processar e salvar a imagem.' });

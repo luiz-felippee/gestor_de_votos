@@ -1,5 +1,5 @@
 import { Trophy, Medal, Users } from 'lucide-react'
-import { api } from '../lib/api'
+import { resolverFotoUrl } from '../lib/fotoUrl'
 import { EmptyState } from './EmptyState'
 
 interface Props {
@@ -58,7 +58,7 @@ export function RankingLiderancas({ ranking }: Props) {
               {/* Foto do Cabo */}
               <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-white shadow-sm dark:border-slate-700">
                 <img 
-                  src={cabo.foto_url ? (cabo.foto_url.startsWith('http') ? cabo.foto_url : `${api.base}${cabo.foto_url}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`} 
+                  src={resolverFotoUrl(cabo.foto_url, `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`)!} 
                   alt={cabo.nome} 
                   className="h-full w-full object-cover" 
                   onError={(e) => {

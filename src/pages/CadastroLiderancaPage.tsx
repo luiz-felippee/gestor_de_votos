@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from 'react'
 import { CheckCircle2, Users } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 import { api } from '../lib/api'
+import { resolverFotoUrl } from '../lib/fotoUrl'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
 import { compressImage } from '../lib/imageOptimization'
@@ -129,13 +130,13 @@ export function CadastroLiderancaPage() {
         {/* Cover Image & Avatar */}
         <div className="relative h-32 w-full bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 sm:h-40">
           {campanha?.foto_url && (
-            <img src={campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`} alt="Capa" className="absolute inset-0 h-full w-full object-cover opacity-50 mix-blend-overlay" />
+            <img src={resolverFotoUrl(campanha.foto_url)!} alt="Capa" className="absolute inset-0 h-full w-full object-cover opacity-50 mix-blend-overlay" />
           )}
           <div className="absolute inset-0 bg-black/20" />
           <div className="absolute -bottom-10 left-6">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800">
               {campanha?.foto_url ? (
-                <img src={campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`} alt="Candidato" className="h-full w-full object-cover" />
+                <img src={resolverFotoUrl(campanha.foto_url)!} alt="Candidato" className="h-full w-full object-cover" />
               ) : (
                 <Users className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />
               )}

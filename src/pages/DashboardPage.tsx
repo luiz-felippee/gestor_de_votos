@@ -2,6 +2,7 @@ import { Suspense, lazy, useState, useEffect, useRef } from 'react'
 import { OnboardingModal } from '../components/OnboardingModal'
 import { useDashboardStats } from '../hooks/useDashboardStats'
 import { api } from '../lib/api'
+import { resolverFotoUrl } from '../lib/fotoUrl'
 import { CIDADES } from '../lib/constants'
 import { RankingLiderancas } from '../components/RankingLiderancas'
 import { useMapaPontos } from '../hooks/useMapaPontos'
@@ -177,7 +178,7 @@ export function DashboardPage() {
           
           {campanha.foto_url ? (
             <img 
-              src={campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`} 
+              src={resolverFotoUrl(campanha.foto_url)!} 
               alt="Candidato" 
               className="h-20 w-20 sm:h-32 sm:w-32 rounded-full object-cover border-4 border-brand-100 dark:border-brand-900/50 shadow-md flex-shrink-0" 
               onError={(e) => {

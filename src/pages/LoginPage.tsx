@@ -131,25 +131,35 @@ export function LoginPage() {
   }, [googleClientId])
 
   return (
-    <div className="fixed inset-0 z-50 grid overflow-y-auto bg-white dark:bg-slate-950 font-sans lg:grid-cols-2">
-
-      {/* Esquerda — Painel de marca (desktop) */}
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-12 xl:p-16 lg:flex">
+    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-slate-950 font-sans lg:grid lg:grid-cols-2 lg:bg-white lg:dark:bg-slate-950">
+      
+      {/* Painel da Marca (Topo no Mobile, Esquerda no Desktop) */}
+      <div className="relative flex flex-col justify-between overflow-hidden bg-slate-950 p-6 pt-10 sm:p-12 lg:p-12 xl:p-16">
         {/* Acentos de gradiente sutis */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-brand-600/25 blur-3xl" />
-          <div className="absolute -bottom-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-indigo-600/20 blur-3xl" />
+          <div className="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-brand-600/25 blur-3xl lg:bg-brand-600/25" />
+          <div className="absolute -bottom-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-indigo-600/20 blur-3xl lg:bg-indigo-600/20" />
           <div className="absolute inset-0 opacity-[0.04] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:26px_26px]" />
         </div>
 
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <Logo iconClassName="h-10 w-10" />
+          <Logo iconClassName="h-8 w-8 lg:h-10 lg:w-10" />
           <span className="text-lg font-bold tracking-tight text-white">Gestor de Votos</span>
         </div>
 
-        {/* Conteúdo central */}
-        <div className="relative z-10 max-w-md">
+        {/* Mensagem curta (Mobile) */}
+        <div className="relative z-10 mt-8 mb-4 lg:hidden">
+          <h1 className="text-3xl font-extrabold leading-[1.15] tracking-tight text-white">
+            A inteligência de <br/>
+            <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
+              campanhas vitoriosas
+            </span>.
+          </h1>
+        </div>
+
+        {/* Conteúdo central (Desktop) */}
+        <div className="relative z-10 max-w-md hidden lg:block mt-16 mb-auto">
           <h1 className="text-4xl font-extrabold leading-[1.12] tracking-tight text-white xl:text-5xl">
             A inteligência por trás de{' '}
             <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
@@ -177,21 +187,16 @@ export function LoginPage() {
           </ul>
         </div>
 
-        {/* Rodapé */}
-        <p className="relative z-10 text-xs text-slate-500">
+        {/* Rodapé (Desktop) */}
+        <p className="relative z-10 text-xs text-slate-500 hidden lg:block">
           © {new Date().getFullYear()} Gestor de Votos · Conexão segura e dados criptografados
         </p>
       </div>
 
       {/* Direita — Formulário */}
-      <div className="flex items-center justify-center px-6 py-10 sm:px-10">
-        <div className="w-full max-w-md">
+      <div className="relative z-20 flex flex-1 items-center justify-center rounded-t-[2.5rem] bg-white px-6 py-10 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] -mt-6 sm:px-10 lg:mt-0 lg:rounded-none lg:shadow-none dark:bg-slate-950 dark:shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
+        <div className="w-full max-w-md lg:max-w-sm xl:max-w-md">
 
-          {/* Logo (mobile) */}
-          <div className="mb-10 flex items-center gap-3 lg:hidden">
-            <Logo iconClassName="h-10 w-10" />
-            <span className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">Gestor de Votos</span>
-          </div>
 
           <div className="mb-8">
             <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
@@ -336,10 +341,10 @@ const labelClass =
   'mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300'
 
 const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-slate-50 px-3.5 py-3 text-base font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 sm:text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-900'
+  'w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3.5 text-base font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 sm:text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-900'
 
 const btnPrimaryClass =
-  'flex w-full items-center justify-center rounded-lg bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-[0.99] disabled:opacity-60 dark:focus:ring-offset-slate-950'
+  'flex w-full items-center justify-center rounded-xl bg-brand-600 px-4 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-[0.99] disabled:opacity-60 dark:focus:ring-offset-slate-950'
 
 const btnSecondaryClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60'
+  'w-full rounded-xl border border-slate-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60'

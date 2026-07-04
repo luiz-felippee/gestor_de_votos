@@ -247,9 +247,9 @@ export function PlanilhaPage() {
   }
 
   const exportBtn =
-    'flex-1 sm:flex-none flex justify-center items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm transition-all hover:border-brand-500 hover:text-brand-600 hover:shadow-md active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-brand-400 dark:hover:text-brand-400'
+    'flex-1 sm:flex-none flex justify-center items-center gap-2 rounded-xl border border-slate-200/50 bg-white/50 backdrop-blur-sm px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-brand-500/50 hover:bg-white hover:text-brand-600 hover:shadow active:scale-95 disabled:opacity-60 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-brand-400/50 dark:hover:bg-slate-800 dark:hover:text-brand-400'
   const filtroSelectClass =
-  'w-full sm:w-auto rounded-xl border-none bg-slate-100 px-4 py-2.5 text-base sm:text-sm font-semibold text-slate-600 outline-none ring-1 ring-transparent transition-all hover:bg-slate-200 focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:focus:bg-slate-950'
+    'w-full sm:w-auto rounded-xl border border-slate-200/50 bg-white/50 backdrop-blur-sm px-4 py-2.5 text-base sm:text-sm font-medium text-slate-700 outline-none transition-all hover:bg-white hover:shadow-sm focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:bg-slate-800 dark:focus:bg-slate-900'
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 animate-fade-in flex flex-col h-full">
@@ -295,7 +295,7 @@ export function PlanilhaPage() {
       )}
 
       {/* Filtros */}
-      <div className="mb-6 flex flex-wrap lg:flex-nowrap items-center gap-3 rounded-2xl border border-slate-200/60 bg-white/50 p-3 shadow-sm backdrop-blur-xl dark:border-slate-800/60 dark:bg-slate-900/50">
+      <div className="mb-6 flex flex-wrap lg:flex-nowrap items-center gap-3 rounded-2xl border border-slate-200/50 bg-white/40 p-3 shadow-sm backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-900/40">
         <div className="relative flex-1 min-w-[250px]">
           <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           <input
@@ -303,7 +303,7 @@ export function PlanilhaPage() {
             placeholder="Buscar por nome, telefone ou título..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            className="w-full rounded-xl border-none bg-slate-100 pl-10 pr-4 py-2.5 text-base sm:text-sm font-medium outline-none ring-1 ring-transparent transition-all focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500 dark:focus:bg-slate-950"
+            className="w-full rounded-xl border border-slate-200/50 bg-white/50 backdrop-blur-sm pl-10 pr-4 py-2.5 text-base sm:text-sm font-medium text-slate-700 outline-none transition-all hover:bg-white hover:shadow-sm focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-200 dark:placeholder:text-slate-400 dark:hover:bg-slate-800 dark:focus:bg-slate-900"
           />
         </div>
         <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 hidden lg:block mx-1"></div>
@@ -381,29 +381,34 @@ export function PlanilhaPage() {
                   </div>
                 </div>
               ) : (
-                <div key={e.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-sm flex flex-col gap-2 relative">
+                <div key={e.id} className="bg-white/80 backdrop-blur-sm dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-3 relative">
                   <div className="flex justify-between items-start mb-1">
-                    <div>
-                      <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base leading-tight">{e.nome}</h3>
-                      <p className="font-semibold text-slate-700 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
-                        {e.telefone}
-                        <a href={`https://wa.me/55${e.telefone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 p-1 rounded-full"><MessageCircle className="h-3.5 w-3.5"/></a>
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-brand-100/80 text-lg font-bold text-brand-700 dark:bg-brand-900/50 dark:text-brand-300">
+                        {e.nome.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <h3 className="font-extrabold text-slate-900 dark:text-slate-100 text-lg leading-tight">{e.nome}</h3>
+                        <p className="font-semibold text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1.5">
+                          {e.telefone}
+                          <a href={`https://wa.me/55${e.telefone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="text-emerald-500 hover:text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 p-1.5 rounded-full transition-colors"><MessageCircle className="h-4 w-4"/></a>
+                        </p>
+                      </div>
                     </div>
-                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${STATUS_STYLES[e.status]}`}>{e.status}</span>
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-widest ${STATUS_STYLES[e.status]}`}>{e.status}</span>
                   </div>
-                  <div className="text-sm dark:text-slate-300 grid grid-cols-1 gap-1">
-                    <p><span className="font-semibold text-slate-500">Local:</span> {e.local_votacao} <span className="text-[11px] text-brand-600 dark:text-brand-400 font-bold ml-1">(Z:{e.zona} S:{e.secao})</span></p>
-                    <p><span className="font-semibold text-slate-500">Endereço:</span> {e.endereco ? `${e.endereco}, ` : ''}{e.bairro} - {e.cidade}</p>
-                    <p><span className="font-semibold text-slate-500">Indicação:</span> {e.cabo?.nome || '—'}</p>
+                  <div className="text-sm dark:text-slate-300 grid grid-cols-1 gap-1.5 mt-2">
+                    <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span><span className="font-semibold text-slate-500">Local:</span> {e.local_votacao} <span className="text-[11px] text-brand-600 dark:text-brand-400 font-bold ml-1">(Z:{e.zona} S:{e.secao})</span></p>
+                    <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span><span className="font-semibold text-slate-500">Endereço:</span> {e.endereco ? `${e.endereco}, ` : ''}{e.bairro} - {e.cidade}</p>
+                    <p className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-violet-400"></span><span className="font-semibold text-slate-500">Indicação:</span> {e.cabo?.nome || '—'}</p>
                   </div>
                   <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/60">
-                     <span className="text-[10px] text-slate-400 font-semibold">{formatDataHora(e.created_at).split(' ')[0]}</span>
-                     <div className="flex gap-1.5">
-                       <button onClick={() => iniciarEdicao(e)} className="p-1.5 text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-lg dark:text-brand-400 dark:bg-brand-900/30">
+                     <span className="text-[11px] text-slate-400 font-semibold">{formatDataHora(e.created_at)}</span>
+                     <div className="flex gap-2">
+                       <button onClick={() => iniciarEdicao(e)} className="p-2 text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-xl transition-colors dark:text-brand-400 dark:bg-brand-900/30">
                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                        </button>
-                       <button onClick={() => excluir(e)} className="p-1.5 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg dark:text-red-400 dark:bg-red-900/30">
+                       <button onClick={() => excluir(e)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors dark:text-red-400 dark:bg-red-900/30">
                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                        </button>
                      </div>
@@ -417,16 +422,16 @@ export function PlanilhaPage() {
         {/* Desktop View (Tabela) */}
         <div className="hidden md:block flex-1 overflow-auto relative custom-scrollbar">
           <table className="w-full min-w-[1000px] text-left text-sm border-collapse">
-            <thead className="sticky top-0 z-20 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+            <thead className="sticky top-0 z-20 bg-slate-50/90 backdrop-blur-sm text-[11px] font-extrabold uppercase tracking-widest text-slate-500 dark:bg-slate-900/90 dark:text-slate-400 shadow-sm">
               <tr>
-                <Th col="nome" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Nome</Th>
-                <Th col="telefone" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Telefone</Th>
-                <Th col="local_votacao" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Local / Zona / Seç.</Th>
-                <Th col="bairro" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Endereço</Th>
-                <th className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 select-none">Indicação</th>
-                <Th col="status" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Status</Th>
-                <Th col="created_at" ordem={ordem} onClick={ordenarPor} className="px-5 py-4 border-b border-slate-200 dark:border-slate-800">Data Cad.</Th>
-                <th className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 text-right">Ações</th>
+                <Th col="nome" ordem={ordem} onClick={ordenarPor} className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80">Nome</Th>
+                <Th col="telefone" ordem={ordem} onClick={ordenarPor} className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80">Telefone</Th>
+                <Th col="local_votacao" ordem={ordem} onClick={ordenarPor} className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80">Local / Zona / Seç.</Th>
+                <Th col="bairro" ordem={ordem} onClick={ordenarPor} className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80">Endereço</Th>
+                <th className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 select-none">Indicação</th>
+                <Th col="status" ordem={ordem} onClick={ordenarPor} className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80">Status</Th>
+                <Th col="created_at" ordem={ordem} onClick={ordenarPor} className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80">Data Cad.</Th>
+                <th className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -496,8 +501,15 @@ export function PlanilhaPage() {
                       </Td>
                     </tr>
                   ) : (
-                    <tr key={e.id} className="group transition-all hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                      <Td className="font-bold text-slate-900 dark:text-slate-100">{e.nome}</Td>
+                    <tr key={e.id} className="group transition-all hover:bg-brand-50/30 dark:hover:bg-brand-900/10">
+                      <Td>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-100/80 text-sm font-bold text-brand-700 dark:bg-brand-900/50 dark:text-brand-300">
+                            {e.nome.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div className="font-bold text-slate-900 dark:text-slate-100">{e.nome}</div>
+                        </div>
+                      </Td>
                       <Td>
                         <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300 group/phone">
                           {e.telefone}
@@ -506,9 +518,9 @@ export function PlanilhaPage() {
                             target="_blank" 
                             rel="noreferrer"
                             title="Conversar no WhatsApp"
-                            className="text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 dark:hover:text-emerald-300 opacity-0 group-hover/phone:opacity-100 transition-opacity"
+                            className="text-emerald-500 hover:text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 p-1.5 rounded-full dark:text-emerald-400 dark:hover:text-emerald-300 opacity-0 group-hover/phone:opacity-100 transition-all"
                           >
-                            <MessageCircle className="h-4 w-4" />
+                            <MessageCircle className="h-3.5 w-3.5" />
                           </a>
                         </div>
                         {e.cpf && <p className="text-[11px] text-slate-500 mt-1 uppercase tracking-wider font-medium">CPF: {e.cpf}</p>}
@@ -545,18 +557,18 @@ export function PlanilhaPage() {
                           {e.status}
                         </span>
                       </Td>
-                      <Td className="whitespace-nowrap text-slate-400 text-xs font-semibold">
+                      <Td className="whitespace-nowrap text-slate-400 text-[11px] font-semibold">
                         {formatDataHora(e.created_at)}
                       </Td>
-                      <Td className="whitespace-nowrap px-5">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                          <button onClick={() => iniciarEdicao(e)} className="p-2 text-brand-600 hover:bg-brand-100 hover:text-brand-700 rounded-xl transition-colors dark:text-brand-400 dark:hover:bg-brand-900/50" title="Editar Eleitor">
+                      <Td className="whitespace-nowrap px-6">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                          <button onClick={() => iniciarEdicao(e)} className="p-2 text-brand-600 bg-brand-50 hover:bg-brand-100 hover:text-brand-700 rounded-xl transition-colors dark:text-brand-400 dark:bg-brand-900/30 dark:hover:bg-brand-900/50" title="Editar Eleitor">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                           </button>
-                          <button onClick={() => anonimizar(e)} className="p-2 text-amber-500 hover:bg-amber-100 hover:text-amber-700 rounded-xl transition-colors dark:text-amber-400 dark:hover:bg-amber-900/50" title="Anonimizar (LGPD)">
+                          <button onClick={() => anonimizar(e)} className="p-2 text-amber-500 bg-amber-50 hover:bg-amber-100 hover:text-amber-700 rounded-xl transition-colors dark:text-amber-400 dark:bg-amber-900/30 dark:hover:bg-amber-900/50" title="Anonimizar (LGPD)">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
                           </button>
-                          <button onClick={() => excluir(e)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition dark:hover:bg-red-900/40" title="Excluir Definitivamente">
+                          <button onClick={() => excluir(e)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors dark:text-red-400 dark:bg-red-900/30 dark:hover:bg-red-900/50" title="Excluir Definitivamente">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
                         </div>
@@ -602,7 +614,7 @@ const editInputClass =
   'w-full rounded-md border border-slate-300 px-2 py-1.5 text-base sm:text-sm font-medium outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 placeholder:text-slate-400'
 
 function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-5 py-4 ${className}`}>{children}</td>
+  return <td className={`px-6 py-4 ${className}`}>{children}</td>
 }
 
 function Th({
@@ -622,7 +634,7 @@ function Th({
 
   return (
     <th
-      className={`px-5 py-4 cursor-pointer hover:bg-slate-100 transition-colors select-none dark:hover:bg-slate-900 ${className}`}
+      className={`px-6 py-4 cursor-pointer hover:bg-slate-100/50 transition-colors select-none dark:hover:bg-slate-800/50 ${className}`}
       onClick={() => onClick(col)}
     >
       <div className="flex items-center gap-1.5 font-bold">

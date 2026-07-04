@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams, useParams } from 'react-router-dom'
 import { CheckCircle2, UserPlus, AlertCircle } from 'lucide-react'
 import { api } from '../lib/api'
+import { resolverFotoUrl } from '../lib/fotoUrl'
 import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
 import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
@@ -62,7 +63,7 @@ export function CadastroPage() {
   // Atualiza o favicon dinamicamente
   useEffect(() => {
     if (campanha?.foto_url) {
-      const url = campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`
+      const url = resolverFotoUrl(campanha.foto_url)
       updateFavicon(url)
     } else {
       updateFavicon(null)
@@ -236,13 +237,13 @@ export function CadastroPage() {
         {/* Cover Image & Avatar */}
         <div className="relative h-32 w-full bg-gradient-to-r from-brand-600 via-indigo-600 to-purple-700 sm:h-40">
           {campanha?.foto_url && (
-            <img src={campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`} alt="Capa" className="absolute inset-0 h-full w-full object-cover opacity-50 mix-blend-overlay" />
+            <img src={resolverFotoUrl(campanha.foto_url)!} alt="Capa" className="absolute inset-0 h-full w-full object-cover opacity-50 mix-blend-overlay" />
           )}
           <div className="absolute inset-0 bg-black/20" />
           <div className="absolute -bottom-10 left-6">
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-white shadow-lg dark:border-slate-900 dark:bg-slate-800">
               {campanha?.foto_url ? (
-                <img src={campanha.foto_url.startsWith('http') ? campanha.foto_url : `${api.base}${campanha.foto_url}`} alt="Candidato" className="h-full w-full object-cover" />
+                <img src={resolverFotoUrl(campanha.foto_url)!} alt="Candidato" className="h-full w-full object-cover" />
               ) : (
                 <UserPlus className="h-10 w-10 text-brand-600 dark:text-brand-400" />
               )}
@@ -258,7 +259,7 @@ export function CadastroPage() {
           {caboEncontrado && !sucesso ? (
             <div className="mt-4 flex items-center gap-3 rounded-xl bg-slate-50 p-3 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50">
               <img 
-                src={caboEncontrado.foto_url ? (caboEncontrado.foto_url.startsWith('http') ? caboEncontrado.foto_url : `${api.base}${caboEncontrado.foto_url}`) : `https://ui-avatars.com/api/?name=${encodeURIComponent(caboEncontrado.nome)}&background=random`} 
+                src={resolverFotoUrl(caboEncontrado.foto_url, `https://ui-avatars.com/api/?name=${encodeURIComponent(caboEncontrado.nome)}&background=random`)!} 
                 alt={caboEncontrado.nome} 
                 className="h-12 w-12 rounded-full object-cover shadow-sm ring-2 ring-white dark:ring-slate-800" 
                 onError={(e) => {
