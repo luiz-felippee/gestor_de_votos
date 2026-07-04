@@ -23,6 +23,14 @@ svg {
   background-color: #020617; /* slate-950 */
 }
 
+/* Fix for Leaflet grid lines between tiles */
+.leaflet-tile-container img {
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.05);
+  margin: -1px;
+  width: calc(100% + 2px) !important;
+  height: calc(100% + 2px) !important;
+}
+
 @layer utilities {
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 0.75rem) !important;
