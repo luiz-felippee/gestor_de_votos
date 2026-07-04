@@ -256,18 +256,18 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
             if (modoVisualizacao === 'mapa') {
               return {
                 color: isSelected ? (theme === 'dark' ? '#ffffff' : '#000000') : '#ffffff',
-                weight: isSelected ? 2 : 0.6,
+                weight: isSelected ? 3 : 0.6,
                 fillColor: isSelected 
                   ? (theme === 'dark' ? '#ffffff' : '#000000') 
                   : (c > 0 ? corCalor(c / maxChoropleth) : theme === 'dark' ? '#1e293b' : '#e2e8f0'),
-                fillOpacity: isSelected ? 1 : (c > 0 ? 0.85 : 0.35),
+                fillOpacity: isSelected ? 0.1 : (c > 0 ? 0.85 : 0.35),
               }
             }
             return {
               color: isSelected ? (theme === 'dark' ? '#ffffff' : '#000000') : tema.boundary,
-              weight: isSelected ? 2 : 0.8,
+              weight: isSelected ? 3 : 0.8,
               fillColor: isSelected ? (theme === 'dark' ? '#ffffff' : '#000000') : tema.fill,
-              fillOpacity: isSelected ? 1 : 0.04,
+              fillOpacity: isSelected ? 0.1 : 0.04,
             }
           }}
           onEachFeature={(feature: any, layer: any) => {
