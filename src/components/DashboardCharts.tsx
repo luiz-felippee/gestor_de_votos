@@ -43,14 +43,16 @@ export default function DashboardCharts({ porCidade, porBairro, porDia }: Props)
             <Tooltip
               cursor={{ fill: 'rgba(59, 130, 246, 0.05)' }}
               contentStyle={{
-                backgroundColor: 'rgba(15, 23, 42, 0.92)',
-                border: 'none',
-                borderRadius: '10px',
+                backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
                 color: '#fff',
                 fontSize: '13px',
                 fontWeight: 600,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                padding: '8px 14px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.24)',
+                padding: '10px 16px',
               }}
               formatter={(value: any) => [`${value} eleitores`, '']}
             />
@@ -90,14 +92,16 @@ export default function DashboardCharts({ porCidade, porBairro, porDia }: Props)
             <Tooltip
               cursor={{ fill: 'rgba(16, 185, 129, 0.05)' }}
               contentStyle={{
-                backgroundColor: 'rgba(15, 23, 42, 0.92)',
-                border: 'none',
-                borderRadius: '10px',
+                backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
                 color: '#fff',
                 fontSize: '13px',
                 fontWeight: 600,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                padding: '8px 14px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.24)',
+                padding: '10px 16px',
               }}
               formatter={(value: any) => [`${value} eleitores`, '']}
             />
@@ -139,11 +143,14 @@ export default function DashboardCharts({ porCidade, porBairro, porDia }: Props)
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                border: 'none',
-                borderRadius: '8px',
+                backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
                 color: '#fff',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                boxShadow: '0 8px 32px rgba(0,0,0,0.24)',
+                padding: '10px 16px',
               }}
               itemStyle={{ color: '#38bdf8', fontWeight: 'bold' }}
             />
