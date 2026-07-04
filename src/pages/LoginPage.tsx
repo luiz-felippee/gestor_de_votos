@@ -187,7 +187,7 @@ export function LoginPage() {
               </span>
             </h1>
             <p className={`mt-5 text-base sm:text-lg text-slate-300 font-medium transition-all duration-1000 delay-500 ${introPhase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-              Organize e no tempo certo.
+              Dados, estratégia e mobilização em tempo real.
             </p>
           </div>
         </div>
