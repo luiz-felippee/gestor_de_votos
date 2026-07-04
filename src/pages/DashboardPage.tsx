@@ -1,7 +1,6 @@
 import { Suspense, lazy, useState, useEffect, useRef } from 'react'
 import { OnboardingModal } from '../components/OnboardingModal'
 import { useDashboardStats } from '../hooks/useDashboardStats'
-import { api } from '../lib/api'
 import { resolverFotoUrl } from '../lib/fotoUrl'
 import { CIDADES } from '../lib/constants'
 import { RankingLiderancas } from '../components/RankingLiderancas'
