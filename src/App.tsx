@@ -12,6 +12,7 @@ import { Header } from './components/layout/Header'
 import { InstallPrompt } from './components/layout/InstallPrompt'
 import { useDocumentTitle } from './hooks/useDocumentTitle'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
+import { useKeepAlive } from './hooks/useKeepAlive'
 import { NaoEncontradoPage } from './pages/NaoEncontradoPage'
 
 // Leves / críticas: carregam de imediato (formulário público e login)
@@ -61,6 +62,9 @@ function AppContent() {
   useDocumentTitle()
   const { usuario } = useAuth()
   const queryClient = useQueryClient()
+
+  // Mantém o backend acordado enquanto o usuário logado está com o app aberto.
+  useKeepAlive(!!usuario)
 
   useEffect(() => {
     if (!usuario) return
