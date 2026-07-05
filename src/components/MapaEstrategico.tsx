@@ -2,8 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapContainer,
   TileLayer,
-  CircleMarker,
-  Tooltip,
   GeoJSON,
   useMap,
 } from 'react-leaflet'
@@ -184,8 +182,6 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
   }, [countPorCidadeNorm])
 
   const maxCount = Math.max(1, ...pontos.map((p) => p.count))
-  const cidadeLider = pontos.reduce<string | null>((lider, p) => p.count === maxCount && maxCount > 0 ? p.cidade : lider, null)
-  const cidadesComRotulo = new Set([...pontos].sort((a, b) => b.count - a.count).slice(0, 5).map((p) => p.cidade))
 
   const pronto = geoData && bounds
 
