@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapContainer,
   TileLayer,
@@ -183,6 +183,49 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
 
   const maxCount = Math.max(1, ...pontos.map((p) => p.count))
 
+  // Estilo de cada município — memoizado e reaplicado sem remontar a camada
+  const estiloFeature = useCallback((feature: any) => {
+    const nomeNorm = normalizar(feature.properties.nome)
+    const isSelected = !!cidadeSelecionada && normalizar(cidadeSelecionada) === nomeNorm
+    const c = countPorCidadeNorm.get(nomeNorm) || 0
+
+    if (modoVisualizacao === 'mapa') {
+      return {
+        color: isSelected ? (theme === 'dark' ? '#ffffff' : '#000000') : '#ffffff',
+        weight: isSelected ? 3 : 0.6,
+        fillColor: isSelected
+          ? (theme === 'dark' ? '#ffffff' : '#000000')
+          : (c > 0 ? corCalor(c / maxChoropleth) : theme === 'dark' ? '#1e293b' : '#e2e8f0'),
+        fillOpacity: isSelected ? 0.1 : (c > 0 ? 0.85 : 0.35),
+      }
+    }
+    return {
+      color: isSelected ? (theme === 'dark' ? '#ffffff' : '#000000') : tema.boundary,
+      weight: isSelected ? 3 : 0.8,
+      fillColor: isSelected ? (theme === 'dark' ? '#ffffff' : '#000000') : tema.fill,
+      fillOpacity: isSelected ? 0.1 : 0.04,
+    }
+  }, [cidadeSelecionada, countPorCidadeNorm, maxChoropleth, modoVisualizacao, theme, tema])
+
+  // Ref com o estado mais recente para os handlers do Leaflet (que só montam 1x)
+  const geoJsonRef = useRef<any>(null)
+  const estadoRef = useRef({ cidadeSelecionada, onCidadeSelect, estiloFeature })
+  estadoRef.current = { cidadeSelecionada, onCidadeSelect, estiloFeature }
+
+  // Reaplica estilos e tooltips de forma imperativa quando os dados mudam,
+  // em vez de remontar os 184 municípios (evita travar ao filtrar/atualizar).
+  useEffect(() => {
+    const layer = geoJsonRef.current
+    if (!layer) return
+    layer.setStyle(estiloFeature)
+    layer.eachLayer((l: any) => {
+      const nome = l.feature?.properties?.nome
+      if (!nome) return
+      const c = countPorCidadeNorm.get(normalizar(nome)) || 0
+      l.setTooltipContent(`<strong>${nome}</strong><br/>${c} eleitor${c !== 1 ? 'es' : ''}`)
+    })
+  }, [estiloFeature, countPorCidadeNorm])
+
   const pronto = geoData && bounds
 
   if (!pronto) {
@@ -242,34 +285,30 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
         <TileLayer key={theme} url={tema.url} subdomains="abcd" detectRetina crossOrigin="anonymous" />
         
         <GeoJSON
-          key={`${modoVisualizacao}-${theme}-${maxChoropleth}-${[...countPorCidadeNorm].join()}`}
+          key={`${modoVisualizacao}-${theme}`}
+          ref={geoJsonRef}
           data={geoData}
-          style={(feature: any) => {
-            const isSelected = cidadeSelecionada && normalizar(cidadeSelecionada) === normalizar(feature.properties.nome)
-            const c = countPorCidadeNorm.get(normalizar(feature.properties.nome)) || 0
-            
-            if (modoVisualizacao === 'mapa') {
-              return {
-                color: isSelected ? (theme === 'dark' ? '#ffffff' : '#000000') : '#ffffff',
-                weight: isSelected ? 3 : 0.6,
-                fillColor: isSelected 
-                  ? (theme === 'dark' ? '#ffffff' : '#000000') 
-                  : (c > 0 ? corCalor(c / maxChoropleth) : theme === 'dark' ? '#1e293b' : '#e2e8f0'),
-                fillOpacity: isSelected ? 0.1 : (c > 0 ? 0.85 : 0.35),
-              }
-            }
-            return {
-              color: isSelected ? (theme === 'dark' ? '#ffffff' : '#000000') : tema.boundary,
-              weight: isSelected ? 3 : 0.8,
-              fillColor: isSelected ? (theme === 'dark' ? '#ffffff' : '#000000') : tema.fill,
-              fillOpacity: isSelected ? 0.1 : 0.04,
-            }
-          }}
+          style={estiloFeature}
           onEachFeature={(feature: any, layer: any) => {
-            const c = countPorCidadeNorm.get(normalizar(feature.properties.nome)) || 0
-            layer.bindTooltip(`<strong>${feature.properties.nome}</strong><br/>${c} eleitor${c !== 1 ? 'es' : ''}`, { sticky: true })
+            const nome = feature.properties.nome
+            const c = countPorCidadeNorm.get(normalizar(nome)) || 0
+            layer.bindTooltip(
+              `<strong>${nome}</strong><br/>${c} eleitor${c !== 1 ? 'es' : ''}`,
+              { sticky: true, className: 'mapa-tooltip', direction: 'top', opacity: 1 }
+            )
             layer.on({
-              click: () => onCidadeSelect(cidadeSelecionada === feature.properties.nome ? null : feature.properties.nome)
+              mouseover: (e: any) => {
+                if (estadoRef.current.cidadeSelecionada === nome) return
+                e.target.setStyle({ weight: 2.5, color: theme === 'dark' ? '#ffffff' : '#0f172a' })
+                e.target.bringToFront()
+              },
+              mouseout: (e: any) => {
+                e.target.setStyle(estadoRef.current.estiloFeature(feature))
+              },
+              click: () =>
+                estadoRef.current.onCidadeSelect(
+                  estadoRef.current.cidadeSelecionada === nome ? null : nome
+                ),
             })
           }}
         />

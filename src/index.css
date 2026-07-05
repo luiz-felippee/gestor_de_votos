@@ -91,6 +91,25 @@ html.is-android body {
   animation: pulseLider 1.8s ease-in-out infinite;
 }
 
+/* Mapa: tooltip de município mais limpo e legível */
+.mapa-tooltip {
+  background: rgba(15, 23, 42, 0.92) !important;
+  border: none !important;
+  color: #fff !important;
+  font-size: 12px;
+  line-height: 1.35;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  padding: 6px 10px !important;
+  white-space: nowrap;
+}
+.mapa-tooltip strong {
+  font-weight: 700;
+}
+.mapa-tooltip::before {
+  border-top-color: rgba(15, 23, 42, 0.92) !important;
+}
+
 /* Mapa: rótulos fixos mais limpos */
 .rotulo-cidade {
   background: rgba(15, 23, 42, 0.9) !important;
