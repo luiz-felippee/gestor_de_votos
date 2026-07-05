@@ -197,16 +197,16 @@ export function LoginPage() {
       <div className={`relative flex min-h-[100dvh] flex-col bg-slate-950 font-sans lg:grid lg:grid-cols-2 lg:bg-white lg:dark:bg-slate-950 transition-opacity duration-700 ${introPhase >= 3 ? 'opacity-100' : 'opacity-0 h-screen overflow-hidden pointer-events-none'}`}>
       
       {/* Painel da Marca (Topo no Mobile, Esquerda no Desktop) */}
-      <div className="relative flex shrink-0 flex-col justify-center overflow-hidden bg-slate-950 p-6 pt-10 pb-12 lg:justify-between sm:p-12 sm:pb-20 lg:p-12 lg:pb-12 xl:p-16">
+      <div className="relative flex shrink-0 flex-col overflow-hidden bg-slate-950 p-6 pt-10 pb-12 sm:p-12 sm:pb-16 lg:p-12 lg:pb-10 xl:p-16">
         {/* Acentos de gradiente sutis */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-brand-600/25 blur-3xl lg:bg-brand-600/25" />
-          <div className="absolute -bottom-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-indigo-600/20 blur-3xl lg:bg-indigo-600/20" />
+          <div className="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-brand-600/25 blur-3xl" />
+          <div className="absolute -bottom-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-indigo-600/20 blur-3xl" />
           <div className="absolute inset-0 opacity-[0.04] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:26px_26px]" />
         </div>
 
         {/* Logo */}
-        <div className="relative z-10 flex items-center gap-3">
+        <div className="relative z-10 flex shrink-0 items-center gap-3">
           <Logo iconClassName="h-8 w-8 lg:h-10 lg:w-10" />
           <span className="text-lg font-bold tracking-tight text-white">Gestor de Votos</span>
         </div>
@@ -221,8 +221,8 @@ export function LoginPage() {
           </h1>
         </div>
 
-        {/* Conteúdo central (Desktop) */}
-        <div className="relative z-10 max-w-md hidden lg:block mt-16 mb-auto">
+        {/* Conteúdo central (Desktop) — centralizado verticalmente entre logo e rodapé */}
+        <div className="relative z-10 hidden max-w-md flex-1 flex-col justify-center py-10 lg:flex">
           <h1 className="text-4xl font-extrabold leading-[1.12] tracking-tight text-white xl:text-5xl">
             A inteligência por trás de{' '}
             <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
@@ -233,7 +233,7 @@ export function LoginPage() {
             Mapeie lideranças, engaje eleitores e acompanhe metas em tempo real — tudo em uma única plataforma.
           </p>
 
-          <ul className="mt-10 space-y-5">
+          <ul className="mt-8 space-y-4 xl:mt-10 xl:space-y-5">
             {[
               ['Gestão descentralizada', 'Distribua metas e acompanhe o desempenho de cada liderança.'],
               ['Mapas inteligentes', 'Visualize a distribuição dos seus votos de forma geográfica.'],
@@ -251,7 +251,7 @@ export function LoginPage() {
         </div>
 
         {/* Rodapé (Desktop) */}
-        <p className="relative z-10 text-xs text-slate-500 hidden lg:block">
+        <p className="relative z-10 hidden shrink-0 text-xs text-slate-500 lg:block">
           © {new Date().getFullYear()} Gestor de Votos · Conexão segura e dados criptografados
         </p>
       </div>

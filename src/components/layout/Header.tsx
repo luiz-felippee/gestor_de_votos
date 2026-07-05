@@ -23,6 +23,9 @@ export function Header() {
     setMenuOpen(false)
   }, [location.pathname])
 
+  // Esconde a barra global no login — a tela de login tem sua própria marca
+  const ocultarHeader = location.pathname === '/login'
+
   // Trava o scroll do body quando o menu está aberto
   useEffect(() => {
     if (menuOpen) {
@@ -32,6 +35,8 @@ export function Header() {
     }
     return () => { document.body.style.overflow = '' }
   }, [menuOpen])
+
+  if (ocultarHeader) return null
 
   return (
     <>
