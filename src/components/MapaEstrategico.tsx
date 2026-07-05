@@ -17,7 +17,7 @@ import cidadesPE from '../data/pe-cidades.json'
 
 // Basemap CARTO Voyager (dados do OpenStreetMap). No dark, o CSS inverte a
 // camada de tiles para o visual escuro, mantendo os rótulos de ruas e bairros.
-const TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+const TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
 const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
