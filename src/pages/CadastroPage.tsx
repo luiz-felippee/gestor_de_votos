@@ -127,7 +127,8 @@ export function CadastroPage() {
         setForm(f => ({
           ...f,
           bairro: data.bairro || f.bairro,
-          cidade: data.localidade || f.cidade
+          cidade: data.localidade || f.cidade,
+          endereco: data.logradouro ? `${data.logradouro}, ` : f.endereco
         }))
       }
     } catch {
