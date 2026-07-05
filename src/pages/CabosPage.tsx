@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
-import { Copy, Link as LinkIcon, CheckCircle2, MessageCircle } from 'lucide-react'
+import { Copy, Link as LinkIcon, CheckCircle2, MessageCircle, UserPlus } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { resolverFotoUrl } from '../lib/fotoUrl'
@@ -50,6 +50,7 @@ export function CabosPage() {
   const [salvando, setSalvando] = useState(false)
   const [arquivoFoto, setArquivoFoto] = useState<File | null>(null)
   const [ordenacao, setOrdenacao] = useState<'nome' | 'ranking'>('ranking')
+  const [isFormOpen, setIsFormOpen] = useState(false)
 
   const cabosOrdenados = useMemo(() => {
     const comRealizado = cabos.map(c => ({
@@ -86,6 +87,7 @@ export function CabosPage() {
     })
     setArquivoFoto(null)
     setErro(null)
+    setIsFormOpen(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -94,6 +96,7 @@ export function CabosPage() {
     setForm(VAZIO)
     setArquivoFoto(null)
     setErro(null)
+    setIsFormOpen(false)
   }
 
   async function salvar(e: FormEvent) {
@@ -176,12 +179,31 @@ export function CabosPage() {
           </p>
         </div>
         
-        {/* Link Público para Lideranças */}
-        <LinkPublicoLideranca />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Link Público para Lideranças */}
+          <LinkPublicoLideranca />
+
+          {!isFormOpen && (
+            <button
+              onClick={() => {
+                setForm(VAZIO)
+                setEditId(null)
+                setArquivoFoto(null)
+                setErro(null)
+                setIsFormOpen(true)
+              }}
+              className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 active:scale-95 sm:py-2.5 h-full"
+            >
+              <UserPlus className="h-5 w-5 shrink-0" />
+              <span className="whitespace-nowrap">Cadastrar Liderança</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Formulário de criação/edição */}
-      <form
+      {isFormOpen && (
+        <form
         onSubmit={salvar}
         className="mb-8 rounded-xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
       >
@@ -344,17 +366,16 @@ export function CabosPage() {
           >
             {salvando ? 'Salvando...' : editId ? 'Salvar alterações' : 'Adicionar cabo'}
           </button>
-          {editId && (
-            <button
-              type="button"
-              onClick={cancelar}
-              className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
-              Cancelar
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={cancelar}
+            className="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            Cancelar
+          </button>
         </div>
       </form>
+      )}
 
       {/* Lista de cabos */}
       <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

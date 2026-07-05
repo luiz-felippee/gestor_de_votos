@@ -8,7 +8,6 @@ import { useMapaPontos } from '../hooks/useMapaPontos'
 import { useCabos } from '../hooks/useCabos'
 import { useConfirm } from '../components/ConfirmDialog'
 import { Map as MapIcon, Cake, User, CalendarDays, Users, MapPin, BadgeCheck, Flame, ChevronDown } from 'lucide-react'
-import html2canvas from 'html2canvas'
 import { useTheme } from '../components/ThemeProvider'
 import { SplashScreen } from '../components/layout/SplashScreen'
 import { EmptyState } from '../components/EmptyState'
@@ -63,6 +62,7 @@ export function DashboardPage() {
     if (!mapaRef.current) return
     setExportando(true)
     try {
+      const { default: html2canvas } = await import('html2canvas')
       const canvas = await html2canvas(mapaRef.current, {
         useCORS: true,
         backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff',
