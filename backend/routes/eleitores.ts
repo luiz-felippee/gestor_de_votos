@@ -412,11 +412,17 @@ eleitoresRouter.post(
     const lote = await prisma.eleitor.findMany({
       where: { lat: null, ...escopoCampanha(req) },
       take: 15,
-      select: { id: true, bairro: true, cidade: true },
+      select: { id: true, bairro: true, cidade: true, endereco: true },
     });
     let geocodificados = 0;
     for (const e of lote) {
-      let coord = await geocodeAddress(e.bairro, e.cidade);
+      // 1ª tentativa: endereço completo (rua) → posição mais exata possível
+      let coord = await geocodeAddress(e.bairro, e.cidade, e.endereco);
+      // 2ª tentativa: só bairro + cidade
+      if (!coord && e.endereco) {
+        await new Promise((r) => setTimeout(r, 1100));
+        coord = await geocodeAddress(e.bairro, e.cidade);
+      }
       // Se o bairro não resolver, cai para a cidade (não fica preso reprocessando)
       if (!coord && e.bairro) {
         await new Promise((r) => setTimeout(r, 1100));

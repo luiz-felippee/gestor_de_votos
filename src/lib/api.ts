@@ -249,6 +249,11 @@ export const api = {
   },
   getDashboardStats: (query: string = '') => request<any>(`/dashboard/stats${query}`),
   getMapaPontos: (query: string = '') => request<any>(`/dashboard/mapa-pontos${query}`),
+  geocodificarEleitores: () =>
+    request<{ processados: number; geocodificados: number; restantes: number }>(
+      '/eleitores/geocodificar',
+      { method: 'POST' }
+    ),
   createEleitor: async (data: unknown) => {
     if (!navigator.onLine) {
       // Estamos offline. Salva no IndexedDB e forja uma resposta de sucesso pro componente.

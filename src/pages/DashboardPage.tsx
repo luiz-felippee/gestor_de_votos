@@ -1,6 +1,9 @@
 import { Suspense, lazy, useState, useEffect, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { OnboardingModal } from '../components/OnboardingModal'
 import { useDashboardStats } from '../hooks/useDashboardStats'
+import { useAuth } from '../auth/AuthContext'
+import { api } from '../lib/api'
 import { resolverFotoUrl } from '../lib/fotoUrl'
 import { CIDADES } from '../lib/constants'
 import { RankingLiderancas } from '../components/RankingLiderancas'
@@ -27,11 +30,38 @@ export function DashboardPage() {
   const { cabos } = useCabos()
   const { alert } = useConfirm()
   const { theme } = useTheme()
+  const { role } = useAuth()
+  const queryClient = useQueryClient()
   const mapaRef = useRef<HTMLDivElement>(null)
 
   // Estado para o mapa
   const [modoMapa, setModoMapa] = useState<'calor' | 'mapa'>('calor')
   const [exportando, setExportando] = useState(false)
+  const [geo, setGeo] = useState<{ rodando: boolean; restantes: number | null }>({ rodando: false, restantes: null })
+
+  // Preenche lat/lng dos cadastros pelo endereço, em lotes (~1 req/s no Nominatim),
+  // até não sobrar nenhum. O calor passa a cair no endereço, não no centro da cidade.
+  async function geolocalizarCadastros() {
+    if (geo.rodando) return
+    setGeo({ rodando: true, restantes: null })
+    try {
+      let anterior = Infinity
+      for (let i = 0; i < 300; i++) {
+        const r = await api.geocodificarEleitores()
+        setGeo({ rodando: true, restantes: r.restantes })
+        queryClient.invalidateQueries({ queryKey: ['mapa-pontos'] })
+        if (r.restantes === 0) break
+        // Trava de segurança: se não avançou e nada foi geocodificado, para (Nominatim indisponível)
+        if (r.restantes >= anterior && r.geocodificados === 0) break
+        anterior = r.restantes
+      }
+      await alert('Cadastros posicionados no mapa pelo endereço.', 'Geolocalização concluída')
+    } catch {
+      await alert('Não foi possível concluir agora. Tente novamente em instantes.', 'Erro na geolocalização')
+    } finally {
+      setGeo((s) => ({ rodando: false, restantes: s.restantes }))
+    }
+  }
 
   const [showOnboarding, setShowOnboarding] = useState(false)
 
@@ -288,6 +318,19 @@ export function DashboardPage() {
               >
                 {exportando ? 'Gerando...' : 'Exportar imagem'}
               </button>
+              {role === 'admin' && (
+                <button
+                  onClick={geolocalizarCadastros}
+                  disabled={geo.rodando}
+                  title="Posiciona no mapa de calor cada cadastro pelo endereço"
+                  className="self-end inline-flex items-center gap-1.5 rounded-xl border border-slate-200/50 bg-white/80 backdrop-blur-md px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-white active:scale-95 disabled:opacity-60 dark:border-slate-700/50 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:bg-slate-900"
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  {geo.rodando
+                    ? `Geolocalizando…${geo.restantes != null ? ` ${geo.restantes} restantes` : ''}`
+                    : 'Geolocalizar cadastros'}
+                </button>
+              )}
             </div>
 
             <div ref={mapaRef} className="h-full w-full bg-slate-100 dark:bg-slate-800 sm:rounded-3xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
