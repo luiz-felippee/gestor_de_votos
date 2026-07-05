@@ -405,10 +405,10 @@ const labelClass =
   'mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300'
 
 const inputClass =
-  'w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-base font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 sm:py-3.5 sm:text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-900'
+  'w-full h-12 sm:h-11 rounded-xl border border-slate-300 bg-slate-50 px-4 text-base sm:text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-900'
 
 const btnPrimaryClass =
-  'flex w-full items-center justify-center rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-[0.99] disabled:opacity-60 sm:py-3.5 dark:focus:ring-offset-slate-950'
+  'flex w-full h-12 sm:h-11 items-center justify-center rounded-xl bg-brand-600 px-4 text-base sm:text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-[0.99] disabled:opacity-60 dark:focus:ring-offset-slate-950'
 
 const btnSecondaryClass =
-  'w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-60 sm:py-3.5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60'
+  'flex w-full h-12 sm:h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-base sm:text-sm font-bold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60'

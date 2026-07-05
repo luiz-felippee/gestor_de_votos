@@ -15,7 +15,7 @@ import cidadesPE from '../data/pe-cidades.json'
 
 const TILES = {
   light: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
     boundary: '#94a3b8',
     fill: '#1e293b',
   },
@@ -222,7 +222,6 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
         scrollWheelZoom={!isMobile}
         dragging={true}
         touchZoom={true}
-        zoomControl={false}
         attributionControl={false}
         style={{
           height: telaCheia ? '100vh' : (className ? '100%' : height),
@@ -280,32 +279,7 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
         />
 
         {modoVisualizacao === 'calor' && (
-          <>
-            <CamadaCalor pontos={pontosCalor} />
-            {pontos.filter((p) => cidadesComRotulo.has(p.cidade)).map((p) => {
-              const ehLider = p.cidade === cidadeLider
-              return (
-                <CircleMarker
-                  key={p.cidade}
-                  center={[p.lat, p.lng]}
-                  radius={ehLider ? 5 : 3}
-                  pathOptions={{
-                    color: '#ffffff',
-                    weight: 2,
-                    fillColor: ehLider ? '#dc2626' : '#0f172a',
-                    fillOpacity: 1,
-                  }}
-                  eventHandlers={{
-                    click: () => onCidadeSelect(cidadeSelecionada === p.cidade ? null : p.cidade),
-                  }}
-                >
-                  <Tooltip permanent direction="top" offset={[0, -8]} className="!bg-transparent !border-0 !shadow-none !text-slate-800 dark:!text-white !font-bold !text-xs">
-                    {ehLider ? '👑 ' : ''}{p.cidade} · {p.count}
-                  </Tooltip>
-                </CircleMarker>
-              )
-            })}
-          </>
+          <CamadaCalor pontos={pontosCalor} />
         )}
       </MapContainer>
 
