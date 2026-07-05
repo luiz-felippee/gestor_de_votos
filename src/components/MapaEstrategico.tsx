@@ -15,9 +15,10 @@ import cidadesPE from '../data/pe-cidades.json'
 // - Clique no município seleciona/aproxima; tela cheia; legenda
 // ============================================================================
 
-// Basemap OpenStreetMap (padrão). No dark, o CSS inverte a camada de tiles.
-const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+// Basemap CARTO Voyager (dados do OpenStreetMap). No dark, o CSS inverte a
+// camada de tiles para o visual escuro, mantendo os rótulos de ruas e bairros.
+const TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
 // ---------- utilitários ----------
@@ -332,7 +333,7 @@ export function MapaEstrategico({
         <ZoomInicialPE bounds={bounds} />
         <VooParaCidade centro={centroSelecionado} boundsPE={bounds} />
 
-        <TileLayer url={TILE_URL} attribution={TILE_ATTR} subdomains="abc" maxZoom={19} crossOrigin="anonymous" />
+        <TileLayer url={TILE_URL} attribution={TILE_ATTR} subdomains="abcd" maxZoom={20} detectRetina crossOrigin="anonymous" />
 
         <GeoJSON
           key={`${modoVisualizacao}-${theme}`}
