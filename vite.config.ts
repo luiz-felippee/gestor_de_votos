@@ -65,18 +65,22 @@ export default defineConfig({
               networkTimeoutSeconds: 8, // Em 3G lento, usa cache após 8s
             },
           },
-          // ---- Tiles do mapa (CARTO CDN) → CacheFirst ----
+          // ---- Tiles do mapa (CARTO CDN) → StaleWhileRevalidate ----
+          // StaleWhileRevalidate + cache só de 200: serve rápido do cache mas
+          // sempre revalida em segundo plano, então nunca fica "preso" num tile
+          // quebrado. Nome novo (v2) abandona o cache antigo que podia estar
+          // envenenado com respostas vazias (status 0).
           {
             urlPattern: /^https:\/\/[a-d]\.basemaps\.cartocdn\.com\/.*/i,
-            handler: 'CacheFirst',
+            handler: 'StaleWhileRevalidate',
             options: {
-              cacheName: 'map-tiles-cache',
+              cacheName: 'map-tiles-cache-v2',
               expiration: {
                 maxEntries: 500,
                 maxAgeSeconds: 60 * 60 * 24 * 30, // 30 dias
               },
               cacheableResponse: {
-                statuses: [0, 200],
+                statuses: [200],
               },
             },
           },
