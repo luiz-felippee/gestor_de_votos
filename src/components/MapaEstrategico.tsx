@@ -3,6 +3,8 @@ import {
   MapContainer,
   TileLayer,
   GeoJSON,
+  CircleMarker,
+  Tooltip,
   useMap,
 } from 'react-leaflet'
 import L, { type LatLngBoundsExpression } from 'leaflet'
@@ -185,6 +187,8 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
   }, [countPorCidadeNorm])
 
   const maxCount = Math.max(1, ...pontos.map((p) => p.count))
+  const cidadeLider = pontos.reduce<string | null>((lider, p) => p.count === maxCount && maxCount > 0 ? p.cidade : lider, null)
+  const cidadesComRotulo = new Set([...pontos].sort((a, b) => b.count - a.count).slice(0, 5).map((p) => p.cidade))
 
   // Estilo de cada município — memoizado e reaplicado sem remontar a camada
   const estiloFeature = useCallback((feature: any) => {
@@ -317,7 +321,32 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
         />
 
         {modoVisualizacao === 'calor' && (
-          <CamadaCalor pontos={pontosCalor} />
+          <>
+            <CamadaCalor pontos={pontosCalor} />
+            {pontos.filter((p) => cidadesComRotulo.has(p.cidade)).map((p) => {
+              const ehLider = p.cidade === cidadeLider
+              return (
+                <CircleMarker
+                  key={p.cidade}
+                  center={[p.lat, p.lng]}
+                  radius={ehLider ? 5 : 3}
+                  pathOptions={{
+                    color: '#ffffff',
+                    weight: 2,
+                    fillColor: ehLider ? '#dc2626' : '#0f172a',
+                    fillOpacity: 1,
+                  }}
+                  eventHandlers={{
+                    click: () => onCidadeSelect(cidadeSelecionada === p.cidade ? null : p.cidade),
+                  }}
+                >
+                  <Tooltip permanent direction="top" offset={[0, -8]} className="!bg-transparent !border-0 !shadow-none !text-slate-800 dark:!text-white !font-bold !text-xs">
+                    {ehLider ? '👑 ' : ''}{p.cidade} · {p.count}
+                  </Tooltip>
+                </CircleMarker>
+              )
+            })}
+          </>
         )}
       </MapContainer>
 
