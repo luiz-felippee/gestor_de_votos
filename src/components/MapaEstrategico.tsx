@@ -96,6 +96,20 @@ function CamadaCalor({ pontos }: { pontos: [number, number, number][] }) {
   return null
 }
 
+// Abre o mapa já enquadrado e aproximado em PE, e impede afastar além disso
+// (evita mostrar o Nordeste inteiro).
+function ZoomInicialPE({ bounds }: { bounds: LatLngBoundsExpression }) {
+  const map = useMap()
+  useEffect(() => {
+    map.fitBounds(bounds, { padding: [6, 6] })
+    const z = map.getZoom()
+    map.setMinZoom(z)                                 // não deixa afastar além de PE
+    map.setZoom(Math.min(z + 0.6, map.getMaxZoom()))  // foca um pouco mais no estado
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return null
+}
+
 // Aproxima na cidade selecionada; volta ao estado quando deseleciona
 function VooParaCidade({ centro, boundsPE }: { centro: [number, number] | null; boundsPE: LatLngBoundsExpression }) {
   const map = useMap()
@@ -282,6 +296,7 @@ export function MapaEstrategico({
         maxBounds={bounds}
         maxBoundsViscosity={0.9}
         minZoom={6}
+        zoomSnap={0.25}
         zoomControl={false}
         scrollWheelZoom={!isMobile}
         attributionControl={false}
@@ -293,6 +308,7 @@ export function MapaEstrategico({
         }}
       >
         <AjustarTamanho dep={telaCheia} />
+        <ZoomInicialPE bounds={bounds} />
         <VooParaCidade centro={centroSelecionado} boundsPE={bounds} />
 
         <TileLayer url={TILE_URL} subdomains="abcd" detectRetina crossOrigin="anonymous" />
