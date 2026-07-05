@@ -15,7 +15,9 @@ import cidadesPE from '../data/pe-cidades.json'
 // - Clique no município seleciona/aproxima; tela cheia; legenda
 // ============================================================================
 
-const TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
+// Basemap OpenStreetMap (padrão). No dark, o CSS inverte a camada de tiles.
+const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
 // ---------- utilitários ----------
@@ -318,7 +320,6 @@ export function MapaEstrategico({
         zoomSnap={0.25}
         zoomControl={false}
         scrollWheelZoom={!isMobile}
-        attributionControl={false}
         style={{
           height: telaCheia ? '100vh' : (className ? '100%' : height),
           minHeight: className ? undefined : height,
@@ -331,7 +332,7 @@ export function MapaEstrategico({
         <ZoomInicialPE bounds={bounds} />
         <VooParaCidade centro={centroSelecionado} boundsPE={bounds} />
 
-        <TileLayer url={TILE_URL} subdomains="abcd" detectRetina crossOrigin="anonymous" />
+        <TileLayer url={TILE_URL} attribution={TILE_ATTR} subdomains="abc" maxZoom={19} crossOrigin="anonymous" />
 
         <GeoJSON
           key={`${modoVisualizacao}-${theme}`}

@@ -71,7 +71,7 @@ export default defineConfig({
           // quebrado. Nome novo (v2) abandona o cache antigo que podia estar
           // envenenado com respostas vazias (status 0).
           {
-            urlPattern: /^https:\/\/[a-d]\.basemaps\.cartocdn\.com\/.*/i,
+            urlPattern: /^https:\/\/([a-d]\.basemaps\.cartocdn\.com|[a-c]\.tile\.openstreetmap\.org)\/.*/i,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'map-tiles-cache-v2',
