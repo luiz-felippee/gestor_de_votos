@@ -8,6 +8,7 @@ import {
 import L, { type LatLngBoundsExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.heat'
+import { feature as topoFeature } from 'topojson-client'
 import { useTheme } from './ThemeProvider'
 import cidadesPE from '../data/pe-cidades.json'
 
@@ -138,9 +139,11 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
   const [telaCheia, setTelaCheia] = useState(false)
 
   useEffect(() => {
-    fetch('/pe-municipios.geojson')
+    fetch('/pe-municipios.topojson')
       .then((r) => r.json())
-      .then((geo) => {
+      .then((topo) => {
+        // Decodifica TopoJSON → GeoJSON (arquivo ~60% menor que o GeoJSON puro)
+        const geo = topoFeature(topo, topo.objects.municipios) as any
         setGeoData(geo)
         setBounds(calcularBounds(geo))
       })

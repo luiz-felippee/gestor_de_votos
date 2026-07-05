@@ -80,9 +80,9 @@ export default defineConfig({
               },
             },
           },
-          // ---- GeoJSON local → CacheFirst ----
+          // ---- Mapa local (Topo/GeoJSON) → CacheFirst ----
           {
-            urlPattern: /\/pe-municipios\.geojson$/i,
+            urlPattern: /\/pe-municipios\.(topo|geo)json$/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'geojson-cache',
