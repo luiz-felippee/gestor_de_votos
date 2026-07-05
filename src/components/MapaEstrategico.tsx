@@ -231,7 +231,7 @@ export function MapaEstrategico({
     const norm = normalizar(feature.properties.nome)
     const sel = !!cidadeSelecionada && normalizar(cidadeSelecionada) === norm
     const c = countPorCidade.get(norm) || 0
-    const isZoomed = zoomAtual >= 9.5
+    const isZoomed = zoomAtual >= 9.0
 
     if (modoVisualizacao === 'mapa') {
       return {
