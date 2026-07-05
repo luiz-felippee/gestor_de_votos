@@ -15,9 +15,12 @@ import cidadesPE from '../data/pe-cidades.json'
 // - Clique no município seleciona/aproxima; tela cheia; legenda
 // ============================================================================
 
-// Basemap CARTO Voyager (dados do OpenStreetMap). No dark, o CSS inverte a
-// camada de tiles para o visual escuro, mantendo os rótulos de ruas e bairros.
-const TILE_URL = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png'
+// Basemap CARTO (dados do OpenStreetMap): claro (light_all) / escuro (dark_all),
+// nativos — mesmo estilo do outro deploy.
+const TILES = {
+  light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', boundary: '#94a3b8', fill: '#1e293b' },
+  dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', boundary: '#475569', fill: '#cbd5e1' },
+}
 const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
@@ -99,20 +102,6 @@ function CamadaCalor({ pontos }: { pontos: [number, number, number][] }) {
   return null
 }
 
-// Abre o mapa já enquadrado e aproximado em PE, e impede afastar além disso
-// (evita mostrar o Nordeste inteiro).
-function ZoomInicialPE({ bounds }: { bounds: LatLngBoundsExpression }) {
-  const map = useMap()
-  useEffect(() => {
-    map.fitBounds(bounds, { padding: [6, 6] })
-    const z = map.getZoom()
-    map.setMinZoom(z)                                 // não deixa afastar além de PE
-    map.setZoom(Math.min(z + 0.6, map.getMaxZoom()))  // foca um pouco mais no estado
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-  return null
-}
-
 // Aproxima na cidade selecionada; volta ao estado quando deseleciona
 function VooParaCidade({ centro, boundsPE }: { centro: [number, number] | null; boundsPE: LatLngBoundsExpression }) {
   const map = useMap()
@@ -122,23 +111,6 @@ function VooParaCidade({ centro, boundsPE }: { centro: [number, number] | null; 
     if (centro) map.flyTo(centro, isMobile ? 9 : 10, { duration: 1.1 })
     else map.flyToBounds(boundsPE, { duration: 1.1 })
   }, [centro, boundsPE, map])
-  return null
-}
-
-// Helper to watch active map zoom
-function ZoomWatcher({ onChange }: { onChange: (z: number) => void }) {
-  const map = useMap()
-  useEffect(() => {
-    const cb = () => onChange(map.getZoom())
-    map.on('zoomend', cb)
-    map.on('zoom', cb)
-    // Initial call
-    cb()
-    return () => {
-      map.off('zoomend', cb)
-      map.off('zoom', cb)
-    }
-  }, [map, onChange])
   return null
 }
 
@@ -165,7 +137,7 @@ export function MapaEstrategico({
 }: MapaEstrategicoProps) {
   const { theme } = useTheme()
   const dark = theme === 'dark'
-  const [zoomAtual, setZoomAtual] = useState(7)
+  const tema = dark ? TILES.dark : TILES.light
 
   const [geoData, setGeoData] = useState<any>(null)
   const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
@@ -231,26 +203,25 @@ export function MapaEstrategico({
     const norm = normalizar(feature.properties.nome)
     const sel = !!cidadeSelecionada && normalizar(cidadeSelecionada) === norm
     const c = countPorCidade.get(norm) || 0
-    const isZoomed = zoomAtual >= 9.0
 
     if (modoVisualizacao === 'mapa') {
       return {
-        color: sel ? (dark ? '#ffffff' : '#0f172a') : (isZoomed ? 'transparent' : '#ffffff'),
+        color: sel ? (dark ? '#ffffff' : '#0f172a') : '#ffffff',
         weight: sel ? 3 : 0.6,
         fillColor: sel
           ? (dark ? '#ffffff' : '#0f172a')
           : (c > 0 ? corCalor(c / maxCidade) : dark ? '#1e293b' : '#e2e8f0'),
-        fillOpacity: isZoomed ? 0 : (sel ? 0.12 : (c > 0 ? 0.85 : 0.35)),
+        fillOpacity: sel ? 0.1 : (c > 0 ? 0.85 : 0.35),
       }
     }
-    // modo calor: municípios quase transparentes só para dar contorno/clique
+    // modo calor: municípios com contorno leve sobre o basemap
     return {
-      color: sel ? (dark ? '#ffffff' : '#0f172a') : (isZoomed ? 'transparent' : (dark ? '#64748b' : '#94a3b8')),
-      weight: sel ? 3 : 0.7,
-      fillColor: sel ? (dark ? '#ffffff' : '#0f172a') : '#000000',
-      fillOpacity: isZoomed ? 0 : (sel ? 0.12 : 0.02),
+      color: sel ? (dark ? '#ffffff' : '#0f172a') : tema.boundary,
+      weight: sel ? 3 : 0.8,
+      fillColor: sel ? (dark ? '#ffffff' : '#0f172a') : tema.fill,
+      fillOpacity: sel ? 0.1 : 0.04,
     }
-  }, [cidadeSelecionada, countPorCidade, maxCidade, modoVisualizacao, dark, zoomAtual])
+  }, [cidadeSelecionada, countPorCidade, maxCidade, modoVisualizacao, dark, tema])
 
   // Handlers do Leaflet montam 1x → usamos um ref com o estado mais recente
   const geoRef = useRef<any>(null)
@@ -268,7 +239,7 @@ export function MapaEstrategico({
       const c = countPorCidade.get(normalizar(nome)) || 0
       l.setTooltipContent(`<strong>${nome}</strong><br/>${c} eleitor${c !== 1 ? 'es' : ''}`)
     })
-  }, [estiloFeature, countPorCidade, zoomAtual])
+  }, [estiloFeature, countPorCidade])
 
   const centroSelecionado = useMemo<[number, number] | null>(() => {
     if (!cidadeSelecionada) return null
@@ -318,7 +289,6 @@ export function MapaEstrategico({
         maxBounds={bounds}
         maxBoundsViscosity={0.9}
         minZoom={6}
-        zoomSnap={0.25}
         zoomControl={false}
         scrollWheelZoom={!isMobile}
         style={{
@@ -328,12 +298,10 @@ export function MapaEstrategico({
           background: dark ? '#0f172a' : '#eef2f6',
         }}
       >
-        <ZoomWatcher onChange={setZoomAtual} />
         <AjustarTamanho dep={telaCheia} />
-        <ZoomInicialPE bounds={bounds} />
         <VooParaCidade centro={centroSelecionado} boundsPE={bounds} />
 
-        <TileLayer url={TILE_URL} attribution={TILE_ATTR} subdomains="abcd" maxZoom={20} detectRetina crossOrigin="anonymous" />
+        <TileLayer key={theme} url={tema.url} attribution={TILE_ATTR} subdomains="abcd" detectRetina crossOrigin="anonymous" />
 
         <GeoJSON
           key={`${modoVisualizacao}-${theme}`}

@@ -31,11 +31,6 @@ svg {
   height: calc(100% + 2px) !important;
 }
 
-/* Dark mode: inverte os tiles Voyager para ficarem escuros mantendo os rótulos de ruas e bairros */
-.dark .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.2) saturate(0.3);
-}
-
 @layer utilities {
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom), 0.75rem) !important;
