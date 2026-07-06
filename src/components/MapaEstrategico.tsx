@@ -91,10 +91,16 @@ function ZoomNaCidade({
   return null
 }
 
-function jitter(seed: string, escala = 0.05) {
-  let h = 0
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
-  return ((h % 1000) / 1000 - 0.5) * escala
+// Observa o nível de zoom atual (para mostrar os pinos de local só ao aproximar)
+function ObservadorZoom({ onChange }: { onChange: (z: number) => void }) {
+  const map = useMap()
+  useEffect(() => {
+    const cb = () => onChange(map.getZoom())
+    map.on('zoomend', cb)
+    cb()
+    return () => { map.off('zoomend', cb) }
+  }, [map, onChange])
+  return null
 }
 
 function normalizar(s: string) {
@@ -122,7 +128,7 @@ function calcularBounds(geo: any): LatLngBoundsExpression {
 }
 
 interface MapaEstrategicoProps {
-  pontosGeo: { id: string; cidade: string | null; lat: number | null; lng: number | null }[]
+  pontosGeo: { id: string; cidade: string | null; local_votacao: string | null; lat: number | null; lng: number | null }[]
   statsPorCidade: { label: string; total: number }[]
   cidadeSelecionada: string | null
   onCidadeSelect: (cidade: string | null) => void
@@ -138,6 +144,7 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
   const [geoData, setGeoData] = useState<any>(null)
   const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
   const [telaCheia, setTelaCheia] = useState(false)
+  const [zoomAtual, setZoomAtual] = useState(7)
 
   useEffect(() => {
     fetch('/pe-municipios.geojson')
@@ -161,18 +168,41 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
   
   const maxChoropleth = Math.max(1, ...countPorCidadeNorm.values())
 
-  const pontosCalor = useMemo(() => {
-    const arr: [number, number, number][] = []
+  // Agrupa pontos por LOCAL DE VOTAÇÃO (não por eleitor individual)
+  const locaisVotacao = useMemo(() => {
+    const mapa = new Map<string, { local: string; cidade: string; lat: number; lng: number; count: number; latSum: number; lngSum: number }>()
     for (const e of pontosGeo) {
-      if (e.lat != null && e.lng != null) {
-        arr.push([e.lat, e.lng, 0.9])
-      } else if (e.cidade) {
-        const c = COORD_POR_CIDADE.get(normalizar(e.cidade))
-        if (c) arr.push([c.lat + jitter(e.id + 'a'), c.lng + jitter(e.id + 'b'), 0.7])
+      if (e.lat == null || e.lng == null) continue
+      const chave = `${(e.local_votacao || 'Desconhecido').toLowerCase().trim()}|${(e.cidade || '').toLowerCase().trim()}`
+      const existing = mapa.get(chave)
+      if (existing) {
+        existing.count++
+        existing.latSum += e.lat
+        existing.lngSum += e.lng
+      } else {
+        mapa.set(chave, {
+          local: e.local_votacao || 'Desconhecido',
+          cidade: e.cidade || '',
+          lat: e.lat,
+          lng: e.lng,
+          count: 1,
+          latSum: e.lat,
+          lngSum: e.lng,
+        })
       }
     }
-    return arr
+    // Usa o ponto médio dos eleitores de cada local como posição do marcador
+    return [...mapa.values()].map(l => ({
+      ...l,
+      lat: l.latSum / l.count,
+      lng: l.lngSum / l.count,
+    }))
   }, [pontosGeo])
+
+  const pontosCalor = useMemo(() => {
+    // Cada local de votação gera 1 ponto com peso proporcional ao número de eleitores
+    return locaisVotacao.map(l => [l.lat, l.lng, Math.min(1, l.count / Math.max(1, ...locaisVotacao.map(x => x.count)))] as [number, number, number])
+  }, [locaisVotacao])
 
   const pontos = useMemo(() => {
     const pts: { cidade: string; count: number; lat: number; lng: number }[] = []
@@ -184,8 +214,10 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
   }, [countPorCidadeNorm])
 
   const maxCount = Math.max(1, ...pontos.map((p) => p.count))
-  const cidadeLider = pontos.reduce<string | null>((lider, p) => p.count === maxCount && maxCount > 0 ? p.cidade : lider, null)
-  const cidadesComRotulo = new Set([...pontos].sort((a, b) => b.count - a.count).slice(0, 5).map((p) => p.cidade))
+
+  // Para os locais de votação: top locais com rótulo
+  const maxLocalCount = Math.max(1, ...locaisVotacao.map(l => l.count))
+  const localLider = locaisVotacao.reduce<string | null>((lider, l) => l.count === maxLocalCount && maxLocalCount > 0 ? l.local : lider, null)
 
   const pronto = geoData && bounds
 
@@ -232,6 +264,7 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
         }}
       >
         <InvalidarTamanho dep={telaCheia} />
+        <ObservadorZoom onChange={setZoomAtual} />
         <ZoomNaCidade
           cidade={cidadeSelecionada}
           centro={
@@ -282,25 +315,27 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
         {modoVisualizacao === 'calor' && (
           <>
             <CamadaCalor pontos={pontosCalor} />
-            {pontos.filter((p) => cidadesComRotulo.has(p.cidade)).map((p) => {
-              const ehLider = p.cidade === cidadeLider
+            {/* Zoom afastado: só o local líder. Aproximado (>=11): cada local de votação. */}
+            {(zoomAtual >= 11 ? locaisVotacao : locaisVotacao.filter(l => l.local === localLider)).map((l) => {
+              const ehLider = l.local === localLider
+              const raio = Math.max(4, Math.min(14, 4 + (l.count / maxLocalCount) * 10))
               return (
                 <CircleMarker
-                  key={p.cidade}
-                  center={[p.lat, p.lng]}
-                  radius={ehLider ? 5 : 3}
+                  key={`${l.local}-${l.cidade}`}
+                  center={[l.lat, l.lng]}
+                  radius={raio}
                   pathOptions={{
                     color: '#ffffff',
                     weight: 2,
-                    fillColor: ehLider ? '#dc2626' : '#0f172a',
-                    fillOpacity: 1,
+                    fillColor: ehLider ? '#dc2626' : '#4f46e5',
+                    fillOpacity: 0.9,
                   }}
                   eventHandlers={{
-                    click: () => onCidadeSelect(cidadeSelecionada === p.cidade ? null : p.cidade),
+                    click: () => onCidadeSelect(cidadeSelecionada === l.cidade ? null : l.cidade),
                   }}
                 >
-                  <Tooltip permanent direction="top" offset={[0, -8]} className="!bg-transparent !border-0 !shadow-none !text-slate-800 dark:!text-white !font-bold !text-xs">
-                    {ehLider ? '👑 ' : ''}{p.cidade} · {p.count}
+                  <Tooltip permanent={ehLider} sticky={!ehLider} direction="top" offset={[0, -8]} className="!bg-transparent !border-0 !shadow-none !text-slate-800 dark:!text-white !font-bold !text-xs">
+                    {ehLider ? '👑 ' : '📍 '}{l.local} · {l.count}
                   </Tooltip>
                 </CircleMarker>
               )

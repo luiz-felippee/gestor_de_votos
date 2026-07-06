@@ -254,6 +254,11 @@ export const api = {
       '/eleitores/geocodificar',
       { method: 'POST' }
     ),
+  regeocodificarEleitores: () =>
+    request<{ message: string; resetados: number }>(
+      '/eleitores/regeocodificar',
+      { method: 'POST' }
+    ),
   createEleitor: async (data: unknown) => {
     if (!navigator.onLine) {
       // Estamos offline. Salva no IndexedDB e forja uma resposta de sucesso pro componente.

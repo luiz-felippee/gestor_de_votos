@@ -113,8 +113,9 @@ eleitoresRouter.post(
         },
       });
 
-      // Geocode em background (fire-and-forget) — não bloqueia o response
-      geocodeAddress(bairroStr, cidadeStr, b.endereco).then(coord => {
+      // Geocode pelo LOCAL DE VOTAÇÃO em background (fire-and-forget)
+      const localVotStr = String(b.local_votacao).trim();
+      geocodeAddress('', cidadeStr, localVotStr).then(coord => {
         if (coord) {
           prisma.eleitor.update({
             where: { id: eleitor.id },
@@ -315,8 +316,8 @@ eleitoresRouter.put(
       return res.status(404).json({ error: 'Eleitor não encontrado.' });
     try {
       let coord = undefined;
-      if (b.bairro && b.cidade) {
-        coord = await geocodeAddress(b.bairro, b.cidade, b.endereco);
+      if (b.local_votacao && b.cidade) {
+        coord = await geocodeAddress('', b.cidade, b.local_votacao);
       }
 
       const eleitor = await prisma.eleitor.update({
@@ -404,6 +405,8 @@ eleitoresRouter.post(
 
 // Mutirão de geolocalização (admin): preenche lat/lng dos eleitores antigos,
 // em lotes, respeitando o limite do Nominatim (1 requisição por segundo).
+// Usa o LOCAL DE VOTAÇÃO como referência (não o endereço residencial).
+// Cache interno evita re-geocodificar o mesmo local várias vezes.
 eleitoresRouter.post(
   '/eleitores/geocodificar',
   requireAuth,
@@ -411,37 +414,64 @@ eleitoresRouter.post(
   wrap(async (req, res) => {
     const lote = await prisma.eleitor.findMany({
       where: { lat: null, ...escopoCampanha(req) },
-      take: 15,
-      select: { id: true, bairro: true, cidade: true, endereco: true },
+      take: 30, // Pode processar mais por lote graças ao cache
+      select: { id: true, local_votacao: true, cidade: true },
     });
+
+    // Cache in-memory para não geocodificar o mesmo local de votação várias vezes
+    const cacheLocal = new Map<string, { lat: number; lng: number } | null>();
     let geocodificados = 0;
+
     for (const e of lote) {
-      // 1ª tentativa: endereço completo (rua) → posição mais exata possível
-      let coord = await geocodeAddress(e.bairro, e.cidade, e.endereco);
-      // 2ª tentativa: só bairro + cidade
-      if (!coord && e.endereco) {
-        await new Promise((r) => setTimeout(r, 1100));
-        coord = await geocodeAddress(e.bairro, e.cidade);
+      const chave = `${(e.local_votacao || '').toLowerCase().trim()}|${(e.cidade || '').toLowerCase().trim()}`;
+
+      let coord: { lat: number; lng: number } | null | undefined = cacheLocal.get(chave);
+
+      if (coord === undefined) {
+        // Ainda não buscou esse local — faz o geocode
+        // 1ª tentativa: local de votação + cidade
+        coord = await geocodeAddress('', e.cidade, e.local_votacao);
+        // 2ª tentativa: só a cidade
+        if (!coord && e.local_votacao) {
+          await new Promise((r) => setTimeout(r, 1100));
+          coord = await geocodeAddress('', e.cidade);
+        }
+        cacheLocal.set(chave, coord);
+        await new Promise((r) => setTimeout(r, 1100)); // ~1 req/s (Nominatim)
       }
-      // Se o bairro não resolver, cai para a cidade (não fica preso reprocessando)
-      if (!coord && e.bairro) {
-        await new Promise((r) => setTimeout(r, 1100));
-        coord = await geocodeAddress('', e.cidade);
-      }
+
       if (coord) {
+        // Adiciona jitter leve para não empilhar todos os eleitores no mesmo pixel
+        const jLat = (Math.random() - 0.5) * 0.0008;
+        const jLng = (Math.random() - 0.5) * 0.0008;
         await prisma.eleitor.update({
           where: { id: e.id },
-          data: { lat: coord.lat, lng: coord.lng },
+          data: { lat: coord.lat + jLat, lng: coord.lng + jLng },
         });
         geocodificados++;
       }
-      await new Promise((r) => setTimeout(r, 1100)); // ~1 req/s
     }
     const restantes = await prisma.eleitor.count({
       where: { lat: null, ...escopoCampanha(req) },
     });
     if (geocodificados > 0) notificarMudanca(req.user?.campanha_id);
     res.json({ processados: lote.length, geocodificados, restantes });
+  }),
+);
+
+// Regeocodificar: zera todos os lat/lng da campanha para que o mutirão
+// reprocesse tudo usando o local de votação.
+eleitoresRouter.post(
+  '/eleitores/regeocodificar',
+  requireAuth,
+  requireRole('admin'),
+  wrap(async (req, res) => {
+    const { count } = await prisma.eleitor.updateMany({
+      where: { ...escopoCampanha(req), lat: { not: null } },
+      data: { lat: null, lng: null },
+    });
+    notificarMudanca(req.user?.campanha_id);
+    res.json({ message: `${count} eleitores terão lat/lng recalculados pelo local de votação.`, resetados: count });
   }),
 );
 

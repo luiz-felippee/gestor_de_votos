@@ -39,8 +39,8 @@ export function DashboardPage() {
   const [exportando, setExportando] = useState(false)
   const [geo, setGeo] = useState<{ rodando: boolean; restantes: number | null }>({ rodando: false, restantes: null })
 
-  // Preenche lat/lng dos cadastros pelo endereço, em lotes (~1 req/s no Nominatim),
-  // até não sobrar nenhum. O calor passa a cair no endereço, não no centro da cidade.
+  // Preenche lat/lng dos cadastros pelo LOCAL DE VOTAÇÃO, em lotes (~1 req/s no Nominatim),
+  // até não sobrar nenhum. O calor cai no local de votação, não no endereço.
   async function geolocalizarCadastros() {
     if (geo.rodando) return
     setGeo({ rodando: true, restantes: null })
@@ -51,15 +51,26 @@ export function DashboardPage() {
         setGeo({ rodando: true, restantes: r.restantes })
         queryClient.invalidateQueries({ queryKey: ['mapa-pontos'] })
         if (r.restantes === 0) break
-        // Trava de segurança: se não avançou e nada foi geocodificado, para (Nominatim indisponível)
         if (r.restantes >= anterior && r.geocodificados === 0) break
         anterior = r.restantes
       }
-      await alert('Cadastros posicionados no mapa pelo endereço.', 'Geolocalização concluída')
+      await alert('Cadastros posicionados no mapa pelo local de votação.', 'Geolocalização concluída')
     } catch {
       await alert('Não foi possível concluir agora. Tente novamente em instantes.', 'Erro na geolocalização')
     } finally {
       setGeo((s) => ({ rodando: false, restantes: s.restantes }))
+    }
+  }
+
+  // Zera todos os lat/lng para regeocodificar pelo local de votação
+  async function regeocodificarTodos() {
+    if (geo.rodando) return
+    try {
+      const r = await api.regeocodificarEleitores()
+      await alert(`${r.resetados} eleitores foram resetados. Agora clique em "Geolocalizar" para posicioná-los pelo local de votação.`, 'Regeocodificação')
+      queryClient.invalidateQueries({ queryKey: ['mapa-pontos'] })
+    } catch {
+      await alert('Erro ao resetar coordenadas.', 'Erro')
     }
   }
 
@@ -319,17 +330,27 @@ export function DashboardPage() {
                 {exportando ? 'Gerando...' : 'Exportar imagem'}
               </button>
               {role === 'admin' && (
-                <button
-                  onClick={geolocalizarCadastros}
-                  disabled={geo.rodando}
-                  title="Posiciona no mapa de calor cada cadastro pelo endereço"
-                  className="self-end inline-flex items-center gap-1.5 rounded-xl border border-slate-200/50 bg-white/80 backdrop-blur-md px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-white active:scale-95 disabled:opacity-60 dark:border-slate-700/50 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:bg-slate-900"
-                >
-                  <MapPin className="h-3.5 w-3.5" />
-                  {geo.rodando
-                    ? `Geolocalizando…${geo.restantes != null ? ` ${geo.restantes} restantes` : ''}`
-                    : 'Geolocalizar cadastros'}
-                </button>
+                <>
+                  <button
+                    onClick={geolocalizarCadastros}
+                    disabled={geo.rodando}
+                    title="Posiciona no mapa de calor cada cadastro pelo local de votação"
+                    className="self-end inline-flex items-center gap-1.5 rounded-xl border border-slate-200/50 bg-white/80 backdrop-blur-md px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-white active:scale-95 disabled:opacity-60 dark:border-slate-700/50 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:bg-slate-900"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    {geo.rodando
+                      ? `Geolocalizando…${geo.restantes != null ? ` ${geo.restantes} restantes` : ''}`
+                      : 'Geolocalizar cadastros'}
+                  </button>
+                  <button
+                    onClick={regeocodificarTodos}
+                    disabled={geo.rodando}
+                    title="Zera todas as coordenadas e permite regeocodificar pelo local de votação"
+                    className="self-end inline-flex items-center gap-1.5 rounded-xl border border-amber-300/50 bg-amber-50/80 backdrop-blur-md px-4 py-2 text-xs font-bold text-amber-700 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-60 dark:border-amber-700/50 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                  >
+                    Regeocodificar tudo
+                  </button>
+                </>
               )}
             </div>
 

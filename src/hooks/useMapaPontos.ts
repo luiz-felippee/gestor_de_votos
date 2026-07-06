@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 export interface PontoMapa {
   id: string
   cidade: string | null
+  local_votacao: string | null
   lat: number | null
   lng: number | null
 }

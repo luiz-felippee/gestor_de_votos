@@ -324,6 +324,7 @@ dashboardRouter.get(
       select: {
         id: true,
         cidade: true,
+        local_votacao: true,
         lat: true,
         lng: true,
       },
