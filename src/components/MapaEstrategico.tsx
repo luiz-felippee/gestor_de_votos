@@ -103,26 +103,20 @@ function CamadaCalor({ pontos }: { pontos: [number, number, number][] }) {
   return null
 }
 
-// Abre o mapa já enquadrado nos cadastros (onde está o calor), no nível de
-// bairro/rua. Sem cadastros, enquadra o estado.
-function EnquadrarDados({ pontos, boundsPE }: { pontos: [number, number, number][]; boundsPE: LatLngBoundsExpression }) {
+// Abre o mapa já centralizado na cidade com mais cadastros (onde está o calor),
+// num zoom de bairro/rua. Sem cadastros, enquadra o estado.
+function EnquadrarDados({ centro, boundsPE }: { centro: [number, number] | null; boundsPE: LatLngBoundsExpression }) {
   const map = useMap()
   const feito = useRef(false)
   useEffect(() => {
     if (feito.current) return
-    if (pontos.length) {
-      const lats = pontos.map((p) => p[0])
-      const lngs = pontos.map((p) => p[1])
-      const b: [[number, number], [number, number]] = [
-        [Math.min(...lats), Math.min(...lngs)],
-        [Math.max(...lats), Math.max(...lngs)],
-      ]
-      map.fitBounds(b, { padding: [50, 50], maxZoom: 14 })
+    if (centro) {
+      map.setView(centro, isMobile ? 12 : 13)
       feito.current = true
     } else {
       map.fitBounds(boundsPE, { padding: [8, 8] })
     }
-  }, [pontos, boundsPE, map])
+  }, [centro, boundsPE, map])
   return null
 }
 
@@ -234,6 +228,11 @@ export function MapaEstrategico({
 
   const topCidades = cidadesComVoto.slice(0, 5)
   const cidadeLider = cidadesComVoto[0]?.cidade ?? null
+  // Centro inicial: cidade com mais cadastros (fica no nível de bairro/rua)
+  const centroInicial = useMemo<[number, number] | null>(
+    () => (cidadesComVoto[0] ? [cidadesComVoto[0].lat, cidadesComVoto[0].lng] : null),
+    [cidadesComVoto]
+  )
 
   // Estilo de cada município — reaplicado imperativamente (sem remontar a camada)
   const estiloFeature = useCallback((feature: any) => {
@@ -339,7 +338,7 @@ export function MapaEstrategico({
       >
         <AjustarTamanho dep={telaCheia} />
         <ObservadorZoom onChange={setZoomAtual} />
-        <EnquadrarDados pontos={pontosCalor} boundsPE={bounds} />
+        <EnquadrarDados centro={centroInicial} boundsPE={bounds} />
         <VooParaCidade centro={centroSelecionado} boundsPE={bounds} />
 
         <TileLayer key={theme} url={tema.url} attribution={TILE_ATTR} subdomains="abcd" detectRetina crossOrigin="anonymous" />
