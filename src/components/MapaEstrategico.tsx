@@ -83,10 +83,10 @@ function CamadaCalor({ pontos }: { pontos: [number, number, number][] }) {
   useEffect(() => {
     if (!pontos.length) return
     const layer = (L as any).heatLayer(pontos, {
-      radius: isMobile ? 20 : 30,
+      radius: isMobile ? 22 : 32,
       blur: isMobile ? 16 : 24,
-      minOpacity: 0.35,
-      maxZoom: 12,
+      minOpacity: 0.4,
+      maxZoom: 17,
       gradient: {
         0.0: '#1e3a8a',
         0.3: '#06b6d4',
@@ -102,13 +102,48 @@ function CamadaCalor({ pontos }: { pontos: [number, number, number][] }) {
   return null
 }
 
+// Abre o mapa já enquadrado nos cadastros (onde está o calor), no nível de
+// bairro/rua. Sem cadastros, enquadra o estado.
+function EnquadrarDados({ pontos, boundsPE }: { pontos: [number, number, number][]; boundsPE: LatLngBoundsExpression }) {
+  const map = useMap()
+  const feito = useRef(false)
+  useEffect(() => {
+    if (feito.current) return
+    if (pontos.length) {
+      const lats = pontos.map((p) => p[0])
+      const lngs = pontos.map((p) => p[1])
+      const b: [[number, number], [number, number]] = [
+        [Math.min(...lats), Math.min(...lngs)],
+        [Math.max(...lats), Math.max(...lngs)],
+      ]
+      map.fitBounds(b, { padding: [50, 50], maxZoom: 14 })
+      feito.current = true
+    } else {
+      map.fitBounds(boundsPE, { padding: [8, 8] })
+    }
+  }, [pontos, boundsPE, map])
+  return null
+}
+
+// Observa o zoom atual (para ocultar o contorno em zoom de bairro)
+function ObservadorZoom({ onChange }: { onChange: (z: number) => void }) {
+  const map = useMap()
+  useEffect(() => {
+    const cb = () => onChange(map.getZoom())
+    map.on('zoomend', cb)
+    cb()
+    return () => { map.off('zoomend', cb) }
+  }, [map, onChange])
+  return null
+}
+
 // Aproxima na cidade selecionada; volta ao estado quando deseleciona
 function VooParaCidade({ centro, boundsPE }: { centro: [number, number] | null; boundsPE: LatLngBoundsExpression }) {
   const map = useMap()
   const primeiro = useRef(true)
   useEffect(() => {
     if (primeiro.current) { primeiro.current = false; return }
-    if (centro) map.flyTo(centro, isMobile ? 9 : 10, { duration: 1.1 })
+    if (centro) map.flyTo(centro, isMobile ? 12 : 13, { duration: 1.1 })
     else map.flyToBounds(boundsPE, { duration: 1.1 })
   }, [centro, boundsPE, map])
   return null
@@ -142,6 +177,7 @@ export function MapaEstrategico({
   const [geoData, setGeoData] = useState<any>(null)
   const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
   const [telaCheia, setTelaCheia] = useState(false)
+  const [zoomAtual, setZoomAtual] = useState(7)
 
   // Carrega o contorno dos municípios (TopoJSON → GeoJSON, ~60% menor)
   useEffect(() => {
@@ -203,25 +239,27 @@ export function MapaEstrategico({
     const norm = normalizar(feature.properties.nome)
     const sel = !!cidadeSelecionada && normalizar(cidadeSelecionada) === norm
     const c = countPorCidade.get(norm) || 0
+    // Em zoom de bairro, oculta o contorno para ver ruas/bairros no basemap
+    const oculto = zoomAtual >= 11 && !sel
 
     if (modoVisualizacao === 'mapa') {
       return {
-        color: sel ? (dark ? '#ffffff' : '#0f172a') : '#ffffff',
+        color: sel ? (dark ? '#ffffff' : '#0f172a') : (oculto ? 'transparent' : '#ffffff'),
         weight: sel ? 3 : 0.6,
         fillColor: sel
           ? (dark ? '#ffffff' : '#0f172a')
           : (c > 0 ? corCalor(c / maxCidade) : dark ? '#1e293b' : '#e2e8f0'),
-        fillOpacity: sel ? 0.1 : (c > 0 ? 0.85 : 0.35),
+        fillOpacity: oculto ? 0 : (sel ? 0.1 : (c > 0 ? 0.85 : 0.35)),
       }
     }
     // modo calor: municípios com contorno leve sobre o basemap
     return {
-      color: sel ? (dark ? '#ffffff' : '#0f172a') : tema.boundary,
+      color: sel ? (dark ? '#ffffff' : '#0f172a') : (oculto ? 'transparent' : tema.boundary),
       weight: sel ? 3 : 0.8,
       fillColor: sel ? (dark ? '#ffffff' : '#0f172a') : tema.fill,
-      fillOpacity: sel ? 0.1 : 0.04,
+      fillOpacity: oculto ? 0 : (sel ? 0.1 : 0.04),
     }
-  }, [cidadeSelecionada, countPorCidade, maxCidade, modoVisualizacao, dark, tema])
+  }, [cidadeSelecionada, countPorCidade, maxCidade, modoVisualizacao, dark, tema, zoomAtual])
 
   // Handlers do Leaflet montam 1x → usamos um ref com o estado mais recente
   const geoRef = useRef<any>(null)
@@ -299,6 +337,8 @@ export function MapaEstrategico({
         }}
       >
         <AjustarTamanho dep={telaCheia} />
+        <ObservadorZoom onChange={setZoomAtual} />
+        <EnquadrarDados pontos={pontosCalor} boundsPE={bounds} />
         <VooParaCidade centro={centroSelecionado} boundsPE={bounds} />
 
         <TileLayer key={theme} url={tema.url} attribution={TILE_ATTR} subdomains="abcd" detectRetina crossOrigin="anonymous" />

@@ -58,7 +58,7 @@ export function Header() {
           </div>
         )}
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <span className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+          <NavLink to="/" className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100 hover:opacity-90 transition-opacity">
             <Logo />
             <span className="flex flex-col leading-tight">
               <span className="hidden sm:inline">Gestor de Votos</span>
@@ -69,7 +69,7 @@ export function Header() {
                 </span>
               )}
             </span>
-          </span>
+          </NavLink>
 
           {usuario ? (
             <div className="flex items-center gap-5">
