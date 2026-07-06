@@ -23,14 +23,6 @@ svg {
   background-color: #020617; /* slate-950 */
 }
 
-/* Fix for Leaflet grid lines between tiles */
-.leaflet-tile-container img {
-  box-shadow: 0 0 1px rgba(0, 0, 0, 0.05);
-  margin: -1px;
-  width: calc(100% + 2px) !important;
-  height: calc(100% + 2px) !important;
-}
-
 /* Dark: inverte os tiles Voyager p/ ficarem escuros mantendo ruas e bairros legíveis */
 .dark .leaflet-tile-pane {
   filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(1.15) saturate(0.35);
