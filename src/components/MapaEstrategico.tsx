@@ -15,11 +15,12 @@ import cidadesPE from '../data/pe-cidades.json'
 // - Clique no município seleciona/aproxima; tela cheia; legenda
 // ============================================================================
 
-// Basemap CARTO (dados do OpenStreetMap): claro (light_all) / escuro (dark_all),
-// nativos — mesmo estilo do outro deploy.
+// Basemap CARTO Voyager (dados do OpenStreetMap) — mostra ruas e nomes de bairro.
+// No dark, o CSS inverte a camada de tiles (.dark .leaflet-tile-pane) para o
+// visual escuro mantendo os rótulos legíveis.
 const TILES = {
-  light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', boundary: '#94a3b8', fill: '#1e293b' },
-  dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', boundary: '#475569', fill: '#cbd5e1' },
+  light: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', boundary: '#94a3b8', fill: '#1e293b' },
+  dark: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', boundary: '#475569', fill: '#cbd5e1' },
 }
 const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
