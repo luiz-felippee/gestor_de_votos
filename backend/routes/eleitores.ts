@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { prisma } from '../prismaClient';
 import { requireAuth, requireRole, optionalAuth, wrap, escopoCampanha, eleitorNaCampanha, registrarLog, cadastroLimiter, requirePlanLimit } from '../middlewares';
 import { notificarMudanca } from '../server';
@@ -6,6 +8,29 @@ import { StatusEleitor } from '@prisma/client';
 import { cache } from '../lib/cache';
 
 const eleitoresRouter = Router();
+
+// Coordenadas oficiais dos locais de votação de PE (TSE), por "zona-seção".
+// Carregado uma vez, em memória. Fonte: eleitorado_local_votacao (dadosabertos TSE).
+let LOCAIS_PE: Record<string, [number, number]> | undefined;
+function locaisPE(): Record<string, [number, number]> {
+  if (!LOCAIS_PE) {
+    try {
+      LOCAIS_PE = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'locais-pe.json'), 'utf8'));
+    } catch (e) {
+      console.error('Falha ao carregar locais-pe.json:', e);
+      LOCAIS_PE = {};
+    }
+  }
+  return LOCAIS_PE!;
+}
+function coordPorSecao(zona: unknown, secao: unknown): { lat: number; lng: number } | null {
+  const z = Number(zona), s = Number(secao);
+  if (!Number.isFinite(z) || !Number.isFinite(s)) return null;
+  const c = locaisPE()[`${z}-${s}`];
+  if (!c) return null;
+  // Jitter ~15m para os eleitores da mesma seção não empilharem no mesmo pixel
+  return { lat: c[0] + (Math.random() - 0.5) * 0.0003, lng: c[1] + (Math.random() - 0.5) * 0.0003 };
+}
 
 function normalizar(nome: string) {
   return nome.trim().toLowerCase();
@@ -89,7 +114,11 @@ eleitoresRouter.post(
         }
       }
 
-      // Cria o eleitor imediatamente (sem esperar geocode)
+      // Coordenada oficial do TSE pela zona/seção (exata). Se não achar, fica nulo
+      // e um geocode por nome roda em background.
+      const coordTSE = coordPorSecao(b.zona, b.secao);
+
+      // Cria o eleitor imediatamente
       const eleitor = await prisma.eleitor.create({
         data: {
           campanha_id: campanhaId,
@@ -106,23 +135,25 @@ eleitoresRouter.post(
           data_nascimento: b.data_nascimento || null,
           cpf: b.cpf ? String(b.cpf).replace(/\D/g, '') : null,
           titulo_eleitor: b.titulo_eleitor ? String(b.titulo_eleitor).replace(/\D/g, '') : null,
-          lat: null,
-          lng: null,
+          lat: coordTSE?.lat ?? null,
+          lng: coordTSE?.lng ?? null,
           status: (b.status as StatusEleitor) || 'ativo',
           observacoes: b.observacoes?.trim() || null,
         },
       });
 
-      // Geocode pelo LOCAL DE VOTAÇÃO em background (fire-and-forget)
-      const localVotStr = String(b.local_votacao).trim();
-      geocodeAddress('', cidadeStr, localVotStr).then(coord => {
-        if (coord) {
-          prisma.eleitor.update({
-            where: { id: eleitor.id },
-            data: { lat: coord.lat, lng: coord.lng },
-          }).catch(console.error);
-        }
-      }).catch(console.error);
+      // Sem coordenada do TSE: geocode pelo LOCAL DE VOTAÇÃO em background (fallback)
+      if (!coordTSE) {
+        const localVotStr = String(b.local_votacao).trim();
+        geocodeAddress('', cidadeStr, localVotStr).then(coord => {
+          if (coord) {
+            prisma.eleitor.update({
+              where: { id: eleitor.id },
+              data: { lat: coord.lat, lng: coord.lng },
+            }).catch(console.error);
+          }
+        }).catch(console.error);
+      }
 
       notificarMudanca(campanhaId);
       res.status(201).json(eleitor);
@@ -403,10 +434,9 @@ eleitoresRouter.post(
   }),
 );
 
-// Mutirão de geolocalização (admin): preenche lat/lng dos eleitores antigos,
-// em lotes, respeitando o limite do Nominatim (1 requisição por segundo).
-// Usa o LOCAL DE VOTAÇÃO como referência (não o endereço residencial).
-// Cache interno evita re-geocodificar o mesmo local várias vezes.
+// Mutirão de geolocalização (admin): preenche lat/lng dos eleitores antigos.
+// 1º) coordenada OFICIAL do TSE pela zona/seção (instantâneo, ~95% dos casos).
+// 2º) fallback: geocode do nome do local via Nominatim (~1 req/s), com cache.
 eleitoresRouter.post(
   '/eleitores/geocodificar',
   requireAuth,
@@ -414,39 +444,37 @@ eleitoresRouter.post(
   wrap(async (req, res) => {
     const lote = await prisma.eleitor.findMany({
       where: { lat: null, ...escopoCampanha(req) },
-      take: 30, // Pode processar mais por lote graças ao cache
-      select: { id: true, local_votacao: true, cidade: true },
+      take: 200, // A maioria é resolvida na hora pelo TSE (sem rede)
+      select: { id: true, local_votacao: true, cidade: true, zona: true, secao: true },
     });
 
-    // Cache in-memory para não geocodificar o mesmo local de votação várias vezes
+    // Cache in-memory do fallback Nominatim (não repete o mesmo local)
     const cacheLocal = new Map<string, { lat: number; lng: number } | null>();
     let geocodificados = 0;
 
     for (const e of lote) {
-      const chave = `${(e.local_votacao || '').toLowerCase().trim()}|${(e.cidade || '').toLowerCase().trim()}`;
+      // 1) TSE por zona/seção — exato e sem rede
+      let coord: { lat: number; lng: number } | null | undefined = coordPorSecao(e.zona, e.secao);
 
-      let coord: { lat: number; lng: number } | null | undefined = cacheLocal.get(chave);
-
-      if (coord === undefined) {
-        // Ainda não buscou esse local — faz o geocode
-        // 1ª tentativa: local de votação + cidade
-        coord = await geocodeAddress('', e.cidade, e.local_votacao);
-        // 2ª tentativa: só a cidade
-        if (!coord && e.local_votacao) {
-          await new Promise((r) => setTimeout(r, 1100));
-          coord = await geocodeAddress('', e.cidade);
+      // 2) Fallback: geocode por nome (com cache + rate limit)
+      if (!coord) {
+        const chave = `${(e.local_votacao || '').toLowerCase().trim()}|${(e.cidade || '').toLowerCase().trim()}`;
+        coord = cacheLocal.get(chave);
+        if (coord === undefined) {
+          coord = await geocodeAddress('', e.cidade, e.local_votacao);
+          if (!coord && e.local_votacao) {
+            await new Promise((r) => setTimeout(r, 1100));
+            coord = await geocodeAddress('', e.cidade);
+          }
+          cacheLocal.set(chave, coord);
+          await new Promise((r) => setTimeout(r, 1100)); // ~1 req/s (Nominatim)
         }
-        cacheLocal.set(chave, coord);
-        await new Promise((r) => setTimeout(r, 1100)); // ~1 req/s (Nominatim)
       }
 
       if (coord) {
-        // Adiciona jitter leve para não empilhar todos os eleitores no mesmo pixel
-        const jLat = (Math.random() - 0.5) * 0.0008;
-        const jLng = (Math.random() - 0.5) * 0.0008;
         await prisma.eleitor.update({
           where: { id: e.id },
-          data: { lat: coord.lat + jLat, lng: coord.lng + jLng },
+          data: { lat: coord.lat, lng: coord.lng },
         });
         geocodificados++;
       }
