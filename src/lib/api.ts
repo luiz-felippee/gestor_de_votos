@@ -249,6 +249,10 @@ export const api = {
   },
   getDashboardStats: (query: string = '') => request<any>(`/dashboard/stats${query}`),
   getMapaPontos: (query: string = '') => request<any>(`/dashboard/mapa-pontos${query}`),
+  validarSecao: (zona: number | string, secao: number | string) =>
+    request<{ valido: boolean; cidade: string | null }>(
+      `/locais/validar?zona=${encodeURIComponent(zona)}&secao=${encodeURIComponent(secao)}`
+    ),
   geocodificarEleitores: () =>
     request<{ processados: number; geocodificados: number; restantes: number }>(
       '/eleitores/geocodificar',

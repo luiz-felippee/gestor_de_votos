@@ -32,6 +32,22 @@ function coordPorSecao(zona: unknown, secao: unknown): { lat: number; lng: numbe
   return { lat: c[0] + (Math.random() - 0.5) * 0.0003, lng: c[1] + (Math.random() - 0.5) * 0.0003 };
 }
 
+// Índice zona-seção → município (TSE PE) para validar zona/seção no cadastro.
+let SECOES_PE: Record<string, string> | undefined;
+function municipioPorSecao(zona: unknown, secao: unknown): string | null {
+  if (!SECOES_PE) {
+    try {
+      SECOES_PE = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'secoes-pe.json'), 'utf8'));
+    } catch (e) {
+      console.error('Falha ao carregar secoes-pe.json:', e);
+      SECOES_PE = {};
+    }
+  }
+  const z = Number(zona), s = Number(secao);
+  if (!Number.isFinite(z) || !Number.isFinite(s)) return null;
+  return SECOES_PE![`${z}-${s}`] || null;
+}
+
 function normalizar(nome: string) {
   return nome.trim().toLowerCase();
 }
@@ -500,6 +516,17 @@ eleitoresRouter.post(
     });
     notificarMudanca(req.user?.campanha_id);
     res.json({ message: `${count} eleitores terão lat/lng recalculados pelo local de votação.`, resetados: count });
+  }),
+);
+
+// Valida zona/seção contra a base oficial do TSE (PE) — usado no formulário.
+// Público: o cadastro é aberto. Retorna se existe e o município da seção.
+eleitoresRouter.get(
+  '/locais/validar',
+  wrap(async (req, res) => {
+    const cidade = municipioPorSecao(req.query.zona, req.query.secao);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.json({ valido: !!cidade, cidade: cidade || null });
   }),
 );
 

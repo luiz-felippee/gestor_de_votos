@@ -90,10 +90,26 @@ export function CadastroPage() {
   const [erros, setErros] = useState<Record<string, string>>({})
   const [sucesso, setSucesso] = useState(false)
 
+  // Validação de zona/seção contra a base oficial do TSE (PE)
+  const [secaoCheck, setSecaoCheck] = useState<{ estado: 'idle' | 'checando' | 'valida' | 'invalida'; cidade?: string | null }>({ estado: 'idle' })
+
   // Sugestões de bairro para o autocomplete
   useEffect(() => {
     api.getBairros().then(setBairros).catch(() => {})
   }, [])
+
+  // Confere zona+seção no TSE (com debounce) sempre que ambos estiverem preenchidos
+  useEffect(() => {
+    const z = form.zona.trim(), s = form.secao.trim()
+    if (!z || !s) { setSecaoCheck({ estado: 'idle' }); return }
+    setSecaoCheck({ estado: 'checando' })
+    const t = setTimeout(() => {
+      api.validarSecao(z, s)
+        .then((r) => setSecaoCheck({ estado: r.valido ? 'valida' : 'invalida', cidade: r.cidade }))
+        .catch(() => setSecaoCheck({ estado: 'idle' }))
+    }, 450)
+    return () => clearTimeout(t)
+  }, [form.zona, form.secao])
 
   // Inicializa o form com o id do cabo
   useEffect(() => {
@@ -426,6 +442,19 @@ export function CadastroPage() {
                   />
                 </Campo>
               </div>
+              {secaoCheck.estado === 'checando' && (
+                <p className="-mt-2 text-xs font-medium text-slate-400">Conferindo zona/seção…</p>
+              )}
+              {secaoCheck.estado === 'valida' && (
+                <p className="-mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Zona/seção confere{secaoCheck.cidade ? ` · ${secaoCheck.cidade}` : ''}
+                </p>
+              )}
+              {secaoCheck.estado === 'invalida' && (
+                <p className="-mt-2 flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-500">
+                  <AlertCircle className="h-3.5 w-3.5" /> Zona/seção não encontrada em PE — confira no título de eleitor.
+                </p>
+              )}
               <Campo label="Endereço (Rua e Número)" erro={erros.endereco}>
                 <input
                   type="text"
