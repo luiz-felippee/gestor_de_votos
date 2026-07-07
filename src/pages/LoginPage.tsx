@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { AlertCircle, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, Eye, EyeOff, CheckCircle2, ShieldCheck } from 'lucide-react'
 import { Logo } from '../components/Logo'
 import { prewarmBackend } from '../lib/api'
 
@@ -205,20 +205,31 @@ export function LoginPage() {
           <div className="absolute inset-0 opacity-[0.04] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:26px_26px]" />
         </div>
 
-        {/* Logo */}
-        <div className="relative z-10 flex shrink-0 items-center gap-3">
-          <Logo iconClassName="h-8 w-8 lg:h-10 lg:w-10" />
+        {/* Logo (centralizado no mobile, à esquerda no desktop) */}
+        <div className="relative z-10 flex shrink-0 items-center justify-center gap-2.5 lg:justify-start">
+          <Logo iconClassName="h-9 w-9 lg:h-10 lg:w-10" />
           <span className="text-lg font-bold tracking-tight text-white">Gestor de Votos</span>
         </div>
 
-        {/* Mensagem curta (Mobile) */}
-        <div className="relative z-10 mt-6 mb-2 lg:hidden">
-          <h1 className="text-2xl sm:text-3xl font-extrabold leading-[1.15] tracking-tight text-white">
-            A inteligência de <br/>
+        {/* Hero (Mobile) — centralizado, com subtítulo e selos de confiança */}
+        <div className="relative z-10 mt-7 text-center lg:hidden">
+          <h1 className="text-[26px] font-extrabold leading-[1.2] tracking-tight text-white sm:text-3xl">
+            A inteligência de<br />
             <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
               campanhas vitoriosas
-            </span>.
+            </span>
           </h1>
+          <p className="mx-auto mt-3 max-w-xs text-sm leading-relaxed text-slate-400">
+            Lideranças, eleitores e metas — tudo em uma só plataforma.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            {['Lideranças', 'Mapas', 'Tempo real'].map((t) => (
+              <span key={t} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-slate-300">
+                <CheckCircle2 className="h-3.5 w-3.5 text-brand-400" />
+                {t}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Conteúdo central (Desktop) — centralizado verticalmente entre logo e rodapé */}
@@ -257,9 +268,11 @@ export function LoginPage() {
       </div>
 
       {/* Direita — Formulário */}
-      <div className="relative z-20 flex flex-1 items-start justify-center rounded-3xl bg-white mx-4 mb-4 px-6 pt-8 pb-10 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] -mt-6 sm:mx-10 sm:mb-8 sm:items-center sm:px-10 lg:mx-0 lg:mb-0 lg:mt-0 lg:rounded-none lg:shadow-none dark:bg-slate-950 dark:shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
+      <div className="relative z-20 flex flex-1 items-start justify-center rounded-t-[2rem] bg-white mx-0 -mt-5 px-6 pt-6 pb-10 shadow-[0_-10px_30px_rgba(0,0,0,0.18)] sm:mx-8 sm:mb-8 sm:items-center sm:rounded-3xl sm:px-10 sm:pt-9 lg:mx-0 lg:mb-0 lg:mt-0 lg:rounded-none lg:shadow-none dark:bg-slate-950 dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
         <div className="w-full max-w-md lg:max-w-sm xl:max-w-md">
 
+          {/* Alça (mobile) */}
+          <div className="mx-auto mb-6 h-1.5 w-10 rounded-full bg-slate-200 dark:bg-slate-800 lg:hidden" />
 
           <div className="mb-6">
             <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
@@ -393,6 +406,12 @@ export function LoginPage() {
               </div>
             </form>
           )}
+
+          {/* Rodapé de segurança (mobile) */}
+          <p className="mt-6 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-400 lg:hidden">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Conexão segura e dados criptografados
+          </p>
         </div>
       </div>
     </div>
