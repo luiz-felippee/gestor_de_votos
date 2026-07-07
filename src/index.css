@@ -70,14 +70,10 @@ html.is-android body {
 }
 
 /* Fix: remove linhas/gaps entre tiles do Leaflet ao dar zoom */
-.leaflet-tile-container img {
-  outline: 2px solid transparent; /* evita gaps sub-pixel */
-}
-.leaflet-container .leaflet-tile {
-  outline: none !important;
-  border: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
+.leaflet-tile {
+  /* Aumentando 1px cobre o gap causado por escala subpixel no navegador */
+  width: 257px !important;
+  height: 257px !important;
 }
 .leaflet-tile-pane {
   image-rendering: auto;
