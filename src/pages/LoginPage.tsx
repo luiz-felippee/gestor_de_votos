@@ -267,8 +267,8 @@ export function LoginPage() {
         </p>
       </div>
 
-      {/* Direita — Formulário */}
-      <div className="relative z-20 flex flex-1 items-start justify-center rounded-t-[2rem] bg-white mx-0 -mt-5 px-6 pt-6 pb-10 shadow-[0_-10px_30px_rgba(0,0,0,0.18)] sm:mx-8 sm:mb-8 sm:items-center sm:rounded-3xl sm:px-10 sm:pt-9 lg:mx-0 lg:mb-0 lg:mt-0 lg:rounded-none lg:shadow-none dark:bg-slate-950 dark:shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+      {/* Direita — Formulário (cartão flutuante no mobile) */}
+      <div className="relative z-20 flex flex-1 items-start justify-center rounded-[1.75rem] bg-white ring-1 ring-black/5 shadow-xl mx-3 mb-4 -mt-6 px-5 pt-7 pb-9 sm:mx-8 sm:mb-8 sm:items-center sm:rounded-3xl sm:px-10 sm:pt-9 lg:mx-0 lg:mb-0 lg:mt-0 lg:rounded-none lg:shadow-none lg:ring-0 dark:bg-slate-950 max-lg:dark:bg-slate-900 dark:ring-white/10 lg:dark:ring-0 dark:shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
         <div className="w-full max-w-md lg:max-w-sm xl:max-w-md">
 
           {/* Alça (mobile) */}
