@@ -2,11 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MapContainer,
   TileLayer,
-  CircleMarker,
+  Marker,
+  Popup,
   Tooltip,
   GeoJSON,
   useMap,
+  ZoomControl,
 } from 'react-leaflet'
+import MarkerClusterGroup from 'react-leaflet-cluster'
 import L, { type LatLngBoundsExpression } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.heat'
@@ -43,15 +46,22 @@ function InvalidarTamanho({ dep }: { dep: boolean }) {
 
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
-function CamadaCalor({ pontos }: { pontos: [number, number, number][] }) {
+function CamadaCalor({ pontos, zoomAtual }: { pontos: [number, number, number][], zoomAtual: number }) {
   const map = useMap()
   useEffect(() => {
     if (!pontos.length) return
+    
+    // Raio e blur dinâmicos baseados no zoom. 
+    // Em zoom baixo (longe), manchas são grandes. Zoom alto (perto), manchas são precisas.
+    const baseR = isMobile ? 12 : 16
+    const baseB = isMobile ? 10 : 14
+    const zOffset = Math.max(0, zoomAtual - 8)
+    
     const layer = (L as any).heatLayer(pontos, {
-      radius: isMobile ? 20 : 32,
-      blur: isMobile ? 16 : 24,
+      radius: baseR + zOffset * 4,
+      blur: baseB + zOffset * 3,
       minOpacity: 0.35,
-      maxZoom: 11,
+      maxZoom: 13,
       gradient: {
         0.0: '#1e3a8a',
         0.3: '#06b6d4',
@@ -65,7 +75,7 @@ function CamadaCalor({ pontos }: { pontos: [number, number, number][] }) {
     return () => {
       map.removeLayer(layer)
     }
-  }, [map, pontos])
+  }, [map, pontos, zoomAtual])
   return null
 }
 
@@ -247,6 +257,7 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
       )}
 
       <MapContainer
+        preferCanvas={true}
         bounds={bounds!}
         maxBounds={bounds!}
         maxBoundsViscosity={0.9}
@@ -278,6 +289,7 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
           boundsPE={bounds!}
         />
         <TileLayer key={theme} url={tema.url} subdomains="abcd" detectRetina crossOrigin="anonymous" />
+        <ZoomControl position="bottomright" />
         
         <GeoJSON
           key={`${modoVisualizacao}-${theme}-${maxChoropleth}-${[...countPorCidadeNorm].join()}`}
@@ -314,32 +326,53 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
 
         {modoVisualizacao === 'calor' && (
           <>
-            <CamadaCalor pontos={pontosCalor} />
-            {/* Zoom afastado: só o local líder. Aproximado (>=11): cada local de votação. */}
-            {(zoomAtual >= 11 ? locaisVotacao : locaisVotacao.filter(l => l.local === localLider)).map((l) => {
-              const ehLider = l.local === localLider
-              const raio = Math.max(4, Math.min(14, 4 + (l.count / maxLocalCount) * 10))
-              return (
-                <CircleMarker
-                  key={`${l.local}-${l.cidade}`}
-                  center={[l.lat, l.lng]}
-                  radius={raio}
-                  pathOptions={{
-                    color: '#ffffff',
-                    weight: 2,
-                    fillColor: ehLider ? '#dc2626' : '#4f46e5',
-                    fillOpacity: 0.9,
-                  }}
-                  eventHandlers={{
-                    click: () => onCidadeSelect(cidadeSelecionada === l.cidade ? null : l.cidade),
-                  }}
-                >
-                  <Tooltip permanent={ehLider} sticky={!ehLider} direction="top" offset={[0, -8]} className="!bg-transparent !border-0 !shadow-none !text-slate-800 dark:!text-white !font-bold !text-xs">
-                    {ehLider ? '👑 ' : '📍 '}{l.local} · {l.count}
-                  </Tooltip>
-                </CircleMarker>
-              )
-            })}
+            <CamadaCalor pontos={pontosCalor} zoomAtual={zoomAtual} />
+            <MarkerClusterGroup 
+              chunkedLoading 
+              maxClusterRadius={isMobile ? 35 : 50}
+              showCoverageOnHover={false}
+              spiderfyOnMaxZoom={true}
+            >
+              {locaisVotacao.map((l) => {
+                const ehLider = l.local === localLider
+                const diametro = Math.max(20, Math.min(42, 20 + (l.count / maxLocalCount) * 40))
+                
+                const customIcon = L.divIcon({
+                  html: `<div class="flex items-center justify-center rounded-full shadow-md text-white font-bold border-2 border-white/20 ${ehLider ? 'bg-red-600' : 'bg-indigo-600'}" style="width: ${diametro}px; height: ${diametro}px; font-size: ${Math.max(10, diametro/2.5)}px;">
+                           ${l.count}
+                         </div>`,
+                  className: '!bg-transparent !border-0',
+                  iconSize: [diametro, diametro],
+                  iconAnchor: [diametro / 2, diametro / 2],
+                })
+
+                return (
+                  <Marker
+                    key={`${l.local}-${l.cidade}`}
+                    position={[l.lat, l.lng]}
+                    icon={customIcon}
+                  >
+                    <Tooltip direction="top" offset={[0, -diametro/2]} opacity={0.9} className="!bg-slate-900 !text-white !border-0 !rounded-lg !text-xs font-semibold">
+                      {ehLider ? '👑 ' : ''}{l.local}
+                    </Tooltip>
+                    <Popup className="rounded-2xl">
+                      <div className="p-1 min-w[180px]">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{l.cidade}</p>
+                        <h3 className="font-bold text-slate-800 text-sm leading-tight mb-2">{l.local}</h3>
+                        <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                          <div className="bg-brand-100 text-brand-700 px-2 py-1 rounded text-xs font-black">
+                            {l.count}
+                          </div>
+                          <span className="text-xs text-slate-600 font-medium">
+                            eleitores ativos
+                          </span>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                )
+              })}
+            </MarkerClusterGroup>
           </>
         )}
       </MapContainer>

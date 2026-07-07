@@ -257,7 +257,7 @@ export function LoginPage() {
       </div>
 
       {/* Direita — Formulário */}
-      <div className="relative z-20 flex flex-1 items-start justify-center rounded-t-[2rem] bg-white px-6 pt-8 pb-10 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] -mt-6 sm:items-center sm:px-10 lg:mt-0 lg:rounded-none lg:shadow-none dark:bg-slate-950 dark:shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
+      <div className="relative z-20 flex flex-1 items-start justify-center rounded-3xl bg-white mx-4 mb-4 px-6 pt-8 pb-10 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] -mt-6 sm:mx-10 sm:mb-8 sm:items-center sm:px-10 lg:mx-0 lg:mb-0 lg:mt-0 lg:rounded-none lg:shadow-none dark:bg-slate-950 dark:shadow-[0_-8px_30px_rgba(0,0,0,0.5)]">
         <div className="w-full max-w-md lg:max-w-sm xl:max-w-md">
 
 
