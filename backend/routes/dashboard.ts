@@ -319,16 +319,26 @@ dashboardRouter.get(
 
     const whereFiltrado = filtroCidade ? { ...whereData, cidade: filtroCidade } : whereData;
 
-    const pontos = await prisma.eleitor.findMany({
-      where: whereFiltrado,
-      select: {
-        id: true,
-        cidade: true,
-        local_votacao: true,
-        lat: true,
-        lng: true,
-      },
+    // Agrega no banco por LOCAL DE VOTAÇÃO (não por eleitor). Antes retornávamos
+    // todos os eleitores (payload de MBs a partir de dezenas de milhares); agora
+    // devolvemos ~1 ponto por local de votação, com a posição média e a contagem.
+    // Só entram eleitores geocodificados (lat/lng não nulos), como o mapa espera.
+    const grupos = await prisma.eleitor.groupBy({
+      by: ['local_votacao', 'cidade'],
+      where: { ...whereFiltrado, lat: { not: null }, lng: { not: null } },
+      _count: { id: true },
+      _avg: { lat: true, lng: true },
     });
+
+    const pontos = grupos
+      .filter((g) => g._avg.lat != null && g._avg.lng != null)
+      .map((g) => ({
+        cidade: g.cidade,
+        local_votacao: g.local_votacao,
+        lat: g._avg.lat,
+        lng: g._avg.lng,
+        count: g._count.id,
+      }));
 
     cache.set(cacheKey, pontos, 600);
     res.json(pontos);

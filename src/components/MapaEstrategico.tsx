@@ -125,7 +125,7 @@ function calcularBounds(geo: any): LatLngBoundsExpression {
 }
 
 interface MapaEstrategicoProps {
-  pontosGeo: { id: string; cidade: string | null; local_votacao: string | null; lat: number | null; lng: number | null }[]
+  pontosGeo: { id?: string; cidade: string | null; local_votacao: string | null; lat: number | null; lng: number | null; count?: number }[]
   statsPorCidade: { label: string; total: number }[]
   cidadeSelecionada: string | null
   onCidadeSelect: (cidade: string | null) => void
@@ -178,8 +178,44 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
   
   const maxChoropleth = Math.max(1, ...countPorCidadeNorm.values())
 
-  // Agrupa pontos por LOCAL DE VOTAÇÃO (não por eleitor individual)
+  // Pontos por LOCAL DE VOTAÇÃO. O backend novo já envia agregado (com count e
+  // posição média). Se vier no formato antigo (um item por eleitor), agregamos
+  // aqui — mantém compatibilidade caso o front atualize antes do backend.
   const locaisVotacao = useMemo(() => {
+    const jaAgregado = pontosGeo.length > 0 && pontosGeo[0].count != null
+
+    // Caminho agregado: re-consolida pela chave normalizada (une variações de
+    // maiúsculas/espaços) usando média ponderada — resultado idêntico ao antigo.
+    if (jaAgregado) {
+      const m = new Map<string, { local: string; cidade: string; count: number; latSum: number; lngSum: number }>()
+      for (const p of pontosGeo) {
+        if (p.lat == null || p.lng == null) continue
+        const chave = `${(p.local_votacao || 'Desconhecido').toLowerCase().trim()}|${(p.cidade || '').toLowerCase().trim()}`
+        const c = p.count ?? 1
+        const ex = m.get(chave)
+        if (ex) {
+          ex.count += c
+          ex.latSum += p.lat * c
+          ex.lngSum += p.lng * c
+        } else {
+          m.set(chave, {
+            local: p.local_votacao || 'Desconhecido',
+            cidade: p.cidade || '',
+            count: c,
+            latSum: p.lat * c,
+            lngSum: p.lng * c,
+          })
+        }
+      }
+      return [...m.values()].map((l) => ({
+        local: l.local,
+        cidade: l.cidade,
+        lat: l.latSum / l.count,
+        lng: l.lngSum / l.count,
+        count: l.count,
+      }))
+    }
+
     const mapa = new Map<string, { local: string; cidade: string; lat: number; lng: number; count: number; latSum: number; lngSum: number }>()
     for (const e of pontosGeo) {
       if (e.lat == null || e.lng == null) continue

@@ -2,11 +2,13 @@ import { api } from '../lib/api'
 import { useQuery } from '@tanstack/react-query'
 
 export interface PontoMapa {
-  id: string
+  id?: string
   cidade: string | null
   local_votacao: string | null
   lat: number | null
   lng: number | null
+  // Presente quando o backend já envia agregado por local de votação.
+  count?: number
 }
 
 export function useMapaPontos(cidade?: string, dias?: string, cabo?: string) {
