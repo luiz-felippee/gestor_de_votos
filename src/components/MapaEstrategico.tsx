@@ -99,17 +99,6 @@ function ZoomNaCidade({
   return null
 }
 
-// Observa o nível de zoom atual (para mostrar os pinos de local só ao aproximar)
-function ObservadorZoom({ onChange }: { onChange: (z: number) => void }) {
-  const map = useMap()
-  useEffect(() => {
-    const cb = () => onChange(map.getZoom())
-    map.on('zoomend', cb)
-    cb()
-    return () => { map.off('zoomend', cb) }
-  }, [map, onChange])
-  return null
-}
 
 function normalizar(s: string) {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -153,7 +142,6 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
   const [geoData, setGeoData] = useState<any>(null)
   const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
   const [telaCheia, setTelaCheia] = useState(false)
-  const [zoomAtual, setZoomAtual] = useState(7)
   
   // Controle de interação no mobile para evitar scroll trap
   const [mapaAtivo, setMapaAtivo] = useState(!isMobile)
@@ -317,7 +305,6 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
         }}
       >
         <InvalidarTamanho dep={telaCheia} />
-        <ObservadorZoom onChange={setZoomAtual} />
         <ZoomNaCidade
           cidade={cidadeSelecionada}
           centro={
