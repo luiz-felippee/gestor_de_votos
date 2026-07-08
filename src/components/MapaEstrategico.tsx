@@ -46,20 +46,18 @@ function InvalidarTamanho({ dep }: { dep: boolean }) {
 
 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
-function CamadaCalor({ pontos, zoomAtual }: { pontos: [number, number, number][], zoomAtual: number }) {
+function CamadaCalor({ pontos }: { pontos: [number, number, number][] }) {
   const map = useMap()
   useEffect(() => {
     if (!pontos.length) return
     
-    // Raio e blur dinâmicos baseados no zoom. 
-    // Em zoom baixo (longe), manchas são grandes. Zoom alto (perto), manchas são precisas.
-    const baseR = isMobile ? 12 : 16
-    const baseB = isMobile ? 10 : 14
-    const zOffset = Math.max(0, zoomAtual - 8)
+    // Raio e blur otimizados e fixos. Recriar a camada a cada zoom causava os travamentos (lag spikes).
+    const baseR = isMobile ? 18 : 22
+    const baseB = isMobile ? 15 : 20
     
     const layer = (L as any).heatLayer(pontos, {
-      radius: baseR + zOffset * 4,
-      blur: baseB + zOffset * 3,
+      radius: baseR,
+      blur: baseB,
       minOpacity: 0.35,
       maxZoom: 13,
       gradient: {
@@ -75,7 +73,7 @@ function CamadaCalor({ pontos, zoomAtual }: { pontos: [number, number, number][]
     return () => {
       map.removeLayer(layer)
     }
-  }, [map, pontos, zoomAtual])
+  }, [map, pontos])
   return null
 }
 
@@ -151,10 +149,24 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
   const { theme } = useTheme()
   const tema = theme === 'dark' ? TILES.dark : TILES.light
   
+  const mapRef = useRef<any>(null)
   const [geoData, setGeoData] = useState<any>(null)
   const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
   const [telaCheia, setTelaCheia] = useState(false)
   const [zoomAtual, setZoomAtual] = useState(7)
+  
+  // Controle de interação no mobile para evitar scroll trap
+  const [mapaAtivo, setMapaAtivo] = useState(!isMobile)
+
+  useEffect(() => {
+    if (mapRef.current && isMobile) {
+      if (mapaAtivo) {
+        mapRef.current.dragging.enable()
+      } else {
+        mapRef.current.dragging.disable()
+      }
+    }
+  }, [mapaAtivo])
 
   useEffect(() => {
     fetch('/pe-municipios.geojson')
@@ -241,6 +253,35 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
 
   return (
     <div className={telaCheia ? 'fixed inset-0 z-[2000] bg-white dark:bg-slate-950' : `relative w-full sm:rounded-2xl overflow-hidden border-y sm:border-x sm:border-y border-slate-200 dark:border-slate-800 shadow-sm ${className || ''}`}>
+      
+      {/* Overlay de Interação Mobile (Resolve Scroll Trap) */}
+      {isMobile && !mapaAtivo && (
+        <div 
+          className="absolute inset-0 z-[2000] flex flex-col items-center justify-center bg-slate-900/30 backdrop-blur-[2px] transition-opacity cursor-pointer"
+          onClick={() => setMapaAtivo(true)}
+          onTouchStart={() => setMapaAtivo(true)}
+        >
+          <div className="rounded-3xl bg-white/95 dark:bg-slate-800/95 px-6 py-5 shadow-2xl flex flex-col items-center gap-3 animate-slide-up mx-6 text-center">
+            <div className="bg-brand-100 dark:bg-brand-900/50 p-3 rounded-full">
+              <span className="text-2xl block animate-bounce">👆</span>
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-slate-800 dark:text-white">Toque para explorar o mapa</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Evitamos deixar ativo direto para não travar a rolagem da sua tela.</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {isMobile && mapaAtivo && (
+        <button
+          onClick={() => setMapaAtivo(false)}
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] flex items-center gap-2 rounded-full bg-slate-800/90 px-4 py-2.5 text-xs font-bold text-white shadow-xl backdrop-blur transition active:scale-95 border border-white/10"
+        >
+          <span>🔒</span> Travar mapa para rolar a tela
+        </button>
+      )}
+
       <button
         onClick={() => setTelaCheia((v) => !v)}
         className="absolute right-3 top-3 z-[1000] flex items-center gap-1.5 rounded-lg border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-lg backdrop-blur transition hover:bg-white active:scale-95 dark:border-slate-700/70 dark:bg-slate-900/85 dark:text-slate-200"
@@ -257,13 +298,14 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
       )}
 
       <MapContainer
+        ref={mapRef}
         preferCanvas={true}
         bounds={bounds!}
         maxBounds={bounds!}
         maxBoundsViscosity={0.9}
         minZoom={6}
         scrollWheelZoom={!isMobile}
-        dragging={true}
+        dragging={!isMobile} // Começa desativado no mobile até o usuário tocar
         touchZoom={true}
         zoomControl={false}
         attributionControl={false}
@@ -326,7 +368,7 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
 
         {modoVisualizacao === 'calor' && (
           <>
-            <CamadaCalor pontos={pontosCalor} zoomAtual={zoomAtual} />
+            <CamadaCalor pontos={pontosCalor} />
             <MarkerClusterGroup 
               chunkedLoading 
               maxClusterRadius={isMobile ? 35 : 50}
@@ -352,9 +394,11 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
                     position={[l.lat, l.lng]}
                     icon={customIcon}
                   >
-                    <Tooltip direction="top" offset={[0, -diametro/2]} opacity={0.9} className="!bg-slate-900 !text-white !border-0 !rounded-lg !text-xs font-semibold">
-                      {ehLider ? '👑 ' : ''}{l.local}
-                    </Tooltip>
+                    {!isMobile && (
+                      <Tooltip direction="top" offset={[0, -diametro/2]} opacity={0.9} className="!bg-slate-900 !text-white !border-0 !rounded-lg !text-xs font-semibold">
+                        {ehLider ? '👑 ' : ''}{l.local}
+                      </Tooltip>
+                    )}
                     <Popup autoPan={false} className="rounded-2xl">
                       <div className="p-1 min-w[180px]">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{l.cidade}</p>

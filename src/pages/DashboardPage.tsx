@@ -297,10 +297,41 @@ export function DashboardPage() {
 
       {/* ========== Mapa de Força + Painéis Laterais ========== */}
       <div className="mb-6">
-        <div className="mb-4">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h2 className="text-xl font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
             Mapa de Força
           </h2>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={exportarImagem}
+              disabled={exportando}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              {exportando ? 'Gerando...' : 'Exportar Imagem'}
+            </button>
+            {role === 'admin' && (
+              <>
+                <button
+                  onClick={geolocalizarCadastros}
+                  disabled={geo.rodando}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-700 shadow-sm transition hover:bg-brand-100 active:scale-95 disabled:opacity-60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  {geo.rodando
+                    ? `Geolocalizando…${geo.restantes != null ? ` ${geo.restantes}` : ''}`
+                    : 'Geolocalizar'}
+                </button>
+                <button
+                  onClick={regeocodificarTodos}
+                  disabled={geo.rodando}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-60 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+                >
+                  Regeocodificar
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -350,38 +381,6 @@ export function DashboardPage() {
                   />
                 </Suspense>
               </LazyMount>
-            </div>
-
-            {/* Ações Extra (Exportar, Admin) transferidas para fora do mapa */}
-            <div className="mt-4 flex flex-wrap items-center gap-3 px-4 sm:px-0">
-              <button
-                onClick={exportarImagem}
-                disabled={exportando}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-              >
-                {exportando ? 'Gerando...' : 'Exportar Imagem'}
-              </button>
-              {role === 'admin' && (
-                <>
-                  <button
-                    onClick={geolocalizarCadastros}
-                    disabled={geo.rodando}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-xs font-bold text-brand-700 shadow-sm transition hover:bg-brand-100 active:scale-95 disabled:opacity-60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
-                  >
-                    <MapPin className="h-3.5 w-3.5" />
-                    {geo.rodando
-                      ? `Geolocalizando…${geo.restantes != null ? ` ${geo.restantes} restantes` : ''}`
-                      : 'Geolocalizar Cadastros'}
-                  </button>
-                  <button
-                    onClick={regeocodificarTodos}
-                    disabled={geo.rodando}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-700 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-60 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
-                  >
-                    Regeocodificar Tudo
-                  </button>
-                </>
-              )}
             </div>
           </div>
 

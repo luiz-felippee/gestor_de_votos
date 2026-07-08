@@ -71,9 +71,12 @@ html.is-android body {
 
 /* Fix: remove linhas/gaps entre tiles do Leaflet ao dar zoom */
 .leaflet-tile {
-  /* Aumentando 1px cobre o gap causado por escala subpixel no navegador */
-  width: 257px !important;
-  height: 257px !important;
+  /* Evita artefatos de borda subpixel */
+  outline: 1px solid transparent;
+}
+/* Camufla os gaps subpixel igualando o fundo do container à cor do tile CartoDB Dark Matter */
+.dark .leaflet-container {
+  background-color: #191a1a !important;
 }
 .leaflet-tile-pane {
   image-rendering: auto;
