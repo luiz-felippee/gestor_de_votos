@@ -306,58 +306,28 @@ export function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Mapa (2/3) */}
           <div className="lg:col-span-2 -mx-4 sm:mx-0 relative group">
-            {/* Controles Flutuantes do Mapa */}
-            <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
-              <div className="inline-flex rounded-xl border border-slate-200/50 bg-white/80 backdrop-blur-md p-1 text-xs font-bold shadow-sm dark:border-slate-700/50 dark:bg-slate-900/80">
+            {/* Controles Flutuantes do Mapa - APENAS Calor/Áreas centralizado no rodapé */}
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[400] pointer-events-auto">
+              <div className="inline-flex rounded-xl border border-slate-200/50 bg-white/90 backdrop-blur-md p-1.5 text-xs font-bold shadow-lg dark:border-slate-700/50 dark:bg-slate-900/90">
                 <button
                   onClick={() => setModoMapa('calor')}
-                  className={`rounded-lg px-3 py-1.5 transition ${modoMapa === 'calor' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'}`}
+                  className={`rounded-lg px-4 py-2 transition ${modoMapa === 'calor' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'}`}
                 >
                   Calor
                 </button>
                 <button
                   onClick={() => setModoMapa('mapa')}
-                  className={`rounded-lg px-3 py-1.5 transition ${modoMapa === 'mapa' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'}`}
+                  className={`rounded-lg px-4 py-2 transition ${modoMapa === 'mapa' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'}`}
                 >
                   Áreas
                 </button>
               </div>
-              <button
-                onClick={exportarImagem}
-                disabled={exportando}
-                className="self-end rounded-xl border border-slate-200/50 bg-white/80 backdrop-blur-md px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-white active:scale-95 disabled:opacity-60 dark:border-slate-700/50 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:bg-slate-900"
-              >
-                {exportando ? 'Gerando...' : 'Exportar imagem'}
-              </button>
-              {role === 'admin' && (
-                <>
-                  <button
-                    onClick={geolocalizarCadastros}
-                    disabled={geo.rodando}
-                    title="Posiciona no mapa de calor cada cadastro pelo local de votação"
-                    className="self-end inline-flex items-center gap-1.5 rounded-xl border border-slate-200/50 bg-white/80 backdrop-blur-md px-4 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-white active:scale-95 disabled:opacity-60 dark:border-slate-700/50 dark:bg-slate-900/80 dark:text-slate-200 dark:hover:bg-slate-900"
-                  >
-                    <MapPin className="h-3.5 w-3.5" />
-                    {geo.rodando
-                      ? `Geolocalizando…${geo.restantes != null ? ` ${geo.restantes} restantes` : ''}`
-                      : 'Geolocalizar cadastros'}
-                  </button>
-                  <button
-                    onClick={regeocodificarTodos}
-                    disabled={geo.rodando}
-                    title="Zera todas as coordenadas e permite regeocodificar pelo local de votação"
-                    className="self-end inline-flex items-center gap-1.5 rounded-xl border border-amber-300/50 bg-amber-50/80 backdrop-blur-md px-4 py-2 text-xs font-bold text-amber-700 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-60 dark:border-amber-700/50 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
-                  >
-                    Regeocodificar tudo
-                  </button>
-                </>
-              )}
             </div>
 
             <div ref={mapaRef} className="h-full w-full bg-slate-100 dark:bg-slate-800 sm:rounded-3xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
               <LazyMount 
                 fallback={
-                  <div className="h-[360px] sm:h-[460px] lg:h-[520px] animate-pulse flex items-center justify-center">
+                  <div className="h-[480px] sm:h-[560px] lg:h-[600px] animate-pulse flex items-center justify-center">
                     <span className="text-slate-400 font-medium">Carregando mapa...</span>
                   </div>
                 }
@@ -365,7 +335,7 @@ export function DashboardPage() {
               >
                 <Suspense
                   fallback={
-                    <div className="h-[360px] sm:h-[460px] lg:h-[520px] animate-pulse flex items-center justify-center">
+                    <div className="h-[480px] sm:h-[560px] lg:h-[600px] animate-pulse flex items-center justify-center">
                       <span className="text-slate-400 font-medium">Processando mapa...</span>
                     </div>
                   }
@@ -376,10 +346,42 @@ export function DashboardPage() {
                     cidadeSelecionada={filtroCidade || null}
                     onCidadeSelect={(c) => setFiltroCidade(c || '')}
                     modoVisualizacao={modoMapa}
-                    className="h-[360px] sm:h-[460px] lg:h-[520px] w-full"
+                    className="h-[480px] sm:h-[560px] lg:h-[600px] w-full"
                   />
                 </Suspense>
               </LazyMount>
+            </div>
+
+            {/* Ações Extra (Exportar, Admin) transferidas para fora do mapa */}
+            <div className="mt-4 flex flex-wrap items-center gap-3 px-4 sm:px-0">
+              <button
+                onClick={exportarImagem}
+                disabled={exportando}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                {exportando ? 'Gerando...' : 'Exportar Imagem'}
+              </button>
+              {role === 'admin' && (
+                <>
+                  <button
+                    onClick={geolocalizarCadastros}
+                    disabled={geo.rodando}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-xs font-bold text-brand-700 shadow-sm transition hover:bg-brand-100 active:scale-95 disabled:opacity-60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
+                  >
+                    <MapPin className="h-3.5 w-3.5" />
+                    {geo.rodando
+                      ? `Geolocalizando…${geo.restantes != null ? ` ${geo.restantes} restantes` : ''}`
+                      : 'Geolocalizar Cadastros'}
+                  </button>
+                  <button
+                    onClick={regeocodificarTodos}
+                    disabled={geo.rodando}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-700 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-60 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
+                  >
+                    Regeocodificar Tudo
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

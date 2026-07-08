@@ -49,6 +49,21 @@ export default defineConfig({
         // Limita o tamanho máximo do precache para não travar em dados móveis
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
         runtimeCaching: [
+          // ---- Fotos das lideranças → CacheFirst (imagens, mudam raramente) ----
+          {
+            urlPattern: /\/api\/cabos\/[^/]+\/foto$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'cabo-fotos-cache',
+              expiration: {
+                maxEntries: 300,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 dias
+              },
+              cacheableResponse: {
+                statuses: [200],
+              },
+            },
+          },
           // ---- API calls → NetworkFirst com fallback cache ----
           {
             urlPattern: /\/api\/.*/i,

@@ -355,7 +355,7 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
                     <Tooltip direction="top" offset={[0, -diametro/2]} opacity={0.9} className="!bg-slate-900 !text-white !border-0 !rounded-lg !text-xs font-semibold">
                       {ehLider ? '👑 ' : ''}{l.local}
                     </Tooltip>
-                    <Popup className="rounded-2xl">
+                    <Popup autoPan={false} className="rounded-2xl">
                       <div className="p-1 min-w[180px]">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">{l.cidade}</p>
                         <h3 className="font-bold text-slate-800 text-sm leading-tight mb-2">{l.local}</h3>

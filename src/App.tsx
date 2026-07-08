@@ -15,18 +15,20 @@ import { useNetworkStatus } from './hooks/useNetworkStatus'
 import { useKeepAlive } from './hooks/useKeepAlive'
 import { NaoEncontradoPage } from './pages/NaoEncontradoPage'
 
-// Leves / críticas: carregam de imediato (formulário público e login)
-import { CadastroPage } from './pages/CadastroPage'
+// Crítica: carrega de imediato (entrada principal)
 import { LoginPage } from './pages/LoginPage'
-import { EsqueciSenhaPage } from './pages/EsqueciSenhaPage'
-import { ResetarSenhaPage } from './pages/ResetarSenhaPage'
-import { PrivacidadePage } from './pages/PrivacidadePage'
 
-// Pesadas: carregam sob demanda (mapa, gráficos, planilha, etc.)
+// Pesadas / menos frequentes: carregam sob demanda
 const lazyPage = <T extends Record<string, React.ComponentType<any>>>(
   loader: () => Promise<T>,
   nome: keyof T,
 ) => lazy(() => loader().then((m) => ({ default: m[nome] })))
+
+// Públicas: sob demanda (não pesam no bundle inicial de quem já está logado)
+const CadastroPage = lazyPage(() => import('./pages/CadastroPage'), 'CadastroPage')
+const EsqueciSenhaPage = lazyPage(() => import('./pages/EsqueciSenhaPage'), 'EsqueciSenhaPage')
+const ResetarSenhaPage = lazyPage(() => import('./pages/ResetarSenhaPage'), 'ResetarSenhaPage')
+const PrivacidadePage = lazyPage(() => import('./pages/PrivacidadePage'), 'PrivacidadePage')
 
 const DashboardPage = lazyPage(() => import('./pages/DashboardPage'), 'DashboardPage')
 const PlanilhaPage = lazyPage(() => import('./pages/PlanilhaPage'), 'PlanilhaPage')

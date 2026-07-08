@@ -123,6 +123,17 @@ export function LoginPage() {
   useEffect(() => {
     if (!googleClientId) return
     let cancelado = false
+
+    // Carrega o script do Google só aqui (não em todas as páginas)
+    const GSI = 'https://accounts.google.com/gsi/client'
+    if (!document.querySelector(`script[src="${GSI}"]`)) {
+      const s = document.createElement('script')
+      s.src = GSI
+      s.async = true
+      s.defer = true
+      document.head.appendChild(s)
+    }
+
     function tryInit() {
       if (cancelado) return
       const g = (window as unknown as { google?: any }).google

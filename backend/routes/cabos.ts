@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import crypto from 'crypto';
 import { prisma } from '../prismaClient';
 import { requireAuth, requireRole, optionalAuth, wrap, escopoCampanha, registrarLog, cadastroLimiter, requirePlanLimit } from '../middlewares';
+import { cache } from '../lib/cache';
 
 const cabosRouter = Router();
 
@@ -13,14 +15,40 @@ cabosRouter.get(
     const where = req.user ? escopoCampanha(req) : {};
     const cabos = await prisma.caboEleitoral.findMany({
       where,
-      include: {
-        _count: {
-          select: { eleitores: true }
-        }
+      // Não seleciona foto_url (base64) — a foto vem por endpoint próprio cacheável
+      select: {
+        id: true, campanha_id: true, nome: true, telefone: true, bairro_atuacao: true,
+        cidade: true, meta_eleitores: true, foi_candidato: true, cargo_candidato: true,
+        ano_eleicao: true, votacao: true, data_nascimento: true, created_at: true,
+        _count: { select: { eleitores: true } },
       },
       orderBy: { nome: 'asc' },
     });
-    res.json(cabos);
+    res.json(cabos.map((c) => ({ ...c, foto_url: `/api/cabos/${c.id}/foto` })));
+  }),
+);
+
+// Foto da liderança servida como imagem cacheável (evita base64 gigante nas listas)
+cabosRouter.get(
+  '/cabos/:id/foto',
+  wrap(async (req, res) => {
+    const id = String(req.params.id);
+    const chave = `foto_${id}`;
+    let item = cache.get<{ mime: string; buf: Buffer; etag: string }>(chave);
+    if (!item) {
+      const cabo = await prisma.caboEleitoral.findUnique({ where: { id }, select: { foto_url: true } });
+      const m = (cabo?.foto_url || '').match(/^data:(image\/[\w.+-]+);base64,(.+)$/);
+      if (!m) return res.status(404).end();
+      const buf = Buffer.from(m[2], 'base64');
+      const etag = 'W/"' + crypto.createHash('sha1').update(buf).digest('base64').slice(0, 22) + '"';
+      item = { mime: m[1], buf, etag };
+      cache.set(chave, item, 3600);
+    }
+    res.set('ETag', item.etag);
+    res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=86400');
+    if (req.headers['if-none-match'] === item.etag) return res.status(304).end();
+    res.set('Content-Type', item.mime);
+    res.send(item.buf);
   }),
 );
 
@@ -121,6 +149,7 @@ cabosRouter.put(
         foto_url: foto_url || null,
       },
     });
+    cache.invalidateByPrefix(`foto_${String(req.params.id)}`); // foto pode ter mudado
     registrarLog(req, 'editar', 'cabo', String(req.params.id), cabo.nome);
     res.json(cabo);
   }),
