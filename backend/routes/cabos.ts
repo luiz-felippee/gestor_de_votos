@@ -15,16 +15,20 @@ cabosRouter.get(
     const where = req.user ? escopoCampanha(req) : {};
     const cabos = await prisma.caboEleitoral.findMany({
       where,
-      // Não seleciona foto_url (base64) — a foto vem por endpoint próprio cacheável
       select: {
         id: true, campanha_id: true, nome: true, telefone: true, bairro_atuacao: true,
         cidade: true, meta_eleitores: true, foi_candidato: true, cargo_candidato: true,
-        ano_eleicao: true, votacao: true, data_nascimento: true, created_at: true,
+        ano_eleicao: true, votacao: true, data_nascimento: true, created_at: true, foto_url: true,
         _count: { select: { eleitores: true } },
       },
       orderBy: { nome: 'asc' },
     });
-    res.json(cabos.map((c) => ({ ...c, foto_url: `/api/cabos/${c.id}/foto` })));
+    // Só as fotos base64 vão pelo endpoint cacheável (nao manda o base64 na lista).
+    // URLs http/legadas seguem como estavam.
+    res.json(cabos.map((c) => ({
+      ...c,
+      foto_url: c.foto_url?.startsWith('data:') ? `/api/cabos/${c.id}/foto` : c.foto_url,
+    })));
   }),
 );
 
