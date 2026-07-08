@@ -316,5 +316,6 @@ export const api = {
   getWhatsAppStatus: () => request<{ status: string }>('/whatsapp/status'),
   connectWhatsApp: () => request<{ qrcode: string, message?: string }>('/whatsapp/connect', { method: 'POST' }),
   disconnectWhatsApp: () => request<{ success: boolean }>('/whatsapp/disconnect', { method: 'POST' }),
-  sendWhatsAppMessage: (numero: string, texto: string) => request<{ success: boolean }>('/whatsapp/send', { method: 'POST', body: { numero, texto } }),
+  sendWhatsAppMessage: (numero: string, texto: string, delay?: number) => request<{ success: boolean }>('/whatsapp/send', { method: 'POST', body: { numero, texto, delay } }),
+  checkWhatsAppNumbers: (numeros: string[]) => request<{ validos: string[]; aviso?: string }>('/whatsapp/check-numbers', { method: 'POST', body: { numeros } }),
 }

@@ -1,12 +1,24 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { api } from '../lib/api'
 import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query'
-import { MessageCircle, Check, Send, Search, Users, Shield, Zap } from 'lucide-react'
+import { MessageCircle, Check, Send, Search, Users, Shield, Zap, Pause, Play, Timer } from 'lucide-react'
 import { toast } from 'sonner'
 import { maskTelefone } from '../lib/format'
 import type { EleitorComCabo, CaboEleitoral } from '../lib/types'
 import { ConexaoEvolution } from '../components/whatsapp/ConexaoEvolution'
 import { WhatsAppSubNav } from '../components/whatsapp/WhatsAppSubNav'
+import { AntiBloqueioPanel } from '../components/whatsapp/AntiBloqueioPanel'
+import { resolverSpintax, contarVariacoes } from '../lib/spintax'
+import {
+  carregarConfig,
+  salvarConfig,
+  contadorHoje as lerContadorHoje,
+  incrementarContador,
+  segundosAleatorios,
+  dentroDoHorario,
+  sleep,
+  type AntiBloqueioConfig,
+} from '../lib/antiBloqueio'
 
 type Contato = EleitorComCabo | CaboEleitoral;
 
@@ -33,6 +45,11 @@ export function WhatsAppPage() {
   const [pagina, setPagina] = useState(1)
   const [plataforma, setPlataforma] = useState<'padrao' | 'web'>('padrao')
 
+  // --- Modo Anti-Bloqueio ---
+  const [antiConfig, setAntiConfig] = useState<AntiBloqueioConfig>(() => carregarConfig())
+  const [contadorDia, setContadorDia] = useState(() => lerContadorHoje())
+  const atualizarConfig = (c: AntiBloqueioConfig) => { setAntiConfig(c); salvarConfig(c) }
+
   useEffect(() => {
     localStorage.setItem('whatsapp_enviados', JSON.stringify(Array.from(enviados)))
   }, [enviados])
@@ -45,7 +62,8 @@ export function WhatsAppPage() {
   })
 
   const mutationSend = useMutation({
-    mutationFn: ({ numero, texto }: { numero: string, texto: string }) => api.sendWhatsAppMessage(numero, texto),
+    mutationFn: ({ numero, texto, delay }: { numero: string, texto: string, delay?: number }) =>
+      api.sendWhatsAppMessage(numero, texto, delay),
     onError: (err: any) => {
       toast.error(err.message || 'Falha ao enviar mensagem.')
     }
@@ -120,47 +138,165 @@ export function WhatsAppPage() {
 
   const [pessoaAtualEnvio, setPessoaAtualEnvio] = useState<number>(0)
 
+  // --- Motor de disparo automático (anti-bloqueio) ---
+  const [autoRodando, setAutoRodando] = useState(false)
+  const [autoStatus, setAutoStatus] = useState('')      // texto do estado atual
+  const [countdown, setCountdown] = useState(0)         // segundos até o próximo envio
+  const [autoProgresso, setAutoProgresso] = useState(0) // enviados nesta sessão
+  const [pausado, setPausado] = useState(false)         // reflete o pause na UI
+  const controleRef = useRef<{ cancelar: boolean; pausar: boolean }>({ cancelar: false, pausar: false })
+
+  const variacoes = useMemo(() => contarVariacoes(mensagem), [mensagem])
+
   // Reseta a fila se mudar a seleção
   useEffect(() => {
     setPessoaAtualEnvio(0)
   }, [selecionados])
 
+  function normalizarNumero(telefone: string) {
+    const d = telefone.replace(/\D/g, '')
+    return d.startsWith('55') && d.length >= 12 ? d : `55${d}`
+  }
+
+  // Resolve spintax + placeholders de personalização para uma pessoa.
+  function montarMensagem(pessoa: { nome: string; telefone: string }) {
+    const nomeCurto = pessoa.nome.split(' ')[0]
+    return resolverSpintax(mensagem)
+      .replace(/\{nome\}/gi, nomeCurto)
+      .replace(/\{nomeCompleto\}/gi, pessoa.nome)
+      .replace(/\{telefone\}/gi, pessoa.telefone || '')
+  }
+
+  // Envia UMA mensagem (com "digitando..." variável). Marca como enviada e conta.
+  async function enviarUm(pessoa: { id: string; nome: string; telefone: string }) {
+    const texto = montarMensagem(pessoa)
+    const numero = normalizarNumero(pessoa.telefone)
+    const delayDigitacao = segundosAleatorios(2, 5) * 1000 // 2–5s digitando
+    await mutationSend.mutateAsync({ numero, texto, delay: delayDigitacao })
+    setEnviados(prev => new Set(prev).add(pessoa.id))
+    setContadorDia(incrementarContador())
+  }
+
+  // Disparo manual (um clique = uma pessoa).
   async function dispararWhatsApp(pessoa: { id: string, nome: string, telefone: string }, index: number) {
     if (whatsappStatus?.status !== 'open') {
       toast.error('Seu WhatsApp não está conectado! Conecte-o antes de disparar.')
       return
     }
-
-    const nomeCompleto = pessoa.nome
-    const nomeCurto = nomeCompleto.split(' ')[0]
-    const msgFinal = mensagem
-      .replace(/\{nome\}/gi, nomeCurto)
-      .replace(/\{nomeCompleto\}/gi, nomeCompleto)
-      .replace(/\{telefone\}/gi, pessoa.telefone || '')
-      
-    const apenasDigitos = pessoa.telefone.replace(/\D/g, '')
-    const numeroFinal = (apenasDigitos.startsWith('55') && apenasDigitos.length >= 12) 
-      ? apenasDigitos 
-      : `55${apenasDigitos}`
-      
+    const nomeCurto = pessoa.nome.split(' ')[0]
     const loadingToast = toast.loading(`Enviando para ${nomeCurto}...`)
     try {
-      await mutationSend.mutateAsync({ numero: numeroFinal, texto: msgFinal })
+      await enviarUm(pessoa)
       toast.success(`Mensagem enviada para ${nomeCurto}!`, { id: loadingToast })
-      
-      setEnviados(prev => {
-        const n = new Set(prev)
-        n.add(pessoa.id)
-        return n
-      })
-
-      if (index + 1 < pessoasSelecionadas.length) {
-        setPessoaAtualEnvio(index + 1)
-      }
+      if (index + 1 < pessoasSelecionadas.length) setPessoaAtualEnvio(index + 1)
     } catch (e) {
       toast.dismiss(loadingToast)
-      // Para o envio se falhar
     }
+  }
+
+  // Espera com contagem regressiva, respeitando pausar/cancelar.
+  async function aguardar(segundos: number, rotulo: string) {
+    for (let s = segundos; s > 0; s--) {
+      if (controleRef.current.cancelar) return
+      while (controleRef.current.pausar && !controleRef.current.cancelar) {
+        setAutoStatus('⏸ Pausado')
+        await sleep(500)
+      }
+      if (controleRef.current.cancelar) return
+      setAutoStatus(rotulo)
+      setCountdown(s)
+      await sleep(1000)
+    }
+    setCountdown(0)
+  }
+
+  // Disparo automático protegido pelo Modo Anti-Bloqueio.
+  async function dispararAuto() {
+    if (whatsappStatus?.status !== 'open') {
+      toast.error('Conecte o WhatsApp antes de disparar.')
+      return
+    }
+    let fila = pessoasSelecionadas.filter(p => !enviados.has(p.id))
+    if (fila.length === 0) {
+      toast.info('Todos os selecionados já receberam a mensagem.')
+      return
+    }
+
+    controleRef.current = { cancelar: false, pausar: false }
+    setPausado(false)
+    setAutoRodando(true)
+    setAutoProgresso(0)
+
+    // Validação opcional dos números no WhatsApp.
+    if (antiConfig.ativo && antiConfig.validarNumero) {
+      setAutoStatus('Validando números no WhatsApp...')
+      try {
+        const numeros = fila.map(p => normalizarNumero(p.telefone))
+        const { validos } = await api.checkWhatsAppNumbers(numeros)
+        const validSet = new Set(validos)
+        const antes = fila.length
+        fila = fila.filter(p => validSet.has(normalizarNumero(p.telefone)))
+        if (fila.length < antes) toast.info(`${antes - fila.length} número(s) inválido(s) ignorado(s).`)
+      } catch { /* segue sem validar */ }
+      if (fila.length === 0) {
+        toast.error('Nenhum número válido para enviar.')
+        setAutoRodando(false); setAutoStatus('')
+        return
+      }
+    }
+
+    let enviadosSessao = 0
+    for (let i = 0; i < fila.length; i++) {
+      if (controleRef.current.cancelar) break
+
+      if (antiConfig.ativo) {
+        if (!dentroDoHorario(antiConfig)) {
+          toast.error(`Fora da janela de envio (${antiConfig.horarioInicio}h–${antiConfig.horarioFim}h). Disparo interrompido.`)
+          break
+        }
+        if (lerContadorHoje() >= antiConfig.limiteDiario) {
+          toast.error(`Limite diário de ${antiConfig.limiteDiario} mensagens atingido.`)
+          break
+        }
+      }
+
+      const pessoa = fila[i]
+      setAutoStatus(`Enviando para ${pessoa.nome.split(' ')[0]}...`)
+      try {
+        await enviarUm(pessoa)
+      } catch {
+        toast.error(`Falha ao enviar para ${pessoa.nome.split(' ')[0]}. Disparo interrompido.`)
+        break
+      }
+      enviadosSessao++
+      setAutoProgresso(enviadosSessao)
+
+      if (i === fila.length - 1) break
+
+      if (antiConfig.ativo) {
+        if (antiConfig.lotePausaCada > 0 && enviadosSessao % antiConfig.lotePausaCada === 0) {
+          await aguardar(antiConfig.lotePausaSeg, `☕ Pausa de segurança (lote de ${antiConfig.lotePausaCada})...`)
+        } else {
+          await aguardar(segundosAleatorios(antiConfig.delayMinSeg, antiConfig.delayMaxSeg), 'Aguardando próximo envio...')
+        }
+      }
+    }
+
+    const cancelado = controleRef.current.cancelar
+    setAutoRodando(false)
+    setAutoStatus('')
+    setCountdown(0)
+    if (!cancelado) toast.success(`Disparo concluído! ${enviadosSessao} mensagem(ns) enviada(s).`)
+  }
+
+  function pausarRetomar() {
+    controleRef.current.pausar = !controleRef.current.pausar
+    setPausado(controleRef.current.pausar)
+  }
+  function cancelarDisparo() {
+    controleRef.current.cancelar = true
+    controleRef.current.pausar = false
+    setPausado(false)
   }
 
   return (
@@ -318,6 +454,11 @@ export function WhatsAppPage() {
           <ConexaoEvolution />
         </div>
 
+        {/* Modo Anti-Bloqueio */}
+        <div className="shrink-0">
+          <AntiBloqueioPanel config={antiConfig} onChange={atualizarConfig} contadorHoje={contadorDia} />
+        </div>
+
         {/* Editor de Mensagem */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 shrink-0">
           <div className="flex items-center justify-between mb-4">
@@ -344,20 +485,27 @@ export function WhatsAppPage() {
           </div>
           
           <div className="flex flex-col gap-2 mb-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 mr-1">Inserir:</span>
               <button onClick={() => setMensagem(m => m + '{nome}')} className="px-2 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-md text-xs font-bold transition dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50">Nome Curto</button>
               <button onClick={() => setMensagem(m => m + '{nomeCompleto}')} className="px-2 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-md text-xs font-bold transition dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50">Nome Completo</button>
               <button onClick={() => setMensagem(m => m + '{telefone}')} className="px-2 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-md text-xs font-bold transition dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50">Telefone</button>
+              <button onClick={() => setMensagem(m => m + '{Olá|Oi|Fala}')} title="Variação: sorteia uma das opções por envio" className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md text-xs font-bold transition dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50">+ Variação {'{a|b}'}</button>
             </div>
-            
+
             <textarea
               value={mensagem}
               onChange={(e) => setMensagem(e.target.value)}
               rows={5}
               className="w-full rounded-xl border border-slate-300 bg-white p-3 text-base sm:text-sm font-medium outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 placeholder:text-slate-400 resize-none"
-              placeholder="Digite a mensagem..."
+              placeholder="Digite a mensagem... Use {Olá|Oi} para variar o texto a cada envio."
             />
+
+            <p className="text-[11px] font-medium text-slate-400">
+              {variacoes > 1
+                ? `✨ ${variacoes} variações possíveis desta mensagem (reduz o risco de bloqueio).`
+                : 'Dica: adicione variações {a|b|c} para cada pessoa receber um texto diferente.'}
+            </p>
             
             <div className="flex items-center gap-3 mt-2">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Plataforma:</span>
@@ -440,24 +588,62 @@ export function WhatsAppPage() {
             )}
           </div>
 
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center mb-3">
-            O disparo é feito de forma assistida pela Evolution API para máxima segurança.
-          </p>
-          
           {whatsappStatus?.status === 'open' ? (
-            <button
-              onClick={() => {
-                if (pessoasSelecionadas.length > 0) {
-                  setPessoaAtualEnvio(0)
-                  dispararWhatsApp(pessoasSelecionadas[0], 0)
-                }
-              }}
-              disabled={pessoasSelecionadas.length === 0 || !mensagem.trim() || mutationSend.isPending}
-              className="w-full mt-auto flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-4 text-base font-bold text-white transition hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
-            >
-              <Send className="h-5 w-5" />
-              {mutationSend.isPending ? 'Enviando...' : `Disparar para ${pessoasSelecionadas.length} pessoas`}
-            </button>
+            <div className="mt-auto">
+              {autoRodando ? (
+                <div className="space-y-3">
+                  {/* Status do disparo em andamento */}
+                  <div className="rounded-xl border border-brand-200 bg-brand-50 p-3 dark:border-brand-800/50 dark:bg-brand-900/20">
+                    <div className="flex items-center justify-between text-sm font-bold text-brand-700 dark:text-brand-300">
+                      <span className="flex items-center gap-1.5">
+                        <Timer className="h-4 w-4" />
+                        {autoStatus || 'Processando...'}
+                      </span>
+                      {countdown > 0 && <span className="tabular-nums">{countdown}s</span>}
+                    </div>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-brand-200 dark:bg-brand-800/50">
+                      <div
+                        className="h-full rounded-full bg-brand-500 transition-all"
+                        style={{ width: `${Math.min(100, (autoProgresso / Math.max(1, pessoasSelecionadas.filter(p => !enviados.has(p.id)).length + autoProgresso)) * 100)}%` }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-xs font-medium text-brand-600 dark:text-brand-400">
+                      {autoProgresso} enviada(s) nesta sessão
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={pausarRetomar}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-amber-600"
+                    >
+                      {pausado ? <><Play className="h-4 w-4" /> Retomar</> : <><Pause className="h-4 w-4" /> Pausar</>}
+                    </button>
+                    <button
+                      onClick={cancelarDisparo}
+                      className="flex-1 rounded-xl bg-red-500 px-4 py-3 text-sm font-bold text-white transition hover:bg-red-600"
+                    >
+                      Parar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="mb-3 text-center text-xs text-slate-500 dark:text-slate-400">
+                    {antiConfig.ativo
+                      ? `🛡️ Envio protegido: intervalo de ${antiConfig.delayMinSeg}–${antiConfig.delayMaxSeg}s, pausa a cada ${antiConfig.lotePausaCada}.`
+                      : '⚠️ Modo Anti-Bloqueio desligado — risco de banimento no envio em massa.'}
+                  </p>
+                  <button
+                    onClick={dispararAuto}
+                    disabled={pessoasSelecionadas.length === 0 || !mensagem.trim()}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-4 text-base font-bold text-white transition hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
+                  >
+                    <Send className="h-5 w-5" />
+                    Disparar para {pessoasSelecionadas.filter(p => !enviados.has(p.id)).length} pessoas
+                  </button>
+                </>
+              )}
+            </div>
           ) : (
             <div className="mt-auto p-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-sm font-medium text-center dark:bg-amber-900/30 dark:border-amber-700/50 dark:text-amber-400">
               Conecte o seu WhatsApp acima para poder enviar mensagens!

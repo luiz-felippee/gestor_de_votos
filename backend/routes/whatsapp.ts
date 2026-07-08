@@ -254,7 +254,7 @@ whatsappRouter.post(
     const campanha_id = req.user?.campanha_id;
     if (!campanha_id) return res.status(403).json({ error: 'Campanha não encontrada.' });
 
-    const { numero, texto } = req.body;
+    const { numero, texto, delay } = req.body as { numero?: string; texto?: string; delay?: number };
     if (!numero || !texto) return res.status(400).json({ error: 'Número e texto são obrigatórios.' });
 
     const campanha = await getCampanha(campanha_id);
@@ -264,13 +264,18 @@ whatsappRouter.post(
 
     const { url, key } = resolverConfig(campanha);
 
+    // Delay = tempo de "digitando..." antes de enviar. Variável (anti-bloqueio),
+    // limitado a 200ms–15s por segurança.
+    const delayDigitacao = Math.min(Math.max(Number(delay) || 1200, 200), 15000);
+
     try {
       await axios.post(
         `${url}/message/sendText/${campanha.evo_instance_name}`,
         {
           number: numero,
           text: texto,
-          delay: 1200, // simula digitação
+          delay: delayDigitacao,
+          presence: 'composing', // mostra "digitando..." para o destinatário
         },
         {
           headers: { apikey: campanha.evo_api_token || key },
@@ -282,6 +287,49 @@ whatsappRouter.post(
       return res
         .status(500)
         .json({ error: error.response?.data?.message || 'Falha ao enviar mensagem.' });
+    }
+  })
+);
+
+/**
+ * 4. POST /whatsapp/check-numbers
+ * Valida quais números realmente existem no WhatsApp (anti-bloqueio: evita
+ * disparar para números inválidos, que aumentam o risco de banimento).
+ * Retorna a lista dos números válidos (só dígitos).
+ */
+whatsappRouter.post(
+  '/check-numbers',
+  wrap(async (req, res) => {
+    const campanha_id = req.user?.campanha_id;
+    if (!campanha_id) return res.status(403).json({ error: 'Campanha não encontrada.' });
+
+    const numeros: string[] = Array.isArray(req.body?.numeros) ? req.body.numeros : [];
+    if (numeros.length === 0) return res.json({ validos: [] });
+
+    const campanha = await getCampanha(campanha_id);
+    if (!campanha?.evo_instance_name) {
+      return res.status(400).json({ error: 'WhatsApp não está conectado.' });
+    }
+
+    const { url, key } = resolverConfig(campanha);
+
+    try {
+      const response = await axios.post(
+        `${url}/chat/whatsappNumbers/${campanha.evo_instance_name}`,
+        { numbers: numeros },
+        { headers: { apikey: campanha.evo_api_token || key } }
+      );
+
+      const data = Array.isArray(response.data) ? response.data : [];
+      const validos = data
+        .filter((n: any) => n?.exists)
+        .map((n: any) => String(n?.number || n?.jid || '').replace(/\D/g, ''))
+        .filter(Boolean);
+
+      return res.json({ validos });
+    } catch (error: any) {
+      // Se a Evolution não suportar a checagem, não bloqueia o fluxo: devolve todos.
+      return res.json({ validos: numeros, aviso: 'Validação indisponível — enviando sem checar.' });
     }
   })
 );

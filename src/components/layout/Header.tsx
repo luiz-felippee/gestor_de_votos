@@ -77,14 +77,14 @@ export function Header() {
               <nav className="hidden gap-0.5 lg:flex">
                 <Item to="/">Painel</Item>
                 <Item to="/planilha">Eleitores</Item>
-                <Item to="/eventos">Agenda</Item>
+                {(role === 'admin' || role === 'coordenador') && (
+                  <Item to="/cabos">Lideranças</Item>
+                )}
                 <Item to="/whatsapp">WhatsApp</Item>
                 <Item to="/funil">Funil CRM</Item>
                 {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
                   <Dropdown title="Administração">
-                    {(role === 'admin' || role === 'coordenador') && (
-                      <DropdownItem to="/cabos">Lideranças</DropdownItem>
-                    )}
+                    <DropdownItem to="/eventos">Agenda</DropdownItem>
                     {usuario?.super_admin && <DropdownItem to="/campanhas">Campanhas</DropdownItem>}
                     {role === 'admin' && <DropdownItem to="/usuarios">Usuários</DropdownItem>}
                     {role === 'admin' && <DropdownItem to="/auditoria">Auditoria</DropdownItem>}
@@ -189,9 +189,11 @@ export function Header() {
               <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Navegação</p>
               <MobileDrawerItem to="/" icon={<Home className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Painel Geral</MobileDrawerItem>
               <MobileDrawerItem to="/planilha" icon={<Users className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Eleitores</MobileDrawerItem>
+              {(role === 'admin' || role === 'coordenador') && (
+                <MobileDrawerItem to="/cabos" icon={<Network className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Lideranças</MobileDrawerItem>
+              )}
               <MobileDrawerItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>WhatsApp</MobileDrawerItem>
               <MobileDrawerItem to="/funil" icon={<Network className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Funil CRM</MobileDrawerItem>
-              <MobileDrawerItem to="/eventos" icon={<CalendarDays className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Agenda & Eventos</MobileDrawerItem>
 
               {/* Seção Admin */}
               {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
@@ -199,9 +201,7 @@ export function Header() {
                   <div className="my-3 border-t border-slate-100 dark:border-slate-800" />
                   <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Administração</p>
 
-                  {(role === 'admin' || role === 'coordenador') && (
-                    <MobileDrawerItem to="/cabos" icon={<Network className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Lideranças</MobileDrawerItem>
-                  )}
+                  <MobileDrawerItem to="/eventos" icon={<CalendarDays className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Agenda & Eventos</MobileDrawerItem>
                   {usuario?.super_admin && (
                     <MobileDrawerItem to="/campanhas" icon={<Building2 className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Campanhas</MobileDrawerItem>
                   )}

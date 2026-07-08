@@ -6,6 +6,8 @@ import { toast } from 'sonner'
 import { maskTelefone } from '../lib/format'
 import { ConexaoEvolution } from '../components/whatsapp/ConexaoEvolution'
 import { WhatsAppSubNav } from '../components/whatsapp/WhatsAppSubNav'
+import { resolverSpintax } from '../lib/spintax'
+import { segundosAleatorios } from '../lib/antiBloqueio'
 
 export function FunilPage() {
   const queryClient = useQueryClient()
@@ -49,7 +51,7 @@ export function FunilPage() {
   })
 
   const mutationSend = useMutation({
-    mutationFn: ({ numero, texto }: { numero: string, texto: string }) => api.sendWhatsAppMessage(numero, texto),
+    mutationFn: ({ numero, texto, delay }: { numero: string, texto: string, delay?: number }) => api.sendWhatsAppMessage(numero, texto, delay),
     onSuccess: () => {
       // toast de sucesso será tratado dentro do handler principal
     },
@@ -60,12 +62,14 @@ export function FunilPage() {
 
   const handleEnviar = async (eleitor: any, template: any) => {
     const numero = `55${eleitor.telefone.replace(/\D/g, '')}`
-    const texto = template.texto_pronto
-    
+    // Aplica variações (spintax) para reduzir o risco de bloqueio.
+    const texto = resolverSpintax(template.texto_pronto)
+    const delay = segundosAleatorios(2, 5) * 1000 // "digitando..." 2–5s
+
     // Tenta enviar via Evolution
     const loadingToast = toast.loading(`Enviando para ${eleitor.nome}...`)
     try {
-      await mutationSend.mutateAsync({ numero, texto })
+      await mutationSend.mutateAsync({ numero, texto, delay })
       toast.success(`Mensagem enviada para ${eleitor.nome}!`, { id: loadingToast })
       
       // Se enviou com sucesso, avança a pessoa no funil
