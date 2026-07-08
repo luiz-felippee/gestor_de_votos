@@ -285,7 +285,7 @@ export function LoginPage() {
           {/* Alça (mobile) */}
           <div className="mx-auto mb-6 h-1.5 w-10 rounded-full bg-slate-200 dark:bg-slate-800 lg:hidden" />
 
-          <div className="mb-6">
+          <div className="mb-6 text-center">
             <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
               {step === 'login' ? 'Acesse sua conta' : 'Verificação de segurança'}
             </h2>

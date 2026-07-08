@@ -39,8 +39,36 @@ router.post('/upload', upload.single('foto'), async (req, res) => {
       .webp({ quality: 80 })
       .toBuffer();
 
-    // Converter para Data URL Base64 — armazenável diretamente no banco
     const base64 = compressedBuffer.toString('base64');
+    
+    // Tenta usar a integração do ImgBB se a chave estiver presente
+    const imgbbKey = process.env.IMGBB_API_KEY;
+    if (imgbbKey) {
+      try {
+        const params = new URLSearchParams();
+        params.append('key', imgbbKey);
+        params.append('image', base64);
+        
+        const response = await fetch('https://api.imgbb.com/1/upload', {
+          method: 'POST',
+          body: params
+        });
+        
+        const imgbbData = await response.json();
+        if (response.ok && imgbbData.data && imgbbData.data.url) {
+          // Sucesso: retorna o link do ImgBB
+          return res.json({ url: imgbbData.data.url });
+        } else {
+          console.error('Erro retornado pela API do ImgBB:', imgbbData);
+        }
+      } catch (uploadError) {
+        console.error('Falha ao comunicar com ImgBB, fazendo fallback para Base64:', uploadError);
+      }
+    } else {
+      console.warn('Atenção: IMGBB_API_KEY não definida no .env. As fotos estão sendo salvas em Base64 no banco de dados (baixa performance).');
+    }
+
+    // Fallback: Data URL Base64 armazenável diretamente no banco
     const dataUrl = `data:image/webp;base64,${base64}`;
 
     res.json({ url: dataUrl });

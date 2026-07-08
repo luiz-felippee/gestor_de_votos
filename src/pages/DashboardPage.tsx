@@ -36,43 +36,8 @@ export function DashboardPage() {
 
   // Estado para o mapa
   const [modoMapa, setModoMapa] = useState<'calor' | 'mapa'>('calor')
-  const [exportando, setExportando] = useState(false)
-  const [geo, setGeo] = useState<{ rodando: boolean; restantes: number | null }>({ rodando: false, restantes: null })
 
-  // Preenche lat/lng dos cadastros pelo LOCAL DE VOTAÇÃO, em lotes (~1 req/s no Nominatim),
-  // até não sobrar nenhum. O calor cai no local de votação, não no endereço.
-  async function geolocalizarCadastros() {
-    if (geo.rodando) return
-    setGeo({ rodando: true, restantes: null })
-    try {
-      let anterior = Infinity
-      for (let i = 0; i < 300; i++) {
-        const r = await api.geocodificarEleitores()
-        setGeo({ rodando: true, restantes: r.restantes })
-        queryClient.invalidateQueries({ queryKey: ['mapa-pontos'] })
-        if (r.restantes === 0) break
-        if (r.restantes >= anterior && r.geocodificados === 0) break
-        anterior = r.restantes
-      }
-      await alert('Cadastros posicionados no mapa pelo local de votação.', 'Geolocalização concluída')
-    } catch {
-      await alert('Não foi possível concluir agora. Tente novamente em instantes.', 'Erro na geolocalização')
-    } finally {
-      setGeo((s) => ({ rodando: false, restantes: s.restantes }))
-    }
-  }
 
-  // Zera todos os lat/lng para regeocodificar pelo local de votação
-  async function regeocodificarTodos() {
-    if (geo.rodando) return
-    try {
-      const r = await api.regeocodificarEleitores()
-      await alert(`${r.resetados} eleitores foram resetados. Agora clique em "Geolocalizar" para posicioná-los pelo local de votação.`, 'Regeocodificação')
-      queryClient.invalidateQueries({ queryKey: ['mapa-pontos'] })
-    } catch {
-      await alert('Erro ao resetar coordenadas.', 'Erro')
-    }
-  }
 
   const [showOnboarding, setShowOnboarding] = useState(false)
 
@@ -98,27 +63,6 @@ export function DashboardPage() {
   const bairrosFiltrados = stats ? stats.porBairro.map(x => ({ cidade: filtroCidade || '', bairro: x.label, count: x.total })) : []
   const maxBairro = bairrosFiltrados.length > 0 ? bairrosFiltrados[0].count : 1
 
-  // Exportar imagem do mapa
-  async function exportarImagem() {
-    if (!mapaRef.current) return
-    setExportando(true)
-    try {
-      const { default: html2canvas } = await import('html2canvas')
-      const canvas = await html2canvas(mapaRef.current, {
-        useCORS: true,
-        backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff',
-        scale: 2,
-      })
-      const a = document.createElement('a')
-      a.href = canvas.toDataURL('image/png')
-      a.download = `mapa-pernambuco${caboFiltro ? '-filtrado' : ''}.png`
-      a.click()
-    } catch {
-      alert('Não foi possível exportar a imagem. Tente novamente.', 'Erro ao exportar')
-    } finally {
-      setExportando(false)
-    }
-  }
 
   if (loading || !stats) {
     if (isInitialLogin.current) {
@@ -301,37 +245,6 @@ export function DashboardPage() {
           <h2 className="text-xl font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
             Mapa de Força
           </h2>
-          
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={exportarImagem}
-              disabled={exportando}
-              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-95 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-            >
-              {exportando ? 'Gerando...' : 'Exportar Imagem'}
-            </button>
-            {role === 'admin' && (
-              <>
-                <button
-                  onClick={geolocalizarCadastros}
-                  disabled={geo.rodando}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-700 shadow-sm transition hover:bg-brand-100 active:scale-95 disabled:opacity-60 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-300 dark:hover:bg-brand-500/20"
-                >
-                  <MapPin className="h-3.5 w-3.5" />
-                  {geo.rodando
-                    ? `Geolocalizando…${geo.restantes != null ? ` ${geo.restantes}` : ''}`
-                    : 'Geolocalizar'}
-                </button>
-                <button
-                  onClick={regeocodificarTodos}
-                  disabled={geo.rodando}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 shadow-sm transition hover:bg-amber-100 active:scale-95 disabled:opacity-60 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
-                >
-                  Regeocodificar
-                </button>
-              </>
-            )}
-          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
