@@ -311,7 +311,10 @@ export const api = {
   deleteFunilTemplate: (id: string) => request<{ success: boolean }>(`/funil/templates/${id}`, { method: 'DELETE' }),
 
   // ---- Evolution API (WhatsApp) ----
+  getWhatsAppConfig: () => request<{ evo_api_url: string; evo_global_key_set: boolean; instance_name: string | null }>('/whatsapp/config'),
+  saveWhatsAppConfig: (data: { evo_api_url: string; evo_global_key?: string }) => request<{ success: boolean }>('/whatsapp/config', { method: 'POST', body: data }),
   getWhatsAppStatus: () => request<{ status: string }>('/whatsapp/status'),
   connectWhatsApp: () => request<{ qrcode: string, message?: string }>('/whatsapp/connect', { method: 'POST' }),
+  disconnectWhatsApp: () => request<{ success: boolean }>('/whatsapp/disconnect', { method: 'POST' }),
   sendWhatsAppMessage: (numero: string, texto: string) => request<{ success: boolean }>('/whatsapp/send', { method: 'POST', body: { numero, texto } }),
 }

@@ -1,14 +1,94 @@
 import { Router } from 'express';
 import { prisma } from '../prismaClient';
-import { wrap, requireAuth, escopoCampanha } from '../middlewares';
+import { wrap, requireAuth } from '../middlewares';
 import axios from 'axios';
 
 const whatsappRouter = Router();
 whatsappRouter.use(requireAuth);
 
-// Evolution API Global Settings (Configurado no .env do backend)
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
-const EVOLUTION_GLOBAL_API_KEY = process.env.EVOLUTION_API_KEY || 'SUA_CHAVE_GLOBAL_AQUI';
+// Fallbacks globais caso a campanha ainda não tenha configurado o servidor Evolution.
+const EVOLUTION_API_URL_FALLBACK = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+const EVOLUTION_GLOBAL_KEY_FALLBACK = process.env.EVOLUTION_API_KEY || '';
+
+type CampanhaEvo = {
+  id: string;
+  evo_api_url: string | null;
+  evo_global_key: string | null;
+  evo_instance_name: string | null;
+  evo_api_token: string | null;
+};
+
+// Resolve a configuração da Evolution: usa o que a campanha salvou; se vazio, cai no .env.
+function resolverConfig(campanha: CampanhaEvo | null) {
+  const url = (campanha?.evo_api_url || EVOLUTION_API_URL_FALLBACK).replace(/\/+$/, '');
+  const key = campanha?.evo_global_key || EVOLUTION_GLOBAL_KEY_FALLBACK;
+  return { url, key };
+}
+
+async function getCampanha(campanha_id: string): Promise<CampanhaEvo | null> {
+  return prisma.campanha.findUnique({
+    where: { id: campanha_id },
+    select: {
+      id: true,
+      evo_api_url: true,
+      evo_global_key: true,
+      evo_instance_name: true,
+      evo_api_token: true,
+    },
+  });
+}
+
+/**
+ * 0. GET /whatsapp/config
+ * Retorna a configuração atual da Evolution (sem expor a chave inteira).
+ */
+whatsappRouter.get(
+  '/config',
+  wrap(async (req, res) => {
+    const campanha_id = req.user?.campanha_id;
+    if (!campanha_id) return res.status(403).json({ error: 'Campanha não encontrada.' });
+
+    const campanha = await getCampanha(campanha_id);
+    return res.json({
+      evo_api_url: campanha?.evo_api_url || '',
+      // Nunca devolvemos a chave em texto; só sinalizamos se já existe alguma configurada.
+      evo_global_key_set: !!campanha?.evo_global_key,
+      instance_name: campanha?.evo_instance_name || null,
+    });
+  })
+);
+
+/**
+ * 0b. POST /whatsapp/config
+ * Salva a URL do servidor Evolution e a API Key global da campanha.
+ */
+whatsappRouter.post(
+  '/config',
+  wrap(async (req, res) => {
+    const campanha_id = req.user?.campanha_id;
+    if (!campanha_id) return res.status(403).json({ error: 'Campanha não encontrada.' });
+
+    const { evo_api_url, evo_global_key } = req.body as {
+      evo_api_url?: string;
+      evo_global_key?: string;
+    };
+
+    if (!evo_api_url || typeof evo_api_url !== 'string') {
+      return res.status(400).json({ error: 'A URL do servidor Evolution é obrigatória.' });
+    }
+
+    const data: Record<string, string> = {
+      evo_api_url: evo_api_url.trim().replace(/\/+$/, ''),
+    };
+    // Só sobrescreve a chave se o usuário digitou uma nova (campo vazio = mantém a atual).
+    if (evo_global_key && evo_global_key.trim()) {
+      data.evo_global_key = evo_global_key.trim();
+    }
+
+    await prisma.campanha.update({ where: { id: campanha_id }, data });
+    return res.json({ success: true });
+  })
+);
 
 /**
  * 1. GET /whatsapp/status
@@ -20,16 +100,18 @@ whatsappRouter.get(
     const campanha_id = req.user?.campanha_id;
     if (!campanha_id) return res.status(403).json({ error: 'Campanha não encontrada.' });
 
-    const campanha = await prisma.campanha.findUnique({ where: { id: campanha_id } });
+    const campanha = await getCampanha(campanha_id);
     if (!campanha || !campanha.evo_instance_name) {
       return res.json({ status: 'unpaired' });
     }
 
+    const { url, key } = resolverConfig(campanha);
+
     try {
-      const response = await axios.get(`${EVOLUTION_API_URL}/instance/connectionState/${campanha.evo_instance_name}`, {
-        headers: { apikey: EVOLUTION_GLOBAL_API_KEY }
+      const response = await axios.get(`${url}/instance/connectionState/${campanha.evo_instance_name}`, {
+        headers: { apikey: key },
       });
-      
+
       const status = response.data?.instance?.state || response.data?.state || 'unpaired';
       return res.json({ status });
     } catch (error) {
@@ -49,59 +131,116 @@ whatsappRouter.post(
     const campanha_id = req.user?.campanha_id;
     if (!campanha_id) return res.status(403).json({ error: 'Campanha não encontrada.' });
 
-    let campanha = await prisma.campanha.findUnique({ where: { id: campanha_id } });
-    let instanceName = campanha?.evo_instance_name;
+    let campanha = await getCampanha(campanha_id);
+    const { url, key } = resolverConfig(campanha);
 
-    // Se ainda não tem instância, vamos gerar um nome único
-    if (!instanceName) {
-      instanceName = `campanha_${campanha_id.split('-')[0]}_${Date.now()}`;
-      
-      // Salva no banco primeiro
-      campanha = await prisma.campanha.update({
-        where: { id: campanha_id },
-        data: { evo_instance_name: instanceName }
+    if (!key) {
+      return res.status(400).json({
+        error: 'Configure a URL e a API Key do servidor Evolution antes de conectar.',
       });
     }
 
-    try {
-      // Tenta criar a instância na Evolution API. 
-      // O 'qrcode: true' instrui a API a já devolver a imagem.
-      const createResponse = await axios.post(`${EVOLUTION_API_URL}/instance/create`, {
-        instanceName,
-        qrcode: true,
-        integration: "WHATSAPP-BAILEYS"
-      }, {
-        headers: { apikey: EVOLUTION_GLOBAL_API_KEY }
+    let instanceName = campanha?.evo_instance_name;
+
+    // Se ainda não tem instância, gera um nome único e salva no banco.
+    if (!instanceName) {
+      instanceName = `campanha_${campanha_id.split('-')[0]}_${Date.now()}`;
+      campanha = await prisma.campanha.update({
+        where: { id: campanha_id },
+        data: { evo_instance_name: instanceName },
+        select: {
+          id: true,
+          evo_api_url: true,
+          evo_global_key: true,
+          evo_instance_name: true,
+          evo_api_token: true,
+        },
       });
+    }
 
-      // Pega o token gerado para essa instância e o QR Code
-      const token = createResponse.data?.hash?.apikey || createResponse.data?.Auth?.apikey;
-      const qrcode = createResponse.data?.qrcode?.base64 || createResponse.data?.base64;
+    // Helper: pede o QR Code de uma instância já existente.
+    const conectarInstancia = async () => {
+      const connectResponse = await axios.get(`${url}/instance/connect/${instanceName}`, {
+        headers: { apikey: key },
+      });
+      const qr =
+        connectResponse.data?.qrcode?.base64 ||
+        connectResponse.data?.base64 ||
+        connectResponse.data?.code;
+      return qr;
+    };
 
-      // Salva o token de segurança no banco
-      if (token) {
+    try {
+      // Tenta criar a instância. O 'qrcode: true' já devolve a imagem na criação.
+      const createResponse = await axios.post(
+        `${url}/instance/create`,
+        {
+          instanceName,
+          qrcode: true,
+          integration: 'WHATSAPP-BAILEYS',
+        },
+        { headers: { apikey: key } }
+      );
+
+      const token = createResponse.data?.hash?.apikey || createResponse.data?.hash || createResponse.data?.Auth?.apikey;
+      let qrcode = createResponse.data?.qrcode?.base64 || createResponse.data?.base64;
+
+      // Salva o token de segurança da instância no banco.
+      if (token && typeof token === 'string') {
         await prisma.campanha.update({
           where: { id: campanha_id },
-          data: { evo_api_token: token }
+          data: { evo_api_token: token },
         });
       }
 
-      return res.json({ qrcode, message: 'Leia o QR Code para conectar' });
+      // Se por algum motivo não veio o QR na criação, pede via connect.
+      if (!qrcode) {
+        qrcode = await conectarInstancia();
+      }
 
+      return res.json({ qrcode, message: 'Leia o QR Code para conectar' });
     } catch (error: any) {
-      // Se a instância já existe, nós pedimos apenas a conexão/QR code
-      if (error.response?.data?.message?.includes('already exists')) {
+      // Instância já existe: apenas pedimos o QR de conexão.
+      const msg = String(error?.response?.data?.message || error?.response?.data?.error || '');
+      const jaExiste = error?.response?.status === 403 || /already|exists|in use|já existe/i.test(msg);
+
+      if (jaExiste) {
         try {
-          const connectResponse = await axios.get(`${EVOLUTION_API_URL}/instance/connect/${instanceName}`, {
-            headers: { apikey: EVOLUTION_GLOBAL_API_KEY }
-          });
-          return res.json({ qrcode: connectResponse.data?.base64 });
+          const qrcode = await conectarInstancia();
+          return res.json({ qrcode, message: 'Leia o QR Code para conectar' });
         } catch (innerError) {
           return res.status(500).json({ error: 'Erro ao gerar QR Code de conexão.' });
         }
       }
-      return res.status(500).json({ error: 'Falha ao criar instância no Evolution.' });
+      return res.status(500).json({
+        error: msg || 'Falha ao criar instância no Evolution. Verifique a URL e a API Key.',
+      });
     }
+  })
+);
+
+/**
+ * 2b. POST /whatsapp/disconnect
+ * Desconecta (logout) a instância da campanha, permitindo parear outro número.
+ */
+whatsappRouter.post(
+  '/disconnect',
+  wrap(async (req, res) => {
+    const campanha_id = req.user?.campanha_id;
+    if (!campanha_id) return res.status(403).json({ error: 'Campanha não encontrada.' });
+
+    const campanha = await getCampanha(campanha_id);
+    if (!campanha?.evo_instance_name) return res.json({ success: true });
+
+    const { url, key } = resolverConfig(campanha);
+    try {
+      await axios.delete(`${url}/instance/logout/${campanha.evo_instance_name}`, {
+        headers: { apikey: key },
+      });
+    } catch {
+      // Ignora — pode já estar desconectada.
+    }
+    return res.json({ success: true });
   })
 );
 
@@ -118,26 +257,31 @@ whatsappRouter.post(
     const { numero, texto } = req.body;
     if (!numero || !texto) return res.status(400).json({ error: 'Número e texto são obrigatórios.' });
 
-    const campanha = await prisma.campanha.findUnique({ where: { id: campanha_id } });
+    const campanha = await getCampanha(campanha_id);
     if (!campanha || !campanha.evo_instance_name) {
       return res.status(400).json({ error: 'WhatsApp não está conectado.' });
     }
 
+    const { url, key } = resolverConfig(campanha);
+
     try {
-      // Tenta enviar
-      await axios.post(`${EVOLUTION_API_URL}/message/sendText/${campanha.evo_instance_name}`, {
-        number: numero,
-        text: texto,
-        delay: 1200 // Espera 1.2 segundos para simular digitação
-      }, {
-        headers: { 
-          apikey: campanha.evo_api_token || EVOLUTION_GLOBAL_API_KEY 
+      await axios.post(
+        `${url}/message/sendText/${campanha.evo_instance_name}`,
+        {
+          number: numero,
+          text: texto,
+          delay: 1200, // simula digitação
+        },
+        {
+          headers: { apikey: campanha.evo_api_token || key },
         }
-      });
+      );
 
       return res.json({ success: true });
     } catch (error: any) {
-      return res.status(500).json({ error: error.response?.data?.message || 'Falha ao enviar mensagem.' });
+      return res
+        .status(500)
+        .json({ error: error.response?.data?.message || 'Falha ao enviar mensagem.' });
     }
   })
 );

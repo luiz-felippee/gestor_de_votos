@@ -40,8 +40,10 @@ model Campanha {
   assinatura_expira_em   DateTime?
 
   // --- Evolution API (WhatsApp) ---
-  evo_instance_name      String?
-  evo_api_token          String?
+  evo_api_url            String?  // URL do servidor Evolution (ex.: https://evo.suaempresa.com)
+  evo_global_key         String?  // API Key global do servidor Evolution
+  evo_instance_name      String?  // nome da instância criada para esta campanha
+  evo_api_token          String?  // token da instância (retornado ao criar)
 
   @@map("campanhas")
 }

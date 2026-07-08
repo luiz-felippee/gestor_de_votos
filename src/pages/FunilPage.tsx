@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { MessageCircle, Check, Plus, Trash2, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { maskTelefone } from '../lib/format'
+import { ConexaoEvolution } from '../components/whatsapp/ConexaoEvolution'
+import { WhatsAppSubNav } from '../components/whatsapp/WhatsAppSubNav'
 
 export function FunilPage() {
   const queryClient = useQueryClient()
@@ -115,6 +117,10 @@ export function FunilPage() {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
+        <div className="max-w-4xl mx-auto mb-6 space-y-4">
+          <WhatsAppSubNav />
+          <ConexaoEvolution compact />
+        </div>
         {aba === 'tarefas' && (
           <div className="max-w-4xl mx-auto">
             {loadingTarefas ? (

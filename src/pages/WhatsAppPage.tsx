@@ -5,6 +5,8 @@ import { MessageCircle, Check, Send, Search, Users, Shield, Zap } from 'lucide-r
 import { toast } from 'sonner'
 import { maskTelefone } from '../lib/format'
 import type { EleitorComCabo, CaboEleitoral } from '../lib/types'
+import { ConexaoEvolution } from '../components/whatsapp/ConexaoEvolution'
+import { WhatsAppSubNav } from '../components/whatsapp/WhatsAppSubNav'
 
 type Contato = EleitorComCabo | CaboEleitoral;
 
@@ -40,10 +42,6 @@ export function WhatsAppPage() {
     queryKey: ['whatsapp-status'],
     queryFn: api.getWhatsAppStatus,
     refetchInterval: (query) => query.state.data?.status === 'unpaired' ? 5000 : false
-  })
-
-  const mutationConnect = useMutation({
-    mutationFn: api.connectWhatsApp
   })
 
   const mutationSend = useMutation({
@@ -175,9 +173,10 @@ export function WhatsAppPage() {
             <MessageCircle className="h-8 w-8 text-brand-600 dark:text-brand-400" />
             Central WhatsApp
           </h1>
-          <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+          <p className="mt-1 mb-4 text-sm font-semibold text-slate-500 dark:text-slate-400">
             Selecione as pessoas para iniciar o disparo na página atual
           </p>
+          <WhatsAppSubNav />
         </div>
 
         {/* Abas */}
@@ -314,44 +313,9 @@ export function WhatsAppPage() {
       {/* Coluna Direita: Painel de Envio */}
       <div className="w-full lg:w-[400px] flex flex-col gap-6 shrink-0 lg:h-full">
         
-        {/* Box de Conexão com Evolution API */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 shrink-0">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              Status da Conexão
-            </h2>
-            {whatsappStatus?.status === 'open' ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400">
-                <Check className="h-3.5 w-3.5" /> Conectado
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-bold text-red-700 dark:bg-red-900/40 dark:text-red-400">
-                Desconectado
-              </span>
-            )}
-          </div>
-          
-          {whatsappStatus?.status !== 'open' && (
-            <div className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700">
-              {mutationConnect.data?.qrcode ? (
-                <>
-                  <p className="text-sm font-medium text-slate-600 dark:text-slate-300 text-center mb-3">Escaneie o QR Code com o seu WhatsApp</p>
-                  <img src={mutationConnect.data.qrcode} alt="QR Code" className="w-48 h-48 rounded-lg" />
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-4">Para disparar mensagens automáticas, conecte o número do seu celular.</p>
-                  <button 
-                    onClick={() => mutationConnect.mutate()}
-                    disabled={mutationConnect.isPending}
-                    className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-bold w-full transition"
-                  >
-                    {mutationConnect.isPending ? 'Gerando QR Code...' : 'Conectar WhatsApp'}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+        {/* Conexão + Configuração da Evolution API (compartilhado com o Funil) */}
+        <div className="shrink-0">
+          <ConexaoEvolution />
         </div>
 
         {/* Editor de Mensagem */}
