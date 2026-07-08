@@ -146,7 +146,7 @@ funilRouter.delete(
   '/templates/:id',
   wrap(async (req, res) => {
     await prisma.funilTemplate.deleteMany({
-      where: { id: req.params.id, ...escopoCampanha(req) }
+      where: { id: String(req.params.id), ...escopoCampanha(req) }
     });
     res.json({ success: true });
   })

@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import { api } from '../lib/api'
-import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query'
 import { MessageCircle, Check, Send, Search, Users, Shield, Zap } from 'lucide-react'
+import { toast } from 'sonner'
 import { maskTelefone } from '../lib/format'
 import type { EleitorComCabo, CaboEleitoral } from '../lib/types'
 
@@ -35,7 +36,7 @@ export function WhatsAppPage() {
   }, [enviados])
   const itensPorPagina = 50
 
-  const { data: whatsappStatus, refetch: refetchStatus } = useQuery({
+  const { data: whatsappStatus } = useQuery({
     queryKey: ['whatsapp-status'],
     queryFn: api.getWhatsAppStatus,
     refetchInterval: (query) => query.state.data?.status === 'unpaired' ? 5000 : false

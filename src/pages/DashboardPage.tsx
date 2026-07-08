@@ -1,17 +1,12 @@
 import { Suspense, lazy, useState, useEffect, useRef } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { OnboardingModal } from '../components/OnboardingModal'
 import { useDashboardStats } from '../hooks/useDashboardStats'
-import { useAuth } from '../auth/AuthContext'
-import { api } from '../lib/api'
 import { resolverFotoUrl } from '../lib/fotoUrl'
 import { CIDADES } from '../lib/constants'
 import { RankingLiderancas } from '../components/RankingLiderancas'
 import { useMapaPontos } from '../hooks/useMapaPontos'
 import { useCabos } from '../hooks/useCabos'
-import { useConfirm } from '../components/ConfirmDialog'
 import { Map as MapIcon, Cake, User, CalendarDays, Users, MapPin, BadgeCheck, Flame, ChevronDown } from 'lucide-react'
-import { useTheme } from '../components/ThemeProvider'
 import { SplashScreen } from '../components/layout/SplashScreen'
 import { EmptyState } from '../components/EmptyState'
 import { LazyMount } from '../components/LazyMount'
@@ -28,10 +23,6 @@ export function DashboardPage() {
   const { stats, loading } = useDashboardStats(filtroCidade, filtroPeriodo, caboFiltro)
   const { pontos: pontosGeo } = useMapaPontos(filtroCidade, filtroPeriodo, caboFiltro)
   const { cabos } = useCabos()
-  const { alert } = useConfirm()
-  const { theme } = useTheme()
-  const { role } = useAuth()
-  const queryClient = useQueryClient()
   const mapaRef = useRef<HTMLDivElement>(null)
 
   // Estado para o mapa

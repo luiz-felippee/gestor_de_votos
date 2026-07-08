@@ -48,7 +48,7 @@ export function FunilPage() {
 
   const mutationSend = useMutation({
     mutationFn: ({ numero, texto }: { numero: string, texto: string }) => api.sendWhatsAppMessage(numero, texto),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       // toast de sucesso será tratado dentro do handler principal
     },
     onError: (err: any) => {
