@@ -7,8 +7,7 @@ import { ThemeProvider } from './components/ThemeProvider'
 import { Toaster, toast } from 'sonner'
 import { ConfirmProvider } from './components/ConfirmDialog'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { Breadcrumbs } from './components/Breadcrumbs'
-import { Header } from './components/layout/Header'
+// Layout Elements carregados de forma lazy abaixo
 import { InstallPrompt } from './components/layout/InstallPrompt'
 import { useDocumentTitle } from './hooks/useDocumentTitle'
 import { useNetworkStatus } from './hooks/useNetworkStatus'
@@ -45,6 +44,10 @@ const CampanhasPage = lazyPage(() => import('./pages/CampanhasPage'), 'Campanhas
 const WhatsAppPage = lazyPage(() => import('./pages/WhatsAppPage'), 'WhatsAppPage')
 
 const PerfilPage = lazyPage(() => import('./pages/PerfilPage').then(m => ({ PerfilPage: m.PerfilPage })), 'PerfilPage')
+
+// Layout Elements (Pesados, carregados sob demanda)
+const Header = lazy(() => import('./components/layout/Header').then(m => ({ default: m.Header })))
+const Breadcrumbs = lazy(() => import('./components/Breadcrumbs').then(m => ({ default: m.Breadcrumbs })))
 
 function CarregandoPagina() {
   return (
@@ -84,8 +87,12 @@ function AppContent() {
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
-      <Header />
-      <Breadcrumbs />
+      {usuario && (
+        <Suspense fallback={null}>
+          <Header />
+          <Breadcrumbs />
+        </Suspense>
+      )}
       <main className="flex-1 overflow-y-auto">
         <ErrorBoundary>
           <Suspense fallback={<CarregandoPagina />}>

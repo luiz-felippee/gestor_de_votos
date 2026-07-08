@@ -26,39 +26,9 @@ export function LoginPage() {
   const [pendingUserId, setPendingUserId] = useState<string | null>(null)
   const [token2fa, setToken2fa] = useState('')
 
-  // Intro Animation States
-  const [introPhase, setIntroPhase] = useState<0 | 1 | 2 | 3 | 4>(0)
-
-  // Pre-aquece o backend e controla a intro
+  // Pre-aquece o backend
   useEffect(() => {
     prewarmBackend()
-    
-    const hasSeenIntro = sessionStorage.getItem('hasSeenIntro')
-    if (hasSeenIntro) {
-      setIntroPhase(4)
-      return
-    }
-
-    // Phase 1: Logo fades in (0ms)
-    setTimeout(() => setIntroPhase(1), 50)
-    
-    // Phase 2: Text fades in
-    const t1 = setTimeout(() => setIntroPhase(2), 400)
-    
-    // Phase 3: Entire intro fades out
-    const t2 = setTimeout(() => setIntroPhase(3), 1200)
-    
-    // Phase 4: Unmount
-    const t3 = setTimeout(() => {
-      setIntroPhase(4)
-      sessionStorage.setItem('hasSeenIntro', 'true')
-    }, 1800)
-
-    return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-      clearTimeout(t3)
-    }
   }, [])
 
   async function handleLogin(e: FormEvent) {
@@ -172,40 +142,9 @@ export function LoginPage() {
   }, [googleClientId])
 
   return (
-    <>
-      {/* Animação de Entrada */}
-      {introPhase < 4 && (
-        <div 
-          className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-slate-950 px-6 transition-opacity duration-500 ease-in-out ${introPhase === 3 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-        >
-          {/* Acentos de gradiente no fundo */}
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-brand-600/10 blur-3xl" />
-            <div className="absolute -bottom-32 -right-24 h-[28rem] w-[28rem] rounded-full bg-indigo-600/10 blur-3xl" />
-          </div>
-
-          <div className={`relative z-10 transition-all duration-700 transform ${introPhase >= 1 ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-90 translate-y-8'}`}>
-            <div className="flex flex-col items-center gap-4">
-              <Logo iconClassName="h-20 w-20 lg:h-24 lg:w-24 drop-shadow-2xl" />
-            </div>
-          </div>
-          
-          <div className={`relative z-10 mt-10 max-w-lg text-center transition-all duration-700 transform ${introPhase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white leading-tight tracking-tight">
-              A inteligência por trás de <br className="hidden sm:block"/>
-              <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
-                campanhas vitoriosas
-              </span>
-            </h1>
-            <p className={`mt-5 text-base sm:text-lg text-slate-300 font-medium transition-all duration-700 delay-200 ${introPhase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-              Dados, estratégia e mobilização em tempo real.
-            </p>
-          </div>
-        </div>
-      )}
-
+    <main className="min-h-[100dvh] bg-slate-950 font-sans lg:bg-white dark:bg-slate-950">
       {/* Container Principal do Login */}
-      <div className={`relative flex min-h-[100dvh] flex-col bg-slate-950 font-sans lg:grid lg:grid-cols-2 lg:bg-white lg:dark:bg-slate-950 transition-opacity duration-700 ${introPhase >= 3 ? 'opacity-100' : 'opacity-0 h-screen overflow-hidden pointer-events-none'}`}>
+      <div className="relative flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-2">
       
       {/* Painel da Marca (Topo no Mobile, Esquerda no Desktop) */}
       <div className="relative flex shrink-0 flex-col overflow-hidden bg-slate-950 p-6 pt-10 pb-12 sm:p-12 sm:pb-16 lg:p-12 lg:pb-10 xl:p-16">
@@ -425,8 +364,8 @@ export function LoginPage() {
           </p>
         </div>
       </div>
-    </div>
-    </>
+      </div>
+    </main>
   )
 }
 
