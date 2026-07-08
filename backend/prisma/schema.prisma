@@ -39,6 +39,10 @@ model Campanha {
   assinatura_status      String   @default("ativa") // ativa, inadimplente, cancelada
   assinatura_expira_em   DateTime?
 
+  // --- Evolution API (WhatsApp) ---
+  evo_instance_name      String?
+  evo_api_token          String?
+
   @@map("campanhas")
 }
 
@@ -84,6 +88,11 @@ model Eleitor {
   titulo_eleitor   String?        @unique
   lat              Float?
   lng              Float?
+  
+  // --- Funil / CRM ---
+  etapa_funil         String         @default("novo") // novo, contato_1, etc
+  data_ultimo_contato DateTime?
+
   created_at       DateTime       @default(now())
   deleted_at       DateTime?
   // Normalizado (minúsculo, sem espaços nas pontas) p/ impedir duplicados
@@ -164,4 +173,17 @@ model LogAuditoria {
   @@index([created_at])
   @@index([entidade])
   @@map("logs_auditoria")
+}
+
+model FunilTemplate {
+  id            String   @id @default(uuid())
+  campanha_id   String?
+  etapa_origem  String   // A etapa em que o eleitor deve estar para receber isso (ex: "novo")
+  etapa_destino String   // Para qual etapa ele vai após o envio (ex: "boas_vindas")
+  dias_espera   Int      // Dias a esperar após data_ultimo_contato (ou cadastro)
+  texto         String   @db.Text
+  created_at    DateTime @default(now())
+
+  @@index([campanha_id])
+  @@map("funil_templates")
 }

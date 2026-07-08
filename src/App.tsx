@@ -45,6 +45,8 @@ const WhatsAppPage = lazyPage(() => import('./pages/WhatsAppPage'), 'WhatsAppPag
 
 const PerfilPage = lazyPage(() => import('./pages/PerfilPage').then(m => ({ PerfilPage: m.PerfilPage })), 'PerfilPage')
 
+const FunilPage = lazyPage(() => import('./pages/FunilPage').then(m => ({ FunilPage: m.FunilPage })), 'FunilPage')
+
 // Layout Elements (Pesados, carregados sob demanda)
 const Header = lazy(() => import('./components/layout/Header').then(m => ({ default: m.Header })))
 const Breadcrumbs = lazy(() => import('./components/Breadcrumbs').then(m => ({ default: m.Breadcrumbs })))
@@ -128,6 +130,14 @@ function AppContent() {
                 element={
                   <ProtectedRoute>
                     <WhatsAppPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/funil"
+                element={
+                  <ProtectedRoute>
+                    <FunilPage />
                   </ProtectedRoute>
                 }
               />

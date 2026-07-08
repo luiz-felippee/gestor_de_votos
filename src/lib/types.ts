@@ -108,3 +108,29 @@ export interface Evento {
   cidade: string | null
   created_at: string
 }
+
+export interface FunilTemplate {
+  id: string
+  campanha_id: string
+  etapa_origem: string
+  etapa_destino: string
+  dias_espera: number
+  texto: string
+  created_at: string
+}
+
+export interface TarefaFunil {
+  eleitor: {
+    id: string
+    nome: string
+    telefone: string
+    etapa_funil: string
+    data_ultimo_contato: string | null
+    created_at: string
+  }
+  template: {
+    id: string
+    etapa_destino: string
+    texto_pronto: string
+  }
+}

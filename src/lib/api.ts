@@ -8,6 +8,8 @@ import type {
   Evento,
   LogAuditoria,
   Campanha,
+  FunilTemplate,
+  TarefaFunil,
 } from './types'
 import { saveToOfflineQueue } from './offline'
 
@@ -300,4 +302,16 @@ export const api = {
   // ---- Assinaturas (Billing) ----
   billingCheckout: (planoId: string) => request<{ url: string }>('/billing/checkout', { method: 'POST', body: { planoId } }),
   billingPortal: () => request<{ url: string }>('/billing/portal', { method: 'POST' }),
+
+  // ---- Funil CRM ----
+  getFunilTarefasHoje: () => request<{ tarefas: TarefaFunil[] }>('/funil/tarefas-hoje'),
+  avancarFunil: (eleitor_id: string, etapa_destino: string) => request<{ success: boolean }>('/funil/avancar', { method: 'POST', body: { eleitor_id, etapa_destino } }),
+  getFunilTemplates: () => request<{ templates: FunilTemplate[] }>('/funil/templates'),
+  createFunilTemplate: (data: unknown) => request<{ template: FunilTemplate }>('/funil/templates', { method: 'POST', body: data }),
+  deleteFunilTemplate: (id: string) => request<{ success: boolean }>(`/funil/templates/${id}`, { method: 'DELETE' }),
+
+  // ---- Evolution API (WhatsApp) ----
+  getWhatsAppStatus: () => request<{ status: string }>('/whatsapp/status'),
+  connectWhatsApp: () => request<{ qrcode: string, message?: string }>('/whatsapp/connect', { method: 'POST' }),
+  sendWhatsAppMessage: (numero: string, texto: string) => request<{ success: boolean }>('/whatsapp/send', { method: 'POST', body: { numero, texto } }),
 }

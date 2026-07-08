@@ -79,6 +79,7 @@ export function Header() {
                 <Item to="/planilha">Eleitores</Item>
                 <Item to="/eventos">Agenda</Item>
                 <Item to="/whatsapp">WhatsApp</Item>
+                <Item to="/funil">Funil CRM</Item>
                 {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
                   <Dropdown title="Administração">
                     {(role === 'admin' || role === 'coordenador') && (
@@ -189,6 +190,7 @@ export function Header() {
               <MobileDrawerItem to="/" icon={<Home className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Painel Geral</MobileDrawerItem>
               <MobileDrawerItem to="/planilha" icon={<Users className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Eleitores</MobileDrawerItem>
               <MobileDrawerItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>WhatsApp</MobileDrawerItem>
+              <MobileDrawerItem to="/funil" icon={<Network className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Funil CRM</MobileDrawerItem>
               <MobileDrawerItem to="/eventos" icon={<CalendarDays className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Agenda & Eventos</MobileDrawerItem>
 
               {/* Seção Admin */}
