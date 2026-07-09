@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams, useParams } from 'react-router-dom'
-import { CheckCircle2, UserPlus, AlertCircle } from 'lucide-react'
+import { CheckCircle2, UserPlus, AlertCircle, Loader2 } from 'lucide-react'
 import { api } from '../lib/api'
+import { buscarCep } from '../lib/cep'
 import { resolverFotoUrl } from '../lib/fotoUrl'
 import { useCabos } from '../hooks/useCabos'
 import { CIDADES } from '../lib/constants'
@@ -92,6 +93,7 @@ export function CadastroPage() {
 
   // Validação de zona/seção contra a base oficial do TSE (PE)
   const [secaoCheck, setSecaoCheck] = useState<{ estado: 'idle' | 'checando' | 'valida' | 'invalida'; cidade?: string | null }>({ estado: 'idle' })
+  const [cepBuscando, setCepBuscando] = useState(false)
 
   // Sugestões de bairro para o autocomplete
   useEffect(() => {
@@ -132,23 +134,20 @@ export function CadastroPage() {
     }
   }
 
-  async function buscarCep(cepFormatado: string) {
-    const limpo = cepFormatado.replace(/\D/g, '')
-    if (limpo.length !== 8) return
-
+  async function preencherPorCep(cepFormatado: string) {
+    setCepBuscando(true)
     try {
-      const res = await fetch(`https://viacep.com.br/ws/${limpo}/json/`)
-      const data = await res.json()
-      if (!data.erro) {
+      const end = await buscarCep(cepFormatado)
+      if (end) {
         setForm(f => ({
           ...f,
-          bairro: data.bairro || f.bairro,
-          cidade: data.localidade || f.cidade,
-          endereco: data.logradouro ? `${data.logradouro}, ` : f.endereco
+          bairro: end.bairro || f.bairro,
+          cidade: end.cidade || f.cidade,
+          endereco: end.logradouro ? `${end.logradouro}, ` : f.endereco
         }))
       }
-    } catch {
-      // Ignora erro do viacep
+    } finally {
+      setCepBuscando(false)
     }
   }
 
@@ -156,7 +155,7 @@ export function CadastroPage() {
     let f = val.replace(/\D/g, '')
     if (f.length > 5) f = f.slice(0, 5) + '-' + f.slice(5, 8)
     atualizar('cep', f)
-    if (f.length === 9) buscarCep(f)
+    if (f.length === 9) preencherPorCep(f)
   }
 
   function maskCpf(v: string) {
@@ -373,7 +372,11 @@ export function CadastroPage() {
                     placeholder="00000-000"
                     maxLength={9}
                   />
-                  {form.cep.length === 9 && (
+                  {cepBuscando ? (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-4 w-4 animate-spin text-brand-500" />
+                    </div>
+                  ) : form.cep.length === 9 && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
                     </div>
