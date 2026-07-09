@@ -47,14 +47,22 @@ const PerfilPage = lazyPage(() => import('./pages/PerfilPage').then(m => ({ Perf
 
 const FunilPage = lazyPage(() => import('./pages/FunilPage').then(m => ({ FunilPage: m.FunilPage })), 'FunilPage')
 
+const ConfiguracoesPage = lazyPage(() => import('./pages/ConfiguracoesPage').then(m => ({ ConfiguracoesPage: m.ConfiguracoesPage })), 'ConfiguracoesPage')
+
 // Layout Elements (Pesados, carregados sob demanda)
 const Header = lazy(() => import('./components/layout/Header').then(m => ({ default: m.Header })))
 const Breadcrumbs = lazy(() => import('./components/Breadcrumbs').then(m => ({ default: m.Breadcrumbs })))
 
 function CarregandoPagina() {
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+    <div className="flex min-h-[65vh] flex-col items-center justify-center gap-4">
+      <div className="relative flex h-14 w-14 items-center justify-center">
+        <div className="absolute h-full w-full animate-ping rounded-full bg-brand-500/20 opacity-75" />
+        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-brand-500 border-t-transparent shadow-md" />
+      </div>
+      <p className="animate-pulse text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+        Carregando painel...
+      </p>
     </div>
   )
 }
@@ -179,6 +187,14 @@ function AppContent() {
                 element={
                   <ProtectedRoute roles={['admin']}>
                     <AuditoriaPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/configuracoes"
+                element={
+                  <ProtectedRoute roles={['admin']}>
+                    <ConfiguracoesPage />
                   </ProtectedRoute>
                 }
               />

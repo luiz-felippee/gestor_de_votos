@@ -184,6 +184,10 @@ export const api = {
   // ---- Auditoria (admin) ----
   getAuditoria: () => request<LogAuditoria[]>('/auditoria'),
 
+  // ---- Configurações globais (admin) ----
+  getConfiguracoes: () => request<{ imgbb_key_set: boolean; imgbb_key_via_env: boolean }>('/configuracoes'),
+  saveConfiguracoes: (data: { imgbb_key?: string }) => request<{ success: boolean }>('/configuracoes', { method: 'POST', body: data }),
+
   // ---- Campanhas (super-admin) ----
   getCampanhas: () => request<Campanha[]>('/campanhas'),
   getCampanhaPublic: async (slug: string) => {

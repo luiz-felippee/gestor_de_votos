@@ -7,7 +7,7 @@ import { useOfflineSync } from '../../hooks/useOfflineSync'
 import {
   WifiOff, Loader2, Home, Users, CalendarDays,
   Network, FileText, Building2, User,
-  LogOut, Sun, Moon, Menu, X, ChevronRight, MessageCircle
+  LogOut, Sun, Moon, Menu, X, ChevronRight, MessageCircle, Settings as SettingsIcon
 } from 'lucide-react'
 
 export function Header() {
@@ -88,6 +88,7 @@ export function Header() {
                     {usuario?.super_admin && <DropdownItem to="/campanhas">Campanhas</DropdownItem>}
                     {role === 'admin' && <DropdownItem to="/usuarios">Usuários</DropdownItem>}
                     {role === 'admin' && <DropdownItem to="/auditoria">Auditoria</DropdownItem>}
+                    {role === 'admin' && <DropdownItem to="/configuracoes">Configurações</DropdownItem>}
 
                   </Dropdown>
                 )}
@@ -210,6 +211,9 @@ export function Header() {
                   )}
                   {role === 'admin' && (
                     <MobileDrawerItem to="/auditoria" icon={<FileText className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Auditoria</MobileDrawerItem>
+                  )}
+                  {role === 'admin' && (
+                    <MobileDrawerItem to="/configuracoes" icon={<SettingsIcon className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Configurações</MobileDrawerItem>
                   )}
 
                 </>

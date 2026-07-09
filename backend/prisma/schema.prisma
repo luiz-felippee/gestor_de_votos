@@ -172,9 +172,21 @@ model LogAuditoria {
   ip           String?
   created_at   DateTime @default(now())
 
+  @@index([campanha_id, created_at])
   @@index([created_at])
   @@index([entidade])
   @@map("logs_auditoria")
+}
+
+// Configurações globais do sistema (chave-valor). Ex.: imgbb_key.
+// Permite configurar segredos pela própria aplicação, sem depender de env vars
+// do servidor de hospedagem.
+model Configuracao {
+  chave      String   @id
+  valor      String   @db.Text
+  updated_at DateTime @updatedAt @default(now())
+
+  @@map("configuracoes")
 }
 
 model FunilTemplate {

@@ -13,6 +13,7 @@ import multer from 'multer';
 import sharp from 'sharp';
 import { randomUUID } from 'node:crypto';
 import { put } from '@vercel/blob';
+import { getImgbbKey } from './config';
 
 const router = Router();
 
@@ -60,8 +61,8 @@ router.post('/upload', upload.single('foto'), async (req, res) => {
 
     const base64 = compressedBuffer.toString('base64');
 
-    // 2) ImgBB, se a chave estiver presente
-    const imgbbKey = process.env.IMGBB_API_KEY;
+    // 2) ImgBB, se a chave estiver presente (env IMGBB_API_KEY ou config do app)
+    const imgbbKey = await getImgbbKey();
     if (imgbbKey) {
       try {
         const params = new URLSearchParams();
@@ -84,7 +85,7 @@ router.post('/upload', upload.single('foto'), async (req, res) => {
         console.error('Falha ao comunicar com ImgBB, fazendo fallback para Base64:', uploadError);
       }
     } else {
-      console.warn('Atenção: IMGBB_API_KEY não definida no .env. As fotos estão sendo salvas em Base64 no banco de dados (baixa performance).');
+      console.warn('Atenção: nenhum storage de imagem configurado (Vercel Blob ou ImgBB). Fotos salvas em Base64 no banco (baixa performance).');
     }
 
     // Fallback: Data URL Base64 armazenável diretamente no banco
