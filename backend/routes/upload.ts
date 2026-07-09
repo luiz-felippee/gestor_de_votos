@@ -1,13 +1,18 @@
 /**
  * Rota de Upload genérico (autenticado + validação de tipo).
- * 
- * As imagens são comprimidas com Sharp e retornadas como Data URLs (Base64)
- * para serem salvas diretamente no banco de dados. Isso evita o problema de
- * perda de arquivos em plataformas com filesystem efêmero (Render, Railway, etc.).
+ *
+ * As imagens são comprimidas com Sharp (WebP, máx. 800px) e então persistidas.
+ * Ordem de destino (o primeiro configurado vence):
+ *   1) Vercel Blob   — se BLOB_READ_WRITE_TOKEN estiver definido (recomendado)
+ *   2) ImgBB         — se IMGBB_API_KEY estiver definido
+ *   3) Base64 no banco — fallback; funciona sem config, mas pesa no Postgres.
+ * Assim a imagem nunca depende do filesystem efêmero do Render.
  */
 import { Router } from 'express';
 import multer from 'multer';
 import sharp from 'sharp';
+import { randomUUID } from 'node:crypto';
+import { put } from '@vercel/blob';
 
 const router = Router();
 
@@ -39,9 +44,23 @@ router.post('/upload', upload.single('foto'), async (req, res) => {
       .webp({ quality: 80 })
       .toBuffer();
 
+    // 1) Vercel Blob (prioridade): guarda o arquivo e retorna um link permanente.
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      try {
+        const { url } = await put(`fotos/${randomUUID()}.webp`, compressedBuffer, {
+          access: 'public',
+          contentType: 'image/webp',
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+        });
+        return res.json({ url });
+      } catch (blobError) {
+        console.error('Falha ao enviar para o Vercel Blob, tentando próximo destino:', blobError);
+      }
+    }
+
     const base64 = compressedBuffer.toString('base64');
-    
-    // Tenta usar a integração do ImgBB se a chave estiver presente
+
+    // 2) ImgBB, se a chave estiver presente
     const imgbbKey = process.env.IMGBB_API_KEY;
     if (imgbbKey) {
       try {
