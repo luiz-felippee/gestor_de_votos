@@ -147,7 +147,7 @@ export function LoginPage() {
       <div className="relative flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-2">
       
       {/* Painel da Marca (Topo no Mobile, Esquerda no Desktop) */}
-      <div className="relative flex shrink-0 flex-col overflow-hidden bg-slate-950 p-6 pt-10 pb-12 sm:p-12 sm:pb-16 lg:p-12 lg:pb-10 xl:p-16">
+      <div className="relative flex shrink-0 flex-col overflow-hidden bg-slate-950 px-6 pt-7 pb-6 sm:p-12 sm:pb-16 lg:p-12 lg:pb-10 xl:p-16">
         {/* Acentos de gradiente sutis */}
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-brand-600/25 blur-3xl" />
@@ -162,17 +162,17 @@ export function LoginPage() {
         </div>
 
         {/* Hero (Mobile) — centralizado, com subtítulo e selos de confiança */}
-        <div className="relative z-10 mt-7 text-center lg:hidden">
-          <h1 className="text-[26px] font-extrabold leading-[1.2] tracking-tight text-white sm:text-3xl">
+        <div className="relative z-10 mt-8 text-center lg:hidden">
+          <h1 className="text-[24px] font-extrabold leading-[1.2] tracking-tight text-white sm:text-3xl">
             A inteligência de<br />
             <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
               campanhas vitoriosas
             </span>
           </h1>
-          <p className="mx-auto mt-3 max-w-xs text-sm leading-relaxed text-slate-400">
+          <p className="mx-auto mt-2.5 max-w-xs text-sm leading-relaxed text-slate-400">
             Lideranças, eleitores e metas — tudo em uma só plataforma.
           </p>
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
             {['Lideranças', 'Mapas', 'Tempo real'].map((t) => (
               <span key={t} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-semibold text-slate-300">
                 <CheckCircle2 className="h-3.5 w-3.5 text-brand-400" />
@@ -218,13 +218,13 @@ export function LoginPage() {
       </div>
 
       {/* Direita — Formulário (cartão flutuante no mobile) */}
-      <div className="relative z-20 flex flex-1 items-start justify-center rounded-[1.75rem] bg-white ring-1 ring-black/5 shadow-xl mx-3 mb-4 -mt-6 px-5 pt-7 pb-9 sm:mx-8 sm:mb-8 sm:items-center sm:rounded-3xl sm:px-10 sm:pt-9 lg:mx-0 lg:mb-0 lg:mt-0 lg:rounded-none lg:shadow-none lg:ring-0 dark:bg-slate-950 max-lg:dark:bg-slate-900 dark:ring-white/10 lg:dark:ring-0 dark:shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
+      <div className="relative z-20 flex flex-1 items-start justify-center rounded-[1.75rem] bg-white ring-1 ring-black/5 shadow-xl mx-3 mb-4 -mt-5 px-5 pt-5 pb-6 sm:mx-8 sm:mb-8 sm:items-center sm:rounded-3xl sm:px-10 sm:pt-9 lg:mx-0 lg:mb-0 lg:mt-0 lg:rounded-none lg:shadow-none lg:ring-0 dark:bg-slate-950 max-lg:dark:bg-slate-900 dark:ring-white/10 lg:dark:ring-0 dark:shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
         <div className="w-full max-w-md lg:max-w-sm xl:max-w-md">
 
           {/* Alça (mobile) */}
-          <div className="mx-auto mb-6 h-1.5 w-10 rounded-full bg-slate-200 dark:bg-slate-800 lg:hidden" />
+          <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-200 dark:bg-slate-800 lg:hidden" />
 
-          <div className="mb-6 text-center">
+          <div className="mb-5 text-center">
             <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
               {step === 'login' ? 'Acesse sua conta' : 'Verificação de segurança'}
             </h2>
@@ -236,7 +236,7 @@ export function LoginPage() {
           </div>
 
           {step === 'login' ? (
-            <form onSubmit={handleLogin} className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-4">
 
               <div>
                 <label className={labelClass}>E-mail</label>
@@ -358,7 +358,7 @@ export function LoginPage() {
           )}
 
           {/* Rodapé de segurança (mobile) */}
-          <p className="mt-6 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-400 lg:hidden">
+          <p className="mt-5 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-400 lg:hidden">
             <ShieldCheck className="h-3.5 w-3.5" />
             Conexão segura e dados criptografados
           </p>
@@ -374,10 +374,10 @@ const labelClass =
   'mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-300'
 
 const inputClass =
-  'w-full h-12 sm:h-11 rounded-xl border border-slate-300 bg-slate-50 px-4 text-base sm:text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-900'
+  'w-full h-11 rounded-xl border border-slate-300 bg-slate-50 px-4 text-base sm:text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:bg-slate-900'
 
 const btnPrimaryClass =
-  'flex w-full h-12 sm:h-11 items-center justify-center rounded-xl bg-brand-600 px-4 text-base sm:text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-[0.99] disabled:opacity-60 dark:focus:ring-offset-slate-950'
+  'flex w-full h-11 items-center justify-center rounded-xl bg-brand-600 px-4 text-base sm:text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-[0.99] disabled:opacity-60 dark:focus:ring-offset-slate-950'
 
 const btnSecondaryClass =
-  'flex w-full h-12 sm:h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-base sm:text-sm font-bold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60'
+  'flex w-full h-11 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-base sm:text-sm font-bold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60'
