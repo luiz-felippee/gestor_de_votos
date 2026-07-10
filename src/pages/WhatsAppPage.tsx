@@ -4,7 +4,6 @@ import { useQuery, useMutation, keepPreviousData, useQueryClient } from '@tansta
 import { MessageCircle, Check, Send, Search, Users, Shield, Zap, Pause, Play, Timer, Trash2, Plus, ArrowRight, Network } from 'lucide-react'
 import { toast } from 'sonner'
 import { maskTelefone } from '../lib/format'
-import type { EleitorComCabo, CaboEleitoral } from '../lib/types'
 import { ConexaoEvolution } from '../components/whatsapp/ConexaoEvolution'
 import { WhatsAppSubNav } from '../components/whatsapp/WhatsAppSubNav'
 import { AntiBloqueioPanel } from '../components/whatsapp/AntiBloqueioPanel'
@@ -19,8 +18,6 @@ import {
   sleep,
   type AntiBloqueioConfig,
 } from '../lib/antiBloqueio'
-
-type Contato = EleitorComCabo | CaboEleitoral;
 
 const TEMPLATES_PRONTOS = [
   { label: 'Saudação Simples', texto: 'Olá {nome}, tudo bem? Como posso te ajudar hoje?' },
@@ -514,9 +511,9 @@ export function WhatsAppPage() {
                 </tr>
               </thead>
               <tbody>
-                {loadingEleitores || loadingCabos ? (
+                {loadingEleitores || loadingCabos || loadingTarefas ? (
                   <tr><td colSpan={4} className="text-center py-10 text-slate-500">Carregando...</td></tr>
-                ) : erroEleitores || erroCabos ? (
+                ) : erroEleitores || erroCabos || erroTarefas ? (
                   <tr><td colSpan={4} className="text-center py-10 text-red-500">Erro ao carregar dados. Tente novamente.</td></tr>
                 ) : listaExibida.length === 0 ? (
                   <tr><td colSpan={4} className="text-center py-10 text-slate-500">Nenhum registro encontrado.</td></tr>

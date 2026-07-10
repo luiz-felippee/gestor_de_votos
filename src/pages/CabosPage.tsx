@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { Copy, Link as LinkIcon, CheckCircle2, MessageCircle, UserPlus } from 'lucide-react'
+import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
 import { resolverFotoUrl } from '../lib/fotoUrl'
