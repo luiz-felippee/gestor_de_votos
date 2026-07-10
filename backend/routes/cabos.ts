@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { prisma } from '../prismaClient';
 import { requireAuth, requireRole, optionalAuth, wrap, escopoCampanha, registrarLog, cadastroLimiter, requirePlanLimit } from '../middlewares';
 import { cache } from '../lib/cache';
+import { notificarMudanca } from '../server';
 
 const cabosRouter = Router();
 
@@ -164,13 +165,29 @@ cabosRouter.delete(
   requireAuth,
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
+    const caboId = String(req.params.id);
     const dono = await prisma.caboEleitoral.findFirst({
-      where: { id: String(req.params.id), ...escopoCampanha(req) },
-      select: { id: true },
+      where: { id: caboId, ...escopoCampanha(req) },
+      select: { id: true, nome: true },
     });
     if (!dono) return res.status(404).json({ error: 'Cabo não encontrado.' });
-    await prisma.caboEleitoral.delete({ where: { id: String(req.params.id) } });
-    registrarLog(req, 'excluir', 'cabo', String(req.params.id));
+
+    const excluirEleitores = req.query.excluirEleitores === 'true';
+    if (excluirEleitores) {
+      await prisma.eleitor.deleteMany({
+        where: { cabo_id: caboId, ...escopoCampanha(req) },
+      });
+    }
+
+    await prisma.caboEleitoral.delete({ where: { id: caboId } });
+    registrarLog(
+      req,
+      'excluir',
+      'cabo',
+      caboId,
+      `Liderança ${dono.nome} excluída. Eleitores associados também excluídos? ${excluirEleitores ? 'Sim' : 'Não'}`
+    );
+    notificarMudanca(req.user?.campanha_id);
     res.status(204).send();
   }),
 );

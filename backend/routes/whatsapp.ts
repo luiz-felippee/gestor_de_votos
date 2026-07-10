@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '../prismaClient';
-import { wrap, requireAuth } from '../middlewares';
+import { wrap, requireAuth, registrarLog } from '../middlewares';
 import axios from 'axios';
 
 const whatsappRouter = Router();
@@ -86,6 +86,7 @@ whatsappRouter.post(
     }
 
     await prisma.campanha.update({ where: { id: campanha_id }, data });
+    registrarLog(req, 'editar', 'campanha', campanha_id, 'Configuração do servidor Evolution WhatsApp alterada');
     return res.json({ success: true });
   })
 );
@@ -198,6 +199,7 @@ whatsappRouter.post(
         qrcode = await conectarInstancia();
       }
 
+      registrarLog(req, 'criar', 'campanha', campanha_id, 'Instância do WhatsApp criada/solicitada conexão');
       return res.json({ qrcode, message: 'Leia o QR Code para conectar' });
     } catch (error: any) {
       // Instância já existe: apenas pedimos o QR de conexão.
@@ -207,6 +209,7 @@ whatsappRouter.post(
       if (jaExiste) {
         try {
           const qrcode = await conectarInstancia();
+          registrarLog(req, 'criar', 'campanha', campanha_id, 'Reconexão solicitada da instância do WhatsApp existente');
           return res.json({ qrcode, message: 'Leia o QR Code para conectar' });
         } catch (innerError) {
           return res.status(500).json({ error: 'Erro ao gerar QR Code de conexão.' });
@@ -240,6 +243,7 @@ whatsappRouter.post(
     } catch {
       // Ignora — pode já estar desconectada.
     }
+    registrarLog(req, 'excluir', 'campanha', campanha_id, 'Instância do WhatsApp desconectada/logout efetuado');
     return res.json({ success: true });
   })
 );
@@ -282,6 +286,7 @@ whatsappRouter.post(
         }
       );
 
+      registrarLog(req, 'enviar_whatsapp', 'eleitor', undefined, `Mensagem WhatsApp enviada para: ${numero}`);
       return res.json({ success: true });
     } catch (error: any) {
       return res

@@ -45,7 +45,6 @@ const WhatsAppPage = lazyPage(() => import('./pages/WhatsAppPage'), 'WhatsAppPag
 
 const PerfilPage = lazyPage(() => import('./pages/PerfilPage').then(m => ({ PerfilPage: m.PerfilPage })), 'PerfilPage')
 
-const FunilPage = lazyPage(() => import('./pages/FunilPage').then(m => ({ FunilPage: m.FunilPage })), 'FunilPage')
 
 const ConfiguracoesPage = lazyPage(() => import('./pages/ConfiguracoesPage').then(m => ({ ConfiguracoesPage: m.ConfiguracoesPage })), 'ConfiguracoesPage')
 
@@ -141,14 +140,7 @@ function AppContent() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/funil"
-                element={
-                  <ProtectedRoute>
-                    <FunilPage />
-                  </ProtectedRoute>
-                }
-              />
+
               <Route
                 path="/perfil"
                 element={

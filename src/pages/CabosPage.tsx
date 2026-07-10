@@ -150,18 +150,35 @@ export function CabosPage() {
     cancelar()
   }
 
-  async function excluir(c: CaboEleitoral) {
+  async function excluir(c: CaboEleitoral & { realizado?: number }) {
     const ok = await confirm({
       title: 'Excluir Liderança?',
-      message: `Tem certeza que deseja excluir o cabo "${c.nome}"? Os eleitores vinculados ficarão sem cabo de indicação.`,
+      message: `Tem certeza que deseja excluir a liderança "${c.nome}"?`,
       confirmText: 'Excluir',
       cancelText: 'Voltar',
     })
     if (!ok) return
 
+    const totalEleitores = c.realizado ?? c._count?.eleitores ?? 0
+    let excluirEleitores = false
+
+    if (totalEleitores > 0) {
+      excluirEleitores = await confirm({
+        title: 'Excluir Eleitores Vinculados?',
+        message: `Esta liderança possui ${totalEleitores} eleitor(es) cadastrado(s). Deseja excluir TODOS estes eleitores também (removendo-os do sistema e do mapa de calor) ou mantê-los no sistema sem vinculação?`,
+        confirmText: 'Excluir Eleitores',
+        cancelText: 'Manter Eleitores',
+      })
+    }
+
     try {
-      await api.deleteCabo(c.id)
+      await api.deleteCabo(c.id, excluirEleitores)
       recarregar()
+      toast.success(
+        excluirEleitores
+          ? `Liderança "${c.nome}" e seus eleitores foram excluídos com sucesso.`
+          : `Liderança "${c.nome}" excluída com sucesso. Os eleitores foram mantidos.`
+      )
     } catch (err) {
       alert(`Erro ao excluir: ${(err as Error).message}`, 'Erro')
     }
@@ -183,21 +200,36 @@ export function CabosPage() {
           {/* Link Público para Lideranças */}
           <LinkPublicoLideranca />
 
-          {!isFormOpen && (
-            <button
-              onClick={() => {
+          <button
+            onClick={() => {
+              if (isFormOpen) {
+                cancelar()
+              } else {
                 setForm(VAZIO)
                 setEditId(null)
                 setArquivoFoto(null)
                 setErro(null)
                 setIsFormOpen(true)
-              }}
-              className="flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 active:scale-95 sm:py-2.5 h-full"
-            >
-              <UserPlus className="h-5 w-5 shrink-0" />
-              <span className="whitespace-nowrap">Cadastrar Liderança</span>
-            </button>
-          )}
+              }
+            }}
+            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-sm transition active:scale-95 sm:py-2.5 h-full ${
+              isFormOpen
+                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'
+                : 'bg-brand-600 text-white hover:bg-brand-700'
+            }`}
+          >
+            {isFormOpen ? (
+              <>
+                <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <span className="whitespace-nowrap">Fechar Formulário</span>
+              </>
+            ) : (
+              <>
+                <UserPlus className="h-5 w-5 shrink-0" />
+                <span className="whitespace-nowrap">Cadastrar Liderança</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -207,9 +239,21 @@ export function CabosPage() {
         onSubmit={salvar}
         className="mb-8 rounded-xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
       >
-        <h2 className="mb-5 text-lg font-bold text-slate-800 dark:text-slate-100">
-          {editId ? 'Editar cabo' : 'Novo cabo'}
-        </h2>
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
+            {editId ? 'Editar cabo' : 'Novo cabo'}
+          </h2>
+          <button
+            type="button"
+            onClick={cancelar}
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            title="Fechar"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
         
         <div className="mb-6 flex flex-col sm:flex-row items-start gap-4">
           <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">

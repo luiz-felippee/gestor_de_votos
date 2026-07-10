@@ -5,14 +5,14 @@ import { Logo } from '../components/Logo'
 describe('Logo', () => {
   it('renderiza a imagem do logo por padrão', () => {
     render(<Logo />)
-    const img = screen.getByAltText('Logo da Campanha')
+    const img = screen.getByAltText('Gestor de Votos')
     expect(img).toBeInTheDocument()
-    expect(img).toHaveAttribute('src', '/logo.png')
+    expect(img.getAttribute('src')).toContain('/icon-192.png')
   })
 
-  it('aceita className customizado', () => {
-    render(<Logo className="h-12 w-auto" />)
-    const img = screen.getByAltText('Logo da Campanha')
-    expect(img.className).toContain('h-12')
+  it('aceita iconClassName customizado', () => {
+    const { container } = render(<Logo iconClassName="h-12 w-auto" />)
+    const wrapper = container.firstChild as HTMLElement
+    expect(wrapper.className).toContain('h-12')
   })
 })

@@ -2,19 +2,20 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { formatDataHora } from '../lib/format'
 import type { LogAuditoria } from '../lib/types'
+import { Shield, Filter, Database, User, Calendar, Info } from 'lucide-react'
 
 const ACAO_STYLE: Record<string, string> = {
-  criar: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-  editar: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  excluir: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
-  anonimizar:
-    'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  criar: 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50',
+  editar: 'bg-blue-50 text-blue-700 border border-blue-200/60 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/50',
+  excluir: 'bg-rose-50 text-rose-700 border border-rose-200/60 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/50',
+  anonimizar: 'bg-amber-50 text-amber-700 border border-amber-200/60 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50',
 }
 
 export function AuditoriaPage() {
   const [logs, setLogs] = useState<LogAuditoria[]>([])
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
+  const [filtroAcao, setFiltroAcao] = useState('')
 
   useEffect(() => {
     api
@@ -24,68 +25,135 @@ export function AuditoriaPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const logsFiltrados = filtroAcao
+    ? logs.filter((l) => l.acao === filtroAcao)
+    : logs
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 animate-fade-in">
-      <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-        Log de Auditoria
-      </h1>
-      <p className="mb-8 text-sm font-medium text-slate-500 dark:text-slate-400">
-        Registro das últimas 300 ações (criação, edição, exclusão e anonimização)
-        — para rastreabilidade e conformidade com a LGPD.
-      </p>
+    <div className="mx-auto max-w-6xl px-4 py-8 animate-fade-in">
+      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <Shield className="h-6 w-6 text-brand-500" />
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              Log de Auditoria
+            </h1>
+          </div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            Registro das últimas 300 ações — para rastreabilidade e conformidade com a LGPD.
+          </p>
+        </div>
+
+        {/* Filtros */}
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-slate-400" />
+          <select
+            value={filtroAcao}
+            onChange={(e) => setFiltroAcao(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+          >
+            <option value="">Todas as Ações</option>
+            <option value="criar">Criar</option>
+            <option value="editar">Editar</option>
+            <option value="excluir">Excluir</option>
+            <option value="anonimizar">Anonimizar</option>
+          </select>
+        </div>
+      </div>
 
       {erro && (
-        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700">
+        <div className="mb-4 rounded-lg bg-rose-50 border border-rose-200 p-4 text-sm text-rose-700 dark:bg-rose-950/20 dark:border-rose-900/50 dark:text-rose-400">
           {erro}
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400">
+          <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
             <tr>
-              <th className="px-4 py-3">Data / Hora</th>
-              <th className="px-4 py-3">Usuário</th>
-              <th className="px-4 py-3">Ação</th>
-              <th className="px-4 py-3">Item</th>
-              <th className="px-4 py-3">Detalhe</th>
+              <th className="px-5 py-4">Data / Hora</th>
+              <th className="px-5 py-4">Usuário</th>
+              <th className="px-5 py-4">Ação</th>
+              <th className="px-5 py-4">Item</th>
+              <th className="px-5 py-4">Detalhe</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
             {loading ? (
+              // Skeletons Animados
+              [...Array(6)].map((_, i) => (
+                <tr key={i} className="animate-pulse">
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-slate-200 dark:text-slate-800" />
+                      <div className="h-4 w-28 rounded bg-slate-100 dark:bg-slate-800" />
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-slate-200 dark:text-slate-800" />
+                      <div className="h-4 w-24 rounded bg-slate-100 dark:bg-slate-800" />
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="h-5 w-16 rounded-full bg-slate-100 dark:bg-slate-800" />
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      <Database className="h-4 w-4 text-slate-200 dark:text-slate-800" />
+                      <div className="h-4 w-20 rounded bg-slate-100 dark:bg-slate-800" />
+                    </div>
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-slate-200 dark:text-slate-800" />
+                      <div className="h-4 w-48 rounded bg-slate-100 dark:bg-slate-800" />
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : logsFiltrados.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
-                  Carregando...
-                </td>
-              </tr>
-            ) : logs.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-slate-400">
-                  Nenhuma ação registrada ainda.
+                <td colSpan={5} className="px-5 py-12 text-center text-slate-400">
+                  Nenhuma ação registrada encontrada.
                 </td>
               </tr>
             ) : (
-              logs.map((l) => (
-                <tr key={l.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                  <td className="whitespace-nowrap px-4 py-3 text-slate-500">
-                    {formatDataHora(l.created_at)}
+              logsFiltrados.map((l) => (
+                <tr key={l.id} className="hover:bg-slate-50/80 transition dark:hover:bg-slate-800/30">
+                  <td className="whitespace-nowrap px-5 py-4 text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-slate-400" />
+                      {formatDataHora(l.created_at)}
+                    </div>
                   </td>
-                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">
-                    {l.usuario_nome ?? '—'}
+                  <td className="px-5 py-4 font-semibold text-slate-800 dark:text-slate-200">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-slate-400" />
+                      {l.usuario_nome ?? '—'}
+                    </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-5 py-4">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        ACAO_STYLE[l.acao] ?? 'bg-slate-100 text-slate-600'
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider ${
+                        ACAO_STYLE[l.acao] ?? 'bg-slate-100 text-slate-600 border border-slate-200'
                       }`}
                     >
                       {l.acao}
                     </span>
                   </td>
-                  <td className="px-4 py-3 capitalize text-slate-600 dark:text-slate-300">
-                    {l.entidade}
+                  <td className="px-5 py-4 capitalize text-slate-700 dark:text-slate-300">
+                    <div className="flex items-center gap-2">
+                      <Database className="h-4 w-4 text-slate-400" />
+                      {l.entidade}
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-slate-500">{l.detalhe ?? '—'}</td>
+                  <td className="px-5 py-4 text-slate-500 dark:text-slate-400 font-medium">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4 text-slate-400 shrink-0" />
+                      <span className="truncate max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl">{l.detalhe ?? '—'}</span>
+                    </div>
+                  </td>
                 </tr>
               ))
             )}

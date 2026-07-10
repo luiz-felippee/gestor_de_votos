@@ -13,12 +13,13 @@ interface FormState {
   admin_email: string
   admin_senha: string
   foto_url: string
+  trajetoria: string
   cargo_ultima_eleicao: string
   ano_ultima_eleicao: string
   votos_ultima_eleicao: string
 }
 
-const VAZIO: FormState = { nome: '', admin_nome: '', admin_email: '', admin_senha: '', foto_url: '', cargo_ultima_eleicao: '', ano_ultima_eleicao: '', votos_ultima_eleicao: '' }
+const VAZIO: FormState = { nome: '', admin_nome: '', admin_email: '', admin_senha: '', foto_url: '', trajetoria: '', cargo_ultima_eleicao: '', ano_ultima_eleicao: '', votos_ultima_eleicao: '' }
 
 export function CampanhasPage() {
   const { usuario } = useAuth()
@@ -71,6 +72,8 @@ export function CampanhasPage() {
     setErro(null)
     setSucesso(null)
     if (!form.nome.trim()) return setErro('Informe o nome da campanha.')
+    if (!arquivoFoto && !form.foto_url.trim()) return setErro('A foto do candidato é obrigatória.')
+    if (!form.trajetoria.trim()) return setErro('Informe a trajetória completa do candidato.')
     if (!form.admin_email.trim() || !form.admin_senha)
       return setErro('Informe o e-mail e a senha do administrador da campanha.')
 
@@ -90,6 +93,7 @@ export function CampanhasPage() {
         admin_email: form.admin_email.trim(),
         admin_senha: form.admin_senha,
         foto_url: fotoUrl,
+        trajetoria: form.trajetoria.trim(),
         cargo_ultima_eleicao: form.cargo_ultima_eleicao.trim() || undefined,
         ano_ultima_eleicao: form.ano_ultima_eleicao.trim() || undefined,
         votos_ultima_eleicao: form.votos_ultima_eleicao ? Number(form.votos_ultima_eleicao) : undefined,
@@ -177,6 +181,17 @@ export function CampanhasPage() {
           </Campo>
           <Campo label="Quantidade de Votos na Última">
             <input type="number" className={inputClass} value={form.votos_ultima_eleicao} onChange={(e) => set('votos_ultima_eleicao', e.target.value)} />
+          </Campo>
+        </div>
+
+        <div className="mt-4">
+          <Campo label="Trajetória do Candidato *">
+            <textarea
+              className={`${inputClass} min-h-[100px] resize-y`}
+              value={form.trajetoria}
+              onChange={(e) => set('trajetoria', e.target.value)}
+              placeholder="Descreva a trajetória, história e propostas do candidato..."
+            />
           </Campo>
         </div>
 

@@ -30,6 +30,7 @@ model Campanha {
   cargo_ultima_eleicao String?
   ano_ultima_eleicao   String?
   votos_ultima_eleicao Int?
+  trajetoria           String?  @db.Text
   created_at           DateTime @default(now())
 
   // --- SaaS Multi-Contas ---

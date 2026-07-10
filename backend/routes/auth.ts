@@ -248,6 +248,7 @@ import { enviarEmail, templateResetSenha } from '../lib/email';
 
 authRouter.post(
   '/esqueci-senha',
+  loginLimiter,
   wrap(async (req, res) => {
     const { email } = req.body ?? {};
     if (!email) return res.status(400).json({ error: 'Informe seu e-mail.' });
@@ -288,6 +289,7 @@ authRouter.post(
 
 authRouter.post(
   '/resetar-senha',
+  loginLimiter,
   wrap(async (req, res) => {
     const { token, senha } = req.body ?? {};
     if (!token || !senha) return res.status(400).json({ error: 'Token e nova senha são obrigatórios.' });

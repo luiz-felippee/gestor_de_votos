@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { api } from '../lib/api'
-import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query'
-import { MessageCircle, Check, Send, Search, Users, Shield, Zap, Pause, Play, Timer } from 'lucide-react'
+import { useQuery, useMutation, keepPreviousData, useQueryClient } from '@tanstack/react-query'
+import { MessageCircle, Check, Send, Search, Users, Shield, Zap, Pause, Play, Timer, Trash2, Plus, ArrowRight, Network } from 'lucide-react'
 import { toast } from 'sonner'
 import { maskTelefone } from '../lib/format'
 import type { EleitorComCabo, CaboEleitoral } from '../lib/types'
@@ -30,11 +30,12 @@ const TEMPLATES_PRONTOS = [
 ]
 
 export function WhatsAppPage() {
-  const [aba, setAba] = useState<'eleitores' | 'cabos'>('eleitores')
+  const queryClient = useQueryClient()
+  const [aba, setAba] = useState<'eleitores' | 'cabos' | 'tarefas_funil' | 'regras_funil'>('eleitores')
   const [busca, setBusca] = useState('')
   const [buscaDeb, setBuscaDeb] = useState('')
   const [mensagem, setMensagem] = useState('Olá {nome}, tudo bem?')
-  const [selecionados, setSelecionados] = useState<Map<string, { id: string, nome: string, telefone: string }>>(new Map())
+  const [selecionados, setSelecionados] = useState<Map<string, { id: string, nome: string, telefone: string, template?: any }>>(new Map())
   const [enviados, setEnviados] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem('whatsapp_enviados')
@@ -89,6 +90,43 @@ export function WhatsAppPage() {
     enabled: aba === 'cabos'
   })
 
+  // Funil Queries & Mutations
+  const { data: tarefasData, isLoading: loadingTarefas, isError: erroTarefas } = useQuery({
+    queryKey: ['funil-tarefas'],
+    queryFn: api.getFunilTarefasHoje,
+    enabled: aba === 'tarefas_funil'
+  })
+
+  const { data: templatesData, isLoading: loadingTemplates } = useQuery({
+    queryKey: ['funil-templates'],
+    queryFn: api.getFunilTemplates,
+    enabled: aba === 'regras_funil'
+  })
+
+  const mutationAvancar = useMutation({
+    mutationFn: ({ id, destino }: { id: string, destino: string }) => api.avancarFunil(id, destino),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['funil-tarefas'] })
+      queryClient.invalidateQueries({ queryKey: ['eleitores'] })
+    }
+  })
+
+  const mutationCreateTemplate = useMutation({
+    mutationFn: api.createFunilTemplate,
+    onSuccess: () => {
+      toast.success('Regra criada com sucesso!')
+      queryClient.invalidateQueries({ queryKey: ['funil-templates'] })
+    }
+  })
+
+  const mutationDeleteTemplate = useMutation({
+    mutationFn: api.deleteFunilTemplate,
+    onSuccess: () => {
+      toast.success('Regra removida com sucesso!')
+      queryClient.invalidateQueries({ queryKey: ['funil-templates'] })
+    }
+  })
+
   // Normalize data depending on tab
   const listaVigente = useMemo(() => {
     if (aba === 'cabos') {
@@ -98,20 +136,34 @@ export function WhatsAppPage() {
       }
       return l
     }
+    if (aba === 'tarefas_funil') {
+      let l = (tarefasData?.tarefas || []).map((t: any) => ({
+        id: t.eleitor.id,
+        nome: t.eleitor.nome,
+        telefone: t.eleitor.telefone,
+        etapa_funil: t.eleitor.etapa_funil,
+        template: t.template
+      }))
+      if (buscaDeb) {
+        l = l.filter((c: any) => c.nome.toLowerCase().includes(buscaDeb.toLowerCase()) || c.telefone.includes(buscaDeb))
+      }
+      return l
+    }
+    if (aba === 'regras_funil') return [] // Não é exibido na tabela padrão
     return eleitoresData?.data || []
-  }, [aba, eleitoresData, cabosData, buscaDeb])
+  }, [aba, eleitoresData, cabosData, tarefasData, buscaDeb])
 
   const total = aba === 'eleitores' ? (eleitoresData?.total || 0) : listaVigente.length
   const totalPaginas = aba === 'eleitores' ? (eleitoresData?.totalPages || 1) : Math.ceil(listaVigente.length / itensPorPagina) || 1
   
-  // se for cabo, a gente fatia no front
-  const listaExibida: Contato[] = aba === 'cabos' ? listaVigente.slice((pagina - 1) * itensPorPagina, pagina * itensPorPagina) : listaVigente
+  // se for cabo ou funil, a gente fatia no front
+  const listaExibida: any[] = aba !== 'eleitores' ? listaVigente.slice((pagina - 1) * itensPorPagina, pagina * itensPorPagina) : listaVigente
 
-  function handleSelect(contato: Contato) {
+  function handleSelect(contato: any) {
     setSelecionados(prev => {
       const n = new Map(prev)
       if (n.has(contato.id)) n.delete(contato.id)
-      else n.set(contato.id, { id: contato.id, nome: contato.nome, telefone: contato.telefone })
+      else n.set(contato.id, { id: contato.id, nome: contato.nome, telefone: contato.telefone, template: contato.template })
       return n
     })
   }
@@ -126,7 +178,7 @@ export function WhatsAppPage() {
       if (allSelected && validos.length > 0) {
         validos.forEach(v => n.delete(v.id))
       } else {
-        validos.forEach(v => n.set(v.id, { id: v.id, nome: v.nome, telefone: v.telefone }))
+        validos.forEach(v => n.set(v.id, { id: v.id, nome: v.nome, telefone: v.telefone, template: v.template }))
       }
       return n
     })
@@ -168,17 +220,21 @@ export function WhatsAppPage() {
   }
 
   // Envia UMA mensagem (com "digitando..." variável). Marca como enviada e conta.
-  async function enviarUm(pessoa: { id: string; nome: string; telefone: string }) {
-    const texto = montarMensagem(pessoa)
+  async function enviarUm(pessoa: { id: string; nome: string; telefone: string; template?: any }) {
+    const texto = pessoa.template ? pessoa.template.texto_pronto : montarMensagem(pessoa)
     const numero = normalizarNumero(pessoa.telefone)
     const delayDigitacao = segundosAleatorios(2, 5) * 1000 // 2–5s digitando
     await mutationSend.mutateAsync({ numero, texto, delay: delayDigitacao })
     setEnviados(prev => new Set(prev).add(pessoa.id))
     setContadorDia(incrementarContador())
+
+    if (pessoa.template) {
+      mutationAvancar.mutate({ id: pessoa.id, destino: pessoa.template.etapa_destino })
+    }
   }
 
   // Disparo manual (um clique = uma pessoa).
-  async function dispararWhatsApp(pessoa: { id: string, nome: string, telefone: string }, index: number) {
+  async function dispararWhatsApp(pessoa: { id: string, nome: string, telefone: string, template?: any }, index: number) {
     if (whatsappStatus?.status !== 'open') {
       toast.error('Seu WhatsApp não está conectado! Conecte-o antes de disparar.')
       return
@@ -335,24 +391,110 @@ export function WhatsAppPage() {
                 : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
             }`}
           >
-            <Shield className="h-4 w-4" /> Lideranças (Cabos)
+            <Shield className="h-4 w-4" /> Lideranças
+          </button>
+          <button
+            onClick={() => { setAba('tarefas_funil'); setPagina(1); setSelecionados(new Map()) }}
+            className={`flex-1 sm:flex-none justify-center flex items-center gap-2 rounded-md px-4 py-2 text-sm font-bold transition-all ${
+              aba === 'tarefas_funil'
+                ? 'bg-white text-brand-600 shadow-sm dark:bg-slate-900 dark:text-brand-400'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+            }`}
+          >
+            <Check className="h-4 w-4" /> Tarefas CRM
+          </button>
+          <button
+            onClick={() => { setAba('regras_funil'); setPagina(1); setSelecionados(new Map()) }}
+            className={`flex-1 sm:flex-none justify-center flex items-center gap-2 rounded-md px-4 py-2 text-sm font-bold transition-all ${
+              aba === 'regras_funil'
+                ? 'bg-white text-brand-600 shadow-sm dark:bg-slate-900 dark:text-brand-400'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+            }`}
+          >
+            <Network className="h-4 w-4" /> Regras do Funil
           </button>
         </div>
 
-        <div className="mb-4 relative shrink-0">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar por nome ou telefone..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            className="w-full rounded-xl border-none bg-slate-100 pl-10 pr-4 py-2.5 text-base sm:text-sm font-medium outline-none ring-1 ring-transparent transition-all focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-200 dark:focus:bg-slate-950"
-          />
-        </div>
+        {aba === 'regras_funil' ? (
+          <div className="flex-1 overflow-y-auto space-y-6">
+            <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Nova Regra de Funil</h3>
+              <form 
+                className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const fd = new FormData(e.currentTarget)
+                  mutationCreateTemplate.mutate({
+                    etapa_origem: fd.get('etapa_origem'),
+                    etapa_destino: fd.get('etapa_destino'),
+                    dias_espera: Number(fd.get('dias_espera')),
+                    texto: fd.get('texto')
+                  })
+                  e.currentTarget.reset()
+                }}
+              >
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Se a Etapa Atual for:</label>
+                  <input required name="etapa_origem" placeholder="ex: novo" className="w-full px-3 py-2 rounded border border-slate-300 bg-white dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mover para a Etapa:</label>
+                  <input required name="etapa_destino" placeholder="ex: boas_vindas" className="w-full px-3 py-2 rounded border border-slate-300 bg-white dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Esperar Quantos Dias? (0 = Hoje mesmo)</label>
+                  <input required type="number" name="dias_espera" min="0" defaultValue="0" className="w-full px-3 py-2 rounded border border-slate-300 bg-white dark:bg-slate-900 dark:border-slate-600 dark:text-white" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Texto da Mensagem (use {'{nome}'} para personalizar)</label>
+                  <textarea required name="texto" rows={4} placeholder="Olá {nome}, tudo bem?" className="w-full px-3 py-2 rounded border border-slate-300 bg-white dark:bg-slate-900 dark:border-slate-600 dark:text-white resize-none" />
+                </div>
+                <div className="md:col-span-2 flex justify-end">
+                  <button type="submit" disabled={mutationCreateTemplate.isPending} className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded font-medium flex items-center gap-2">
+                    <Plus className="h-4 w-4" /> Criar Regra
+                  </button>
+                </div>
+              </form>
+            </div>
 
-        <div className="flex-1 min-h-[400px] lg:min-h-0 max-h-[600px] lg:max-h-none flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex-1 overflow-x-auto overflow-y-auto relative">
-            <table className="w-full text-left text-sm border-collapse min-w-[500px]">
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">Regras Cadastradas</h3>
+              {loadingTemplates ? (
+                <p>Carregando...</p>
+              ) : templatesData?.templates.map((t: any) => (
+                <div key={t.id} className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm dark:bg-slate-800 dark:border-slate-700 flex justify-between items-center">
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-xs font-bold dark:bg-slate-700 dark:text-slate-300">{t.etapa_origem}</span>
+                      <ArrowRight className="h-4 w-4 text-slate-400" />
+                      <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold dark:bg-emerald-900/50 dark:text-emerald-400">{t.etapa_destino}</span>
+                      <span className="text-sm text-slate-500">• {t.dias_espera} dia(s)</span>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">"{t.texto}"</p>
+                  </div>
+                  <button onClick={() => mutationDeleteTemplate.mutate(t.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg dark:hover:bg-red-900/20">
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 relative shrink-0">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nome ou telefone..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="w-full rounded-xl border-none bg-slate-100 pl-10 pr-4 py-2.5 text-base sm:text-sm font-medium outline-none ring-1 ring-transparent transition-all focus:bg-white focus:ring-brand-500 dark:bg-slate-800 dark:text-slate-200 dark:focus:bg-slate-950"
+              />
+            </div>
+
+            <div className="flex-1 min-h-[400px] lg:min-h-0 max-h-[600px] lg:max-h-none flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex-1 overflow-x-auto overflow-y-auto relative">
+                <table className="w-full text-left text-sm border-collapse min-w-[500px]">
               <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm dark:bg-slate-950">
                 <tr>
                   <th className="w-12 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
@@ -443,7 +585,9 @@ export function WhatsAppPage() {
               </button>
             </div>
           </div>
-        </div>
+          </div>
+          </>
+        )}
       </div>
 
       {/* Coluna Direita: Painel de Envio */}
@@ -493,19 +637,34 @@ export function WhatsAppPage() {
               <button onClick={() => setMensagem(m => m + '{Olá|Oi|Fala}')} title="Variação: sorteia uma das opções por envio" className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md text-xs font-bold transition dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50">+ Variação {'{a|b}'}</button>
             </div>
 
-            <textarea
-              value={mensagem}
-              onChange={(e) => setMensagem(e.target.value)}
-              rows={5}
-              className="w-full rounded-xl border border-slate-300 bg-white p-3 text-base sm:text-sm font-medium outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 placeholder:text-slate-400 resize-none"
-              placeholder="Digite a mensagem... Use {Olá|Oi} para variar o texto a cada envio."
-            />
+            {aba === 'tarefas_funil' ? (
+              <div className="p-4 bg-brand-50 rounded-xl border border-brand-100 dark:bg-brand-900/20 dark:border-brand-800 flex flex-col gap-2">
+                <p className="text-sm font-semibold text-brand-700 dark:text-brand-400">
+                  <Check className="h-4 w-4 inline mr-1" />
+                  Mensagem Automática do CRM
+                </p>
+                <p className="text-xs text-brand-600/80 dark:text-brand-400/80 leading-relaxed">
+                  Os eleitores selecionados receberão automaticamente o texto definido em suas respectivas regras do funil. 
+                  Você não precisa digitar a mensagem aqui.
+                </p>
+              </div>
+            ) : (
+              <>
+                <textarea
+                  value={mensagem}
+                  onChange={(e) => setMensagem(e.target.value)}
+                  rows={5}
+                  className="w-full rounded-xl border border-slate-300 bg-white p-3 text-base sm:text-sm font-medium outline-none transition focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 placeholder:text-slate-400 resize-none"
+                  placeholder="Digite a mensagem... Use {Olá|Oi} para variar o texto a cada envio."
+                />
 
-            <p className="text-[11px] font-medium text-slate-400">
-              {variacoes > 1
-                ? `✨ ${variacoes} variações possíveis desta mensagem (reduz o risco de bloqueio).`
-                : 'Dica: adicione variações {a|b|c} para cada pessoa receber um texto diferente.'}
-            </p>
+                <p className="text-[11px] font-medium text-slate-400">
+                  {variacoes > 1
+                    ? `✨ ${variacoes} variações possíveis desta mensagem (reduz o risco de bloqueio).`
+                    : 'Dica: adicione variações {a|b|c} para cada pessoa receber um texto diferente.'}
+                </p>
+              </>
+            )}
             
             <div className="flex items-center gap-3 mt-2">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Plataforma:</span>

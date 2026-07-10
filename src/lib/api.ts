@@ -153,8 +153,8 @@ export const api = {
     request<CaboEleitoral>('/cabos', { method: 'POST', body: data }),
   updateCabo: (id: string, data: unknown) =>
     request<CaboEleitoral>(`/cabos/${id}`, { method: 'PUT', body: data }),
-  deleteCabo: (id: string) =>
-    request<void>(`/cabos/${id}`, { method: 'DELETE' }),
+  deleteCabo: (id: string, excluirEleitores?: boolean) =>
+    request<void>(`/cabos/${id}${excluirEleitores ? '?excluirEleitores=true' : ''}`, { method: 'DELETE' }),
   createCaboPublic: async (dados: Partial<CaboEleitoral> & { website?: string; campanha_slug?: string }) => {
     const res = await fetch(`${API_BASE}/api/cabos-public`, {
       method: 'POST',

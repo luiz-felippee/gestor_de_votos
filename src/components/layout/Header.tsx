@@ -80,8 +80,7 @@ export function Header() {
                 {(role === 'admin' || role === 'coordenador') && (
                   <Item to="/cabos">Lideranças</Item>
                 )}
-                <Item to="/whatsapp">WhatsApp</Item>
-                <Item to="/funil">Funil CRM</Item>
+                <Item to="/whatsapp">WhatsApp & CRM</Item>
                 {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
                   <Dropdown title="Administração">
                     <DropdownItem to="/eventos">Agenda</DropdownItem>
@@ -193,8 +192,7 @@ export function Header() {
               {(role === 'admin' || role === 'coordenador') && (
                 <MobileDrawerItem to="/cabos" icon={<Network className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Lideranças</MobileDrawerItem>
               )}
-              <MobileDrawerItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>WhatsApp</MobileDrawerItem>
-              <MobileDrawerItem to="/funil" icon={<Network className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Funil CRM</MobileDrawerItem>
+              <MobileDrawerItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>WhatsApp & CRM</MobileDrawerItem>
 
               {/* Seção Admin */}
               {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
