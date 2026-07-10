@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
 import { api, ApiError } from '../lib/api'
 import { AlertCircle, CheckCircle, ShieldCheck, ShieldAlert } from 'lucide-react'
+import { InstalarAppCard } from '../components/InstalarAppCard'
 
 export function PerfilPage() {
   const { usuario } = useAuth()
@@ -86,6 +87,9 @@ export function PerfilPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Instalar o app (PWA) — aparece só quando é possível instalar */}
+        <InstalarAppCard />
+
         {/* Informações Básicas */}
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="px-6 py-5">

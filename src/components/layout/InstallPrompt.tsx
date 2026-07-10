@@ -1,84 +1,40 @@
 import { useState, useEffect } from 'react'
 import { X, Download, Share } from 'lucide-react'
-
-// O evento beforeinstallprompt é disparado pelos navegadores suportados (Chrome, Edge, etc)
-interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: string[]
-  readonly userChoice: Promise<{
-    outcome: 'accepted' | 'dismissed'
-    platform: string
-  }>
-  prompt(): Promise<void>
-}
+import { useInstallPWA } from '../../hooks/useInstallPWA'
 
 export function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const { iOS: isIos, instalado, temPrompt, instalar } = useInstallPWA()
   const [isVisible, setIsVisible] = useState(false)
-  const [isIos, setIsIos] = useState(false)
 
   useEffect(() => {
-    // Detecta se já está instalado (standalone)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone
-    if (isStandalone) return
+    if (instalado) return
 
-    // Detecta se é iOS (iPhone/iPad) no Safari
-    const ua = window.navigator.userAgent;
-    const isIOSDevice = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
-    
-    if (isIOSDevice) {
-      setIsIos(true)
-      const hasDismissed = localStorage.getItem('pwa_ios_dismissed')
-      if (!hasDismissed) {
-        // Mostra o prompt para iOS (instruções manuais) após 3 segundos
-        setTimeout(() => setIsVisible(true), 3000)
-      }
-      return
+    // iOS: instrução manual (só se ainda não foi dispensado).
+    if (isIos) {
+      if (localStorage.getItem('pwa_ios_dismissed')) return
+      const t = setTimeout(() => setIsVisible(true), 3000)
+      return () => clearTimeout(t)
     }
 
-    // Escuta o evento que permite instalar o PWA no Android/Desktop
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault() // Impede o banner padrão do Chrome
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
-      
-      // Só mostramos depois de alguns segundos
-      setTimeout(() => setIsVisible(true), 3000)
+    // Android/Desktop: quando o navegador oferecer o diálogo nativo.
+    if (temPrompt) {
+      const t = setTimeout(() => setIsVisible(true), 3000)
+      return () => clearTimeout(t)
     }
+  }, [isIos, instalado, temPrompt])
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-
-    // Se o usuário instalou, podemos esconder
-    const handleAppInstalled = () => {
-      setIsVisible(false)
-      setDeferredPrompt(null)
-    }
-    window.addEventListener('appinstalled', handleAppInstalled)
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-      window.removeEventListener('appinstalled', handleAppInstalled)
-    }
-  }, [])
-
-  if (!isVisible) return null
+  if (!isVisible || instalado) return null
   // Se não for iOS e não tiver o evento de prompt pronto, não mostra nada
-  if (!isIos && !deferredPrompt) return null
+  if (!isIos && !temPrompt) return null
 
   async function handleInstallClick() {
     if (isIos) {
-      // No iOS, o usuário precisa fazer manualmente, então só fechamos o banner e marcamos como visto
+      // No iOS, a instalação é manual: só fechamos o banner e marcamos como visto.
       dismissPrompt()
       return
     }
-    
-    if (!deferredPrompt) return
     setIsVisible(false)
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null)
-    } else {
-      setDeferredPrompt(null)
-    }
+    await instalar()
   }
 
   function dismissPrompt() {
