@@ -147,7 +147,7 @@ export function LoginPage() {
       <div className="relative flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-2">
       
       {/* Painel da Marca (Topo no Mobile, Esquerda no Desktop) */}
-      <div className="relative flex shrink-0 flex-col overflow-hidden bg-slate-950 px-6 pt-7 pb-6 sm:p-12 sm:pb-16 lg:p-12 lg:pb-10 xl:p-16">
+      <div className="relative flex shrink-0 flex-col overflow-hidden bg-slate-950 px-6 pb-5 pt-[calc(env(safe-area-inset-top)+2rem)] sm:p-12 sm:pb-16 lg:p-12 lg:pb-10 xl:p-16">
         {/* Acentos de gradiente sutis */}
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-brand-600/25 blur-3xl" />
@@ -162,7 +162,7 @@ export function LoginPage() {
         </div>
 
         {/* Hero (Mobile) — centralizado, com subtítulo e selos de confiança */}
-        <div className="relative z-10 mt-8 text-center lg:hidden">
+        <div className="relative z-10 mt-6 text-center lg:hidden">
           <h1 className="text-[24px] font-extrabold leading-[1.2] tracking-tight text-white sm:text-3xl">
             A inteligência de<br />
             <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
