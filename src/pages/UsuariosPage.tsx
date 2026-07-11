@@ -242,8 +242,55 @@ export function UsuariosPage() {
         </div>
       </form>
 
-      {/* Lista */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      {/* Lista — Cards no mobile */}
+      <div className="space-y-3 md:hidden">
+        {loading ? (
+          <p className="py-8 text-center text-slate-400">Carregando...</p>
+        ) : usuarios.length === 0 ? (
+          <p className="py-8 text-center text-slate-400">Nenhum usuário cadastrado.</p>
+        ) : (
+          usuarios.map((u) => (
+            <div key={u.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-slate-800 dark:text-slate-100">
+                    {u.nome}
+                    {u.id === atual?.id && (
+                      <span className="ml-2 text-[10px] font-semibold uppercase text-brand-500">você</span>
+                    )}
+                  </p>
+                  <p className="truncate text-sm text-slate-500 dark:text-slate-400">{u.email}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                  {ROLE_LABEL[u.role]}
+                </span>
+              </div>
+              {u.cabo?.nome && (
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Cabo: {u.cabo.nome}</p>
+              )}
+              <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+                <button
+                  onClick={() => editar(u)}
+                  className="flex-1 rounded-lg bg-slate-100 py-2 text-sm font-bold text-slate-700 transition active:scale-95 dark:bg-slate-800 dark:text-slate-200"
+                >
+                  Editar
+                </button>
+                {u.id !== atual?.id && (
+                  <button
+                    onClick={() => excluir(u)}
+                    className="flex-1 rounded-lg bg-red-50 py-2 text-sm font-bold text-red-600 transition active:scale-95 dark:bg-red-900/20 dark:text-red-400"
+                  >
+                    Excluir
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Lista — Tabela no desktop */}
+      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm md:block dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400">
             <tr>

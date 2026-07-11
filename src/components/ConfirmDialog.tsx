@@ -61,12 +61,19 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     <ConfirmContext.Provider value={{ confirm, alert }}>
       {children}
       {dialogState?.open && (
-        <div className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300">
+        <div
+          className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"
+          onClick={() => handleClose(false)}
+        >
           <div
-            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 dark:bg-slate-900 dark:border-slate-800 animate-slide-up sm:animate-fade-in"
+            className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-2xl bg-white p-6 pb-8 sm:pb-6 shadow-2xl border-t border-slate-100 sm:border dark:bg-slate-900 dark:border-slate-800 animate-slide-up sm:animate-fade-in"
             role="dialog"
             aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
           >
+            {/* Alça do bottom sheet (mobile) */}
+            <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-slate-200 dark:bg-slate-700 sm:hidden" />
+
             {dialogState.options.title && (
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
                 {dialogState.options.title}

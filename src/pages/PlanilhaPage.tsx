@@ -9,6 +9,7 @@ import { useConfirm } from '../components/ConfirmDialog'
 import { Printer, Upload, MessageCircle, Users } from 'lucide-react'
 import { ImportModal } from '../components/ImportModal'
 import { EmptyState } from '../components/EmptyState'
+import { FAB } from '../components/FAB'
 import type { EleitorComCabo, StatusEleitor } from '../lib/types'
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 
@@ -284,9 +285,12 @@ export function PlanilhaPage() {
         </div>
       </div>
 
+      {/* Ação principal no mobile */}
+      <FAB onClick={() => setShowImport(true)} label="Importar eleitores" icon={<Upload className="h-6 w-6" />} />
+
       {showImport && (
-        <ImportModal 
-          onClose={() => setShowImport(false)} 
+        <ImportModal
+          onClose={() => setShowImport(false)}
           onSuccess={() => {
             setShowImport(false)
             queryClient.invalidateQueries({ queryKey: ['eleitores-paginados'] })
@@ -294,8 +298,8 @@ export function PlanilhaPage() {
         />
       )}
 
-      {/* Filtros */}
-      <div className="mb-6 flex flex-wrap lg:flex-nowrap items-center gap-3 rounded-2xl border border-slate-200/50 bg-white/40 p-3 shadow-sm backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-900/40">
+      {/* Filtros — busca fixa no topo ao rolar (mobile) */}
+      <div className="mb-6 flex flex-wrap lg:flex-nowrap items-center gap-3 rounded-2xl border border-slate-200/50 bg-white/70 p-3 shadow-sm backdrop-blur-md max-lg:sticky max-lg:top-0 max-lg:z-20 dark:border-slate-700/50 dark:bg-slate-900/70">
         <div className="relative flex-1 min-w-[250px]">
           <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           <input

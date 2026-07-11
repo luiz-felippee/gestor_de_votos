@@ -207,7 +207,7 @@ export function CadastroLiderancaPage() {
         ) : (
           <form
             onSubmit={enviar}
-            className="max-h-[calc(100vh-9rem)] space-y-6 overflow-y-auto px-6 py-6"
+            className="max-h-[calc(100dvh-9rem)] space-y-6 overflow-y-auto px-6 py-6"
           >
             {/* Honeypot anti-robô: invisível e fora do fluxo de tab */}
             <input

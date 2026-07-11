@@ -250,7 +250,7 @@ export default function App() {
             </BrowserRouter>
           </AuthProvider>
         </ConfirmProvider>
-        <Toaster position="bottom-right" richColors />
+        <Toaster position="bottom-right" richColors mobileOffset={{ bottom: '84px' }} />
       </ThemeProvider>
     </QueryClientProvider>
   )

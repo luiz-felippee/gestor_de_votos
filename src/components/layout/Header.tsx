@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext'
 import { useTheme } from '../ThemeProvider'
 import { Logo } from '../Logo'
 import { useOfflineSync } from '../../hooks/useOfflineSync'
+import { vibrar } from '../../lib/haptics'
 import {
   WifiOff, Loader2, Home, Users, CalendarDays,
   Network, FileText, Building2, User,
@@ -238,10 +239,10 @@ export function Header() {
           <BottomNavItem to="/planilha" icon={<Users className="h-5 w-5 sm:h-6 sm:w-6" />} label="Eleitores" />
           <BottomNavItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />} label="WhatsApp" />
           <button
-            onClick={() => setMenuOpen(true)}
+            onClick={() => { vibrar(); setMenuOpen(true) }}
             className="flex flex-1 flex-col items-center justify-center gap-1 p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
           >
-            <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+            <span className="px-3 py-0.5"><Menu className="h-5 w-5 sm:h-6 sm:w-6" /></span>
             <span className="text-[10px] font-bold">Menu</span>
           </button>
         </nav>
@@ -324,16 +325,25 @@ function BottomNavItem({ to, icon, label }: { to: string; icon: React.ReactNode;
   return (
     <NavLink
       to={to}
+      onClick={() => vibrar()}
       className={({ isActive }) =>
-        `flex flex-1 flex-col items-center justify-center gap-1 p-2 transition-colors ${
+        `relative flex flex-1 flex-col items-center justify-center gap-1 p-2 transition-colors ${
           isActive
             ? 'text-brand-600 dark:text-brand-400'
             : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
         }`
       }
     >
-      {icon}
-      <span className="text-[10px] font-bold">{label}</span>
+      {({ isActive }) => (
+        <>
+          {/* Indicador do item ativo */}
+          {isActive && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-brand-600 dark:bg-brand-400" />}
+          <span className={isActive ? 'rounded-full bg-brand-50 px-3 py-0.5 dark:bg-brand-500/10' : 'px-3 py-0.5'}>
+            {icon}
+          </span>
+          <span className="text-[10px] font-bold">{label}</span>
+        </>
+      )}
     </NavLink>
   )
 }

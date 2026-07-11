@@ -18,6 +18,16 @@ svg {
   flex-shrink: 0;
 }
 
+/* Anti-zoom do iOS: o Safari dá zoom automático ao focar campos com fonte < 16px.
+   Forçamos no mínimo 16px em telas pequenas, mantendo o visual desejado no desktop. */
+@media (max-width: 640px) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* Variante Dark para o fundo */
 .dark body {
   background-color: #020617; /* slate-950 */

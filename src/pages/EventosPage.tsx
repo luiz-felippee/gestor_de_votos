@@ -5,6 +5,7 @@ import { api } from "../lib/api"
 import { formatDataHora } from "../lib/format"
 import { useConfirm } from "../components/ConfirmDialog"
 import { CardSkeleton } from "../components/Skeleton"
+import { FAB } from "../components/FAB"
 import type { Evento } from "../lib/types"
 
 export function EventosPage() {
@@ -55,12 +56,15 @@ export function EventosPage() {
         </div>
         <button
           onClick={() => { setEditForm({}); setShowModal(true) }}
-          className="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-sm transition active:scale-98"
+          className="hidden sm:flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-sm transition active:scale-98"
         >
           <Plus className="h-4 w-4" />
           <span>Novo Evento</span>
         </button>
       </div>
+
+      {/* Ação principal no mobile */}
+      <FAB onClick={() => { setEditForm({}); setShowModal(true) }} label="Novo evento" />
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

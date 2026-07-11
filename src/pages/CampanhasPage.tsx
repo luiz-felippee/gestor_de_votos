@@ -231,7 +231,49 @@ export function CampanhasPage() {
       </form>
 
       {/* Lista */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      {/* Cards no mobile */}
+      <div className="space-y-3 md:hidden">
+        {loading ? (
+          <p className="py-8 text-center text-slate-400">Carregando...</p>
+        ) : campanhas.length === 0 ? (
+          <p className="py-8 text-center text-slate-400">Nenhuma campanha ainda.</p>
+        ) : (
+          campanhas.map((c) => (
+            <div key={c.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-bold text-slate-800 dark:text-slate-100">
+                  {c.nome}
+                  {c.id === usuario?.campanha_id && (
+                    <span className="ml-2 text-[10px] font-semibold uppercase text-brand-500">a sua</span>
+                  )}
+                </p>
+                {c.id !== usuario?.campanha_id && (
+                  <button
+                    onClick={() => excluir(c)}
+                    className="shrink-0 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition active:scale-95 dark:bg-red-900/20 dark:text-red-400"
+                  >
+                    Excluir
+                  </button>
+                )}
+              </div>
+              <div className="mt-3 flex gap-4 text-sm">
+                <span className="text-slate-500 dark:text-slate-400">
+                  <strong className="text-brand-600 dark:text-brand-400">{c.total_eleitores ?? 0}</strong> eleitores
+                </span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  <strong className="text-slate-700 dark:text-slate-200">{c.total_usuarios ?? 0}</strong> usuários
+                </span>
+              </div>
+              <p className="mt-2 border-t border-slate-100 pt-2 text-xs text-slate-400 dark:border-slate-800">
+                Criada em {formatDataHora(c.created_at)}
+              </p>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Tabela no desktop */}
+      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm md:block dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400">
             <tr>
