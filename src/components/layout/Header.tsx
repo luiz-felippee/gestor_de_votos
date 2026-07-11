@@ -116,14 +116,7 @@ export function Header() {
                 >
                   Sair
                 </button>
-                {/* Hamburger - Mobile Only */}
-                <button
-                  onClick={() => setMenuOpen(true)}
-                  className="lg:hidden flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:text-slate-400"
-                  aria-label="Abrir menu"
-                >
-                  <Menu className="h-5 w-5" />
-                </button>
+
               </div>
             </div>
           ) : location.pathname !== '/login' && !location.pathname.startsWith('/c/') ? (
@@ -238,6 +231,21 @@ export function Header() {
           </div>
         </>
       )}
+      {/* ========== MOBILE BOTTOM NAV ========== */}
+      {usuario && (
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between border-t border-slate-200 bg-white/90 pb-safe pt-1 px-2 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+          <BottomNavItem to="/" icon={<Home className="h-5 w-5 sm:h-6 sm:w-6" />} label="Início" />
+          <BottomNavItem to="/planilha" icon={<Users className="h-5 w-5 sm:h-6 sm:w-6" />} label="Eleitores" />
+          <BottomNavItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />} label="WhatsApp" />
+          <button
+            onClick={() => setMenuOpen(true)}
+            className="flex flex-1 flex-col items-center justify-center gap-1 p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"
+          >
+            <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+            <span className="text-[10px] font-bold">Menu</span>
+          </button>
+        </nav>
+      )}
     </>
   )
 }
@@ -308,6 +316,24 @@ function MobileDrawerItem({ to, icon, onClick, children }: { to: string; icon: R
       {icon}
       <span className="flex-1">{children}</span>
       <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600" />
+    </NavLink>
+  )
+}
+
+function BottomNavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label: string }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex flex-1 flex-col items-center justify-center gap-1 p-2 transition-colors ${
+          isActive
+            ? 'text-brand-600 dark:text-brand-400'
+            : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+        }`
+      }
+    >
+      {icon}
+      <span className="text-[10px] font-bold">{label}</span>
     </NavLink>
   )
 }

@@ -490,76 +490,148 @@ export function WhatsAppPage() {
             </div>
 
             <div className="flex-1 min-h-[400px] lg:min-h-0 max-h-[600px] lg:max-h-none flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex-1 overflow-x-auto overflow-y-auto relative">
-                <table className="w-full text-left text-sm border-collapse min-w-[500px]">
-              <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm dark:bg-slate-950">
-                <tr>
-                  <th className="w-12 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-                    <input 
-                      type="checkbox" 
-                      className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                      checked={
-                        listaExibida.filter((i) => i.telefone && i.telefone.length >= 10).length > 0 && 
-                        listaExibida.filter((i) => i.telefone && i.telefone.length >= 10).every((i) => selecionados.has(i.id))
-                      }
-                      onChange={handleSelectAll}
-                    />
-                  </th>
-                  <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">Nome</th>
-                  <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">Telefone</th>
-                  <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loadingEleitores || loadingCabos || loadingTarefas ? (
-                  <tr><td colSpan={4} className="text-center py-10 text-slate-500">Carregando...</td></tr>
-                ) : erroEleitores || erroCabos || erroTarefas ? (
-                  <tr><td colSpan={4} className="text-center py-10 text-red-500">Erro ao carregar dados. Tente novamente.</td></tr>
-                ) : listaExibida.length === 0 ? (
-                  <tr><td colSpan={4} className="text-center py-10 text-slate-500">Nenhum registro encontrado.</td></tr>
-                ) : (
-                  listaExibida.map((item) => {
-                    const enviou = enviados.has(item.id)
-                    const invalidPhone = !item.telefone || item.telefone.length < 10
-                    return (
-                      <tr 
-                        key={item.id} 
-                        className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50 cursor-pointer ${selecionados.has(item.id) ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}
-                        onClick={() => !invalidPhone && handleSelect(item)}
-                      >
-                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+              <div className="flex-1 overflow-y-auto relative p-2 sm:p-0">
+                {/* Desktop View (Tabela) */}
+                <div className="hidden sm:block w-full overflow-x-auto">
+                  <table className="w-full text-left text-sm border-collapse min-w-[500px]">
+                    <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm dark:bg-slate-950">
+                      <tr>
+                        <th className="w-12 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
                           <input 
                             type="checkbox" 
-                            className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 disabled:opacity-50"
-                            checked={selecionados.has(item.id)}
-                            onChange={() => handleSelect(item)}
-                            disabled={invalidPhone}
+                            className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            checked={
+                              listaExibida.filter((i) => i.telefone && i.telefone.length >= 10).length > 0 && 
+                              listaExibida.filter((i) => i.telefone && i.telefone.length >= 10).every((i) => selecionados.has(i.id))
+                            }
+                            onChange={handleSelectAll}
                           />
-                        </td>
-                        <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{item.nome}</td>
-                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
-                          {maskTelefone(item.telefone) || '-'}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {enviou ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-green-900/40 dark:text-green-400">
-                              <Check className="h-3 w-3" /> Enviado
-                            </span>
-                          ) : invalidPhone ? (
-                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                              S/Número
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-xs">-</span>
-                          )}
-                        </td>
+                        </th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">Nome</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">Telefone</th>
+                        <th className="px-4 py-3 font-bold text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 text-center">Status</th>
                       </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                    </thead>
+                    <tbody>
+                      {loadingEleitores || loadingCabos || loadingTarefas ? (
+                        <tr><td colSpan={4} className="text-center py-10 text-slate-500">Carregando...</td></tr>
+                      ) : erroEleitores || erroCabos || erroTarefas ? (
+                        <tr><td colSpan={4} className="text-center py-10 text-red-500">Erro ao carregar dados. Tente novamente.</td></tr>
+                      ) : listaExibida.length === 0 ? (
+                        <tr><td colSpan={4} className="text-center py-10 text-slate-500">Nenhum registro encontrado.</td></tr>
+                      ) : (
+                        listaExibida.map((item) => {
+                          const enviou = enviados.has(item.id)
+                          const invalidPhone = !item.telefone || item.telefone.length < 10
+                          return (
+                            <tr 
+                              key={item.id} 
+                              className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50 cursor-pointer ${selecionados.has(item.id) ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''}`}
+                              onClick={() => !invalidPhone && handleSelect(item)}
+                            >
+                              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                <input 
+                                  type="checkbox" 
+                                  className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 disabled:opacity-50"
+                                  checked={selecionados.has(item.id)}
+                                  onChange={() => handleSelect(item)}
+                                  disabled={invalidPhone}
+                                />
+                              </td>
+                              <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{item.nome}</td>
+                              <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                                {maskTelefone(item.telefone) || '-'}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                {enviou ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                                    <Check className="h-3 w-3" /> Enviado
+                                  </span>
+                                ) : invalidPhone ? (
+                                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                    S/Número
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 text-xs">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile View (Cards) */}
+                <div className="sm:hidden flex flex-col gap-2">
+                  <div className="flex items-center justify-between px-2 py-1 mb-1 border-b border-slate-200 dark:border-slate-800">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                      <input 
+                        type="checkbox" 
+                        className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                        checked={
+                          listaExibida.filter((i) => i.telefone && i.telefone.length >= 10).length > 0 && 
+                          listaExibida.filter((i) => i.telefone && i.telefone.length >= 10).every((i) => selecionados.has(i.id))
+                        }
+                        onChange={handleSelectAll}
+                      />
+                      Selecionar Todos
+                    </label>
+                  </div>
+                  {loadingEleitores || loadingCabos || loadingTarefas ? (
+                    <div className="text-center py-10 text-slate-500">Carregando...</div>
+                  ) : erroEleitores || erroCabos || erroTarefas ? (
+                    <div className="text-center py-10 text-red-500">Erro ao carregar dados.</div>
+                  ) : listaExibida.length === 0 ? (
+                    <div className="text-center py-10 text-slate-500">Nenhum registro encontrado.</div>
+                  ) : (
+                    listaExibida.map((item) => {
+                      const enviou = enviados.has(item.id)
+                      const invalidPhone = !item.telefone || item.telefone.length < 10
+                      const selecionado = selecionados.has(item.id)
+                      return (
+                        <div 
+                          key={item.id}
+                          onClick={() => !invalidPhone && handleSelect(item)}
+                          className={`flex items-center p-3 rounded-xl border transition-all ${
+                            selecionado 
+                              ? 'bg-brand-50 border-brand-200 dark:bg-brand-900/20 dark:border-brand-800' 
+                              : 'bg-white border-slate-200 dark:bg-slate-900 dark:border-slate-800'
+                          } ${!invalidPhone ? 'active:scale-[0.98] cursor-pointer' : 'opacity-70 grayscale'}`}
+                        >
+                          <div className="mr-3 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <input 
+                              type="checkbox" 
+                              className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 disabled:opacity-50 h-5 w-5"
+                              checked={selecionado}
+                              onChange={() => handleSelect(item)}
+                              disabled={invalidPhone}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-bold text-slate-900 dark:text-white truncate">{item.nome}</h4>
+                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                              {maskTelefone(item.telefone) || 'Sem telefone'}
+                            </p>
+                          </div>
+                          <div className="shrink-0 ml-2">
+                            {enviou ? (
+                              <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-bold text-green-700 dark:bg-green-900/40 dark:text-green-400">
+                                <Check className="h-3 w-3" /> <span className="hidden xs:inline">Enviado</span>
+                              </span>
+                            ) : invalidPhone && (
+                              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                S/N
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
           
           <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900 shrink-0">
             <span className="text-sm font-medium text-slate-500 dark:text-slate-400">

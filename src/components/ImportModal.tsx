@@ -88,8 +88,16 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-slate-900 border border-slate-200 dark:border-slate-800 relative">
+    <div 
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm sm:p-4 animate-fade-in"
+      onClick={onClose}
+    >
+      <div 
+        className="w-full max-w-lg rounded-t-3xl sm:rounded-2xl bg-white p-6 pb-8 sm:pb-6 shadow-xl dark:bg-slate-900 border-t border-slate-200 sm:border dark:border-slate-800 relative max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Alça do Bottom Sheet (Mobile) */}
+        <div className="mx-auto w-12 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 mb-6 sm:hidden" />
         
         <button 
           onClick={onClose}
