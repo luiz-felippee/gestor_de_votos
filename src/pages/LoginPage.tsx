@@ -148,11 +148,11 @@ export function LoginPage() {
   ]
 
   return (
-    <main className="min-h-[100dvh] bg-slate-950 font-sans lg:bg-white dark:bg-slate-950">
+    <main className="min-h-[100dvh] bg-slate-950 font-sans dark:bg-slate-950">
       <div className="relative flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-[1.05fr_1fr]">
 
         {/* ===================== Painel da marca ===================== */}
-        <div className="relative isolate flex shrink-0 flex-col overflow-hidden px-6 pb-9 pt-[calc(env(safe-area-inset-top)+2.25rem)] sm:px-10 sm:pt-14 sm:pb-14 lg:px-14 lg:py-14 xl:px-20">
+        <div className="relative isolate flex shrink-0 flex-col overflow-hidden px-6 pb-8 pt-[calc(env(safe-area-inset-top)+1.75rem)] sm:px-10 sm:pt-12 sm:pb-12 lg:px-14 lg:py-14 xl:px-20">
           {/* Fundo com gradiente + orbes */}
           <div className="pointer-events-none absolute inset-0 -z-10">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950" />
@@ -167,18 +167,15 @@ export function LoginPage() {
             <span className="text-lg font-bold tracking-tight text-white">Gestor de Votos</span>
           </div>
 
-          {/* Hero — mobile */}
-          <div className="mt-9 flex flex-col items-center text-center lg:hidden">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold text-brand-300">
-              <Sparkles className="h-3 w-3" /> Plataforma de campanha
-            </span>
-            <h1 className="mt-4 text-[26px] font-extrabold leading-[1.15] tracking-tight text-white">
-              A inteligência de<br />
+          {/* Hero — mobile (compacto) */}
+          <div className="mt-6 flex flex-col items-center text-center lg:hidden">
+            <h1 className="text-[21px] font-extrabold leading-[1.2] tracking-tight text-white">
+              A inteligência de{' '}
               <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
                 campanhas vitoriosas
               </span>
             </h1>
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-slate-400">
+            <p className="mt-2 max-w-xs text-[13px] leading-relaxed text-slate-400">
               Lideranças, eleitores e metas — tudo em uma só plataforma.
             </p>
           </div>
@@ -221,18 +218,16 @@ export function LoginPage() {
         </div>
 
         {/* ===================== Painel do formulário ===================== */}
-        <div className="relative z-20 -mt-6 flex flex-1 items-start justify-center rounded-t-[2rem] bg-white px-5 pb-10 pt-8 shadow-[0_-10px_40px_rgba(0,0,0,0.14)] sm:px-8 sm:items-center lg:mt-0 lg:rounded-none lg:px-10 lg:shadow-none dark:bg-slate-950 max-lg:dark:bg-slate-900">
-          <div className="w-full max-w-[26rem]">
-
-            {/* Alça (mobile) */}
-            <div className="mx-auto mb-7 h-1.5 w-11 rounded-full bg-slate-200 dark:bg-slate-700 lg:hidden" />
+        <div className="relative z-20 flex flex-1 flex-col justify-start px-4 pb-8 lg:justify-center lg:bg-slate-50 lg:px-10 lg:pb-0 lg:dark:bg-slate-950">
+          {/* Card flutuante sobre o azul (azul aparece acima e abaixo no mobile) */}
+          <div className="mx-auto w-full max-w-[25rem] rounded-3xl bg-white p-6 shadow-2xl shadow-black/40 ring-1 ring-black/5 sm:p-7 lg:shadow-xl lg:shadow-black/5 dark:bg-slate-900 dark:ring-white/5">
 
             {/* Cabeçalho */}
-            <div className="mb-8">
-              <h2 className="text-[26px] font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            <div className="mb-6">
+              <h2 className="text-[24px] font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-[26px]">
                 {step === 'login' ? 'Bem-vindo de volta' : 'Verificação de segurança'}
               </h2>
-              <p className="mt-2 text-[15px] leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                 {step === 'login'
                   ? 'Entre com suas credenciais para continuar.'
                   : 'Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.'}
@@ -240,7 +235,7 @@ export function LoginPage() {
             </div>
 
             {step === 'login' ? (
-              <form onSubmit={handleLogin} className="space-y-5">
+              <form onSubmit={handleLogin} className="space-y-4">
 
                 {/* E-mail */}
                 <div>
@@ -322,7 +317,7 @@ export function LoginPage() {
                 </p>
               </form>
             ) : (
-              <form onSubmit={handle2FASubmit} className="space-y-5">
+              <form onSubmit={handle2FASubmit} className="space-y-4">
                 <div>
                   <label className={labelClass}>Código de autenticação (6 dígitos)</label>
                   <input
@@ -360,13 +355,13 @@ export function LoginPage() {
                 </div>
               </form>
             )}
-
-            {/* Rodapé de segurança (mobile) */}
-            <p className="mt-8 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-400 lg:hidden">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Conexão segura e dados criptografados
-            </p>
           </div>
+
+          {/* Rodapé de segurança (mobile) — sobre o azul, abaixo do card */}
+          <p className="mt-6 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-400 lg:hidden">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Conexão segura e dados criptografados
+          </p>
         </div>
       </div>
     </main>
