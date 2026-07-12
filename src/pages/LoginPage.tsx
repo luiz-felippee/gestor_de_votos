@@ -149,13 +149,20 @@ export function LoginPage() {
 
   return (
     <main className="min-h-[100dvh] bg-slate-950 font-sans dark:bg-slate-950">
-      {/* Mobile: empilhado sobre o azul · Desktop: duas colunas em tela cheia */}
-      <div className="relative flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-[1.05fr_1fr]">
+      {/* Mobile: conjunto centralizado sobre o azul · Desktop: duas colunas em tela cheia */}
+      <div className="relative flex min-h-[100dvh] flex-col max-lg:justify-center lg:grid lg:grid-cols-[1.05fr_1fr]">
+
+        {/* Fundo cobrindo a tela toda — apenas mobile (halo azul no topo e na base) */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden lg:hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1a2352] via-[#28347a] to-[#161d47]" />
+          <div className="absolute inset-0 [background:radial-gradient(120%_55%_at_50%_2%,rgba(129,140,248,0.38),transparent_60%)]" />
+          <div className="absolute inset-0 opacity-[0.06] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:26px_26px]" />
+        </div>
 
         {/* ===================== Painel da marca ===================== */}
-        <div className="relative isolate flex shrink-0 flex-col overflow-hidden px-6 pb-8 pt-[calc(env(safe-area-inset-top)+1.75rem)] sm:px-10 sm:pt-12 sm:pb-12 lg:px-14 lg:py-14 xl:px-20">
-          {/* Fundo com gradiente + orbes */}
-          <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="relative isolate flex shrink-0 flex-col overflow-hidden px-6 pb-7 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-10 sm:pb-8 lg:px-14 lg:py-14 xl:px-20">
+          {/* Fundo com gradiente + orbes — apenas desktop (no mobile usamos o full-screen acima) */}
+          <div className="pointer-events-none absolute inset-0 -z-10 hidden lg:block">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950" />
             <div className="absolute -top-40 -left-24 h-[32rem] w-[32rem] rounded-full bg-brand-600/30 blur-[110px]" />
             <div className="absolute -bottom-40 -right-24 h-[30rem] w-[30rem] rounded-full bg-indigo-500/20 blur-[110px]" />
@@ -219,7 +226,7 @@ export function LoginPage() {
         </div>
 
         {/* ===================== Painel do formulário ===================== */}
-        <div className="relative z-20 flex flex-1 flex-col justify-start px-4 pb-8 lg:justify-center lg:bg-white lg:px-12 lg:pb-0 dark:lg:bg-slate-900">
+        <div className="relative z-20 flex flex-col px-4 pt-3 lg:flex-1 lg:justify-center lg:bg-white lg:px-12 lg:pt-0 dark:lg:bg-slate-900">
           {/* Mobile: card flutuante sobre o azul · Desktop: coluna direita em tela cheia */}
           <div className="mx-auto w-full max-w-[25rem] rounded-3xl bg-white p-6 shadow-2xl shadow-black/40 ring-1 ring-black/5 sm:p-7 lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none lg:ring-0 dark:bg-slate-900 dark:ring-white/5 lg:dark:bg-transparent lg:dark:ring-0">
 
