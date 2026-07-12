@@ -148,9 +148,9 @@ export function LoginPage() {
   ]
 
   return (
-    <main className="min-h-[100dvh] bg-slate-950 font-sans lg:flex lg:items-center lg:justify-center lg:bg-slate-100 lg:p-6 dark:bg-slate-950 dark:lg:bg-slate-950">
-      {/* Mobile: empilhado sobre o azul · Desktop: card único dividido, centralizado */}
-      <div className="relative flex min-h-[100dvh] w-full flex-col lg:grid lg:min-h-0 lg:max-w-5xl lg:grid-cols-2 lg:overflow-hidden lg:rounded-[1.75rem] lg:shadow-2xl lg:shadow-black/25 lg:ring-1 lg:ring-black/5 dark:lg:ring-white/10">
+    <main className="min-h-[100dvh] bg-slate-950 font-sans dark:bg-slate-950">
+      {/* Mobile: empilhado sobre o azul · Desktop: duas colunas em tela cheia */}
+      <div className="relative flex min-h-[100dvh] flex-col lg:grid lg:grid-cols-[1.05fr_1fr]">
 
         {/* ===================== Painel da marca ===================== */}
         <div className="relative isolate flex shrink-0 flex-col overflow-hidden px-6 pb-8 pt-[calc(env(safe-area-inset-top)+1.75rem)] sm:px-10 sm:pt-12 sm:pb-12 lg:px-14 lg:py-14 xl:px-20">
@@ -219,8 +219,8 @@ export function LoginPage() {
         </div>
 
         {/* ===================== Painel do formulário ===================== */}
-        <div className="relative z-20 flex flex-1 flex-col justify-start px-4 pb-8 lg:justify-center lg:bg-white lg:px-12 lg:py-14 lg:pb-14 dark:lg:bg-slate-900">
-          {/* Mobile: card flutuante sobre o azul · Desktop: lado direito do card grande */}
+        <div className="relative z-20 flex flex-1 flex-col justify-start px-4 pb-8 lg:justify-center lg:bg-white lg:px-12 lg:pb-0 dark:lg:bg-slate-900">
+          {/* Mobile: card flutuante sobre o azul · Desktop: coluna direita em tela cheia */}
           <div className="mx-auto w-full max-w-[25rem] rounded-3xl bg-white p-6 shadow-2xl shadow-black/40 ring-1 ring-black/5 sm:p-7 lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none lg:ring-0 dark:bg-slate-900 dark:ring-white/5 lg:dark:bg-transparent lg:dark:ring-0">
 
             {/* Cabeçalho */}
