@@ -1,9 +1,25 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
+import { type PerfilAcesso } from '@prisma/client';
 import { prisma } from '../prismaClient';
 import { assinarToken, wrap, loginLimiter, requireAuth } from '../middlewares';
 
 const authRouter = Router();
+
+interface UsuarioLogin {
+  id: string;
+  nome: string;
+  role: PerfilAcesso;
+  cabo_id: string | null;
+  campanha_id: string | null;
+  super_admin: boolean;
+  senha_hash: string;
+  token_version: number;
+  two_factor_enabled: boolean;
+  campanha_nome: string | null;
+  campanha_slug: string | null;
+  campanha_plano: string | null;
+}
 
 // --- Autenticação ---
 authRouter.post(
@@ -13,9 +29,22 @@ authRouter.post(
     const { email, senha } = req.body ?? {};
     if (!email || !senha) return res.status(400).json({ error: 'Informe e-mail e senha.' });
 
-    const usuario = await prisma.usuario.findUnique({
-      where: { email: String(email).toLowerCase().trim() },
-    });
+    // Query única: usuário + campanha num só round-trip (o banco fica longe da API,
+    // cada ida custa ~175ms). Como $queryRaw não passa pelo middleware de soft delete,
+    // o filtro deleted_at vai explícito aqui.
+    const rows = await prisma.$queryRaw<Array<UsuarioLogin>>`
+      SELECT u.id, u.nome, u.role, u.cabo_id, u.campanha_id, u.super_admin,
+             u.senha_hash, u.token_version, u.two_factor_enabled,
+             c.nome AS campanha_nome,
+             c.slug AS campanha_slug,
+             c.plano AS campanha_plano
+      FROM usuarios u
+      LEFT JOIN campanhas c ON c.id = u.campanha_id
+      WHERE u.email = ${String(email).toLowerCase().trim()}
+        AND u.deleted_at IS NULL
+      LIMIT 1
+    `;
+    const usuario = rows[0];
     if (!usuario || !(await bcrypt.compare(senha, usuario.senha_hash))) {
       return res.status(401).json({ error: 'E-mail ou senha inválidos.' });
     }
@@ -24,30 +53,17 @@ authRouter.post(
       return res.json({ require2FA: true, userId: usuario.id });
     }
 
-    const token = assinarToken(usuario);
-    let campanha_nome: string | null = null;
-    let campanha_slug: string | null = null;
-    let campanha_plano: string | null = null;
-    if (usuario.campanha_id) {
-      const c = await prisma.campanha.findUnique({
-        where: { id: usuario.campanha_id },
-        select: { nome: true, slug: true, plano: true },
-      });
-      campanha_nome = c?.nome ?? null;
-      campanha_slug = c?.slug ?? null;
-      campanha_plano = c?.plano ?? null;
-    }
     res.json({
-      token,
+      token: assinarToken(usuario),
       usuario: {
         id: usuario.id,
         nome: usuario.nome,
         role: usuario.role,
         cabo_id: usuario.cabo_id,
         campanha_id: usuario.campanha_id,
-        campanha_nome,
-        campanha_slug,
-        campanha_plano,
+        campanha_nome: usuario.campanha_nome,
+        campanha_slug: usuario.campanha_slug,
+        campanha_plano: usuario.campanha_plano,
         super_admin: usuario.super_admin,
       },
     });

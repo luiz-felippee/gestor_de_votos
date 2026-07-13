@@ -266,14 +266,15 @@ async function bootstrap() {
 }
 
 // --- Inicialização ---
+// A porta abre ANTES do bootstrap: no Render (free) o serviço dorme e o cold start
+// já custa dezenas de segundos — segurar o listen() atrás de ~10 round-trips no banco
+// (que hoje não mudam mais nada) atrasava o health check e a primeira requisição real.
+// O bootstrap roda em segundo plano; se falhar, o servidor continua de pé.
 const PORT = Number(process.env.PORT) || 3000;
-bootstrap()
-  .then(async () => {
-    httpServer.listen(PORT, () => {
-      logger.info('Servidor iniciado com sucesso', { port: PORT });
-    });
-  })
-  .catch((err) => {
-    logger.error('Falha ao iniciar servidor', err);
-    process.exit(1);
-  });
+httpServer.listen(PORT, () => {
+  logger.info('Servidor iniciado com sucesso', { port: PORT });
+
+  bootstrap()
+    .then(() => logger.info('Bootstrap concluído'))
+    .catch((err) => logger.error('Falha no bootstrap (servidor segue no ar)', err));
+});

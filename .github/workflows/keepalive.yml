@@ -1,16 +1,40 @@
 name: Keep-Alive Backend (Render)
 
+# O Render (plano free) derruba o serviço após ~15 min sem requisições, e o próximo
+# acesso paga 30-60s de cold start na tela de login.
+#
+# A versão anterior deste workflow usava cron '*/10' e confiava no agendador do GitHub.
+# Não funciona: o schedule do Actions é best-effort e no tier gratuito os runs chegaram
+# a espaçar de 45 min a 3h45 — muito acima da janela de 15 min do Render. O workflow
+# ficava verde enquanto o servidor dormia.
+#
+# Correção: cada execução vira um pinger que fica ~55 min no ar pingando a cada 5 min,
+# e os runs são agendados de forma sobreposta. Assim, mesmo que o agendador atrase um
+# run em uma hora, o loop do run anterior ainda estava cobrindo a janela.
+# Repo é público => minutos de Actions ilimitados, então o loop não custa nada.
+
 on:
   schedule:
-    # Roda a cada 10 minutos
-    - cron: '*/10 * * * *'
-  workflow_dispatch: # Permite rodar manualmente no painel do GitHub
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+# Runs sobrepostos são intencionais (redundância contra atraso do agendador).
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
-      - name: Ping API Health Check
+      - name: Manter a API acordada por ~55 min
+        env:
+          URL: https://gestor-votos-api.onrender.com/api/health
         run: |
-          echo "Pingando: https://gestor-votos-api.onrender.com/api/health"
-          curl -f "https://gestor-votos-api.onrender.com/api/health" || echo "Ping falhou, mas o workflow continua."
+          fim=$(( $(date +%s) + 55 * 60 ))
+          while [ "$(date +%s)" -lt "$fim" ]; do
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' -m 90 "$URL" || echo "000")
+            echo "$(date -u +%H:%M:%S) ping -> $codigo"
+            sleep 300
+          done
