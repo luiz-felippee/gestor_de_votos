@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import { prisma } from '../prismaClient';
-import { requireAuth, requireSuperAdmin, wrap, gerarSlug } from '../middlewares';
+import { requireAuth, requireSuperAdmin, wrap, gerarSlug, limparTokenCache } from '../middlewares';
 
 const campanhasRouter = Router();
 
@@ -143,6 +143,9 @@ campanhasRouter.delete(
     await prisma.evento.deleteMany({ where: { campanha_id: id } });
     await prisma.logAuditoria.deleteMany({ where: { campanha_id: id } });
     await prisma.campanha.delete({ where: { id } });
+    // Os usuários da campanha foram excluídos em massa: sem limpar o cache, eles
+    // continuariam autenticando por até 5 min.
+    limparTokenCache();
     res.status(204).send();
   }),
 );

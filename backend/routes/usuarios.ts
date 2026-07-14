@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import { prisma } from '../prismaClient';
-import { requireAuth, requireRole, wrap, escopoCampanha, registrarLog } from '../middlewares';
+import { requireAuth, requireRole, wrap, escopoCampanha, registrarLog, invalidarTokenCache } from '../middlewares';
 import { PerfilAcesso } from '@prisma/client';
 
 const usuariosRouter = Router();
@@ -92,6 +92,8 @@ usuariosRouter.put(
         },
         select: USUARIO_PUBLICO,
       });
+      // Papel/campanha/senha podem ter mudado: derruba o cache para o novo acesso valer já.
+      invalidarTokenCache(String(req.params.id));
       registrarLog(req, 'editar', 'usuario', String(req.params.id), usuario.email);
       res.json(usuario);
     } catch (err: any) {
@@ -117,6 +119,8 @@ usuariosRouter.delete(
     });
     if (!alvo) return res.status(404).json({ error: 'Usuário não encontrado.' });
     await prisma.usuario.delete({ where: { id: String(req.params.id) } });
+    // Sem isto, o usuário excluído continuaria entrando até o cache expirar (5 min).
+    invalidarTokenCache(String(req.params.id));
     registrarLog(req, 'excluir', 'usuario', String(req.params.id));
     res.status(204).send();
   }),

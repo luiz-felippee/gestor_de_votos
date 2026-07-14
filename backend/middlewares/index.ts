@@ -64,6 +64,19 @@ export function assinarToken(u: {
 const _tokenCache = new Map<string, { campanha_id: string | null; super_admin: boolean; token_version: number; ts: number }>();
 const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
+// Descarta a entrada em cache de um usuário. Deve ser chamada SEMPRE que o acesso
+// dele mudar (exclusão, troca de papel/campanha, revogação de sessão, troca de senha):
+// sem isso, o cache continua liberando o acesso antigo por até TOKEN_CACHE_TTL.
+export function invalidarTokenCache(userId: string): void {
+  _tokenCache.delete(userId);
+}
+
+// Para operações em massa (ex.: excluir uma campanha inteira), onde não temos os ids
+// dos usuários afetados em mãos. É raro e o custo é só um re-fetch por usuário ativo.
+export function limparTokenCache(): void {
+  _tokenCache.clear();
+}
+
 export async function completarToken(p: TokenPayload): Promise<void> {
   // Sempre validamos o banco caso não esteja no cache (para token_version)
   const cached = _tokenCache.get(p.id);
@@ -173,15 +186,64 @@ export const cadastroLimiter = rateLimit({
   },
 });
 
-// Anti força-bruta no login: 10 tentativas por IP a cada 5 minutos
+// Anti força-bruta no login.
+//
+// Antes era um limite único de 10 tentativas por IP. O problema: uma sede de campanha
+// sai toda por um único IP (NAT). Meia dúzia de pessoas errando a senha travava o login
+// de TODO MUNDO no escritório — e justo no dia da eleição isso é um desastre.
+//
+// Agora são duas camadas, e nenhuma delas conta o login que deu certo
+// (skipSuccessfulRequests), então quem acerta a senha nunca queima a cota de ninguém:
+//  - por IP: teto alto, só para conter varredura em massa vinda de uma origem;
+//  - por conta: teto baixo, que é o que de fato protege a senha de um usuário —
+//    e vale mesmo que o atacante troque de IP a cada tentativa.
+const MENSAGEM_LIMITE = {
+  error: 'Muitas tentativas de login. Aguarde alguns minutos e tente de novo.',
+};
+
+// Chaveia pela conta alvo (e-mail no /login e /esqueci-senha, userId no /login-2fa).
+// Sem isso a cota seria do IP, e trocar de IP contornaria o limite.
+function chaveDaConta(req: Request): string {
+  const body = req.body as { email?: unknown; userId?: unknown } | undefined;
+  const alvo = body?.email ?? body?.userId;
+  if (typeof alvo === 'string' && alvo.trim()) return `conta:${alvo.toLowerCase().trim()}`;
+  return `ip:${req.ip}`;
+}
+
 export const loginLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
-  max: 10,
+  max: 60,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: MENSAGEM_LIMITE,
+});
+
+// Chaveado pela conta alvo (e-mail no /login, userId no /login-2fa), não pelo IP.
+// Sem e-mail no corpo, cai de volta no IP.
+export const loginContaLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 8,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: MENSAGEM_LIMITE,
+  keyGenerator: chaveDaConta,
+});
+
+// O /esqueci-senha responde 200 SEMPRE (de propósito, para não revelar quais e-mails
+// existem). Por isso ele não pode usar o limiter acima: com skipSuccessfulRequests o
+// contador nunca subiria e a proteção seria nenhuma. Aqui toda requisição conta —
+// senão dá para disparar e-mails de reset sem parar na caixa de uma pessoa.
+export const esqueciSenhaLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: 'Muitas tentativas de login. Aguarde alguns minutos e tente de novo.',
+    error: 'Muitos pedidos de recuperação. Aguarde alguns minutos e tente de novo.',
   },
+  keyGenerator: chaveDaConta,
 });
 
 // --- Helpers de escopo multi-campanha ---

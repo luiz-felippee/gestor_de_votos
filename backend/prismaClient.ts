@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 // Normaliza a connection string para uso eficiente do pool de conexões.
 // Objetivo: no Render, basta colar a URL "pooled" (PgBouncer) do Neon na env
@@ -22,42 +22,69 @@ function urlComPool(raw: string): string {
   }
 }
 
-export const prisma = new PrismaClient(
+const prismaBase = new PrismaClient(
   process.env.DATABASE_URL ? { datasourceUrl: urlComPool(process.env.DATABASE_URL) } : undefined
 );
 
-// Middleware de Soft Delete
-const SOFT_DELETE_MODELS = ['Eleitor', 'CaboEleitoral', 'Usuario', 'Evento'];
+// --- Soft Delete ---
+// Antes isto era um middleware `prisma.$use`, API deprecada e marcada para remoção.
+// Agora usa Client Extensions ($extends), que é o caminho suportado.
+//
+// São duas metades, e as duas precisam existir:
+//  1. `query`: toda leitura/atualização ganha `deleted_at: null`, para que o registro
+//     excluído simplesmente não exista para o resto do sistema.
+//  2. `model`: `delete`/`deleteMany` viram `update`/`updateMany` carimbando `deleted_at`.
+//     Diferente do `$use`, uma extensão de `query` NÃO consegue trocar a operação — se
+//     esta metade faltar, `prisma.eleitor.delete()` volta a APAGAR a linha de verdade.
+//     Por isso os overrides estão declarados modelo a modelo (e não em `$allModels`):
+//     assim os modelos sem soft delete seguem com o `delete` normal do Prisma.
+const MODELOS_SOFT_DELETE = ['Eleitor', 'CaboEleitoral', 'Usuario', 'Evento'];
 
-prisma.$use(async (params, next) => {
-  if (params.model && SOFT_DELETE_MODELS.includes(params.model)) {
-    params.args = params.args || {};
-    
-    if (params.action === 'findUnique' || params.action === 'findFirst') {
-      params.action = 'findFirst';
-      params.args.where = { ...(params.args.where || {}), deleted_at: null };
-    }
-    if (params.action === 'findMany') {
-      params.args.where = { ...(params.args.where || {}), deleted_at: null };
-    }
-    if (params.action === 'update') {
-      params.args.where = { ...(params.args.where || {}), deleted_at: null };
-    }
-    if (params.action === 'updateMany') {
-      params.args.where = { ...(params.args.where || {}), deleted_at: null };
-    }
-    if (params.action === 'delete') {
-      params.action = 'update';
-      params.args['data'] = { deleted_at: new Date() };
-    }
-    if (params.action === 'deleteMany') {
-      params.action = 'updateMany';
-      if (params.args.data !== undefined) {
-        params.args.data['deleted_at'] = new Date();
-      } else {
-        params.args['data'] = { deleted_at: new Date() };
-      }
-    }
-  }
-  return next(params);
+const OPERACOES_FILTRADAS = [
+  'findUnique',
+  'findUniqueOrThrow',
+  'findFirst',
+  'findFirstOrThrow',
+  'findMany',
+  'update',
+  'updateMany',
+];
+
+// Os overrides são declarados com tipos frouxos (`any`) de propósito. Tipar isso com os
+// genéricos do Prisma faz o TS instanciar tipos tão profundos que o ts-node estoura a
+// memória ao subir o dev server. Como o corpo é trivial, o custo de checagem aqui é baixo.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function softDeleteModel() {
+  return {
+    async delete(this: any, args: any): Promise<any> {
+      const ctx: any = Prisma.getExtensionContext(this);
+      return ctx.update({ where: args?.where, data: { deleted_at: new Date() } });
+    },
+    async deleteMany(this: any, args?: any): Promise<any> {
+      const ctx: any = Prisma.getExtensionContext(this);
+      return ctx.updateMany({ where: args?.where ?? {}, data: { deleted_at: new Date() } });
+    },
+  };
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+export const prisma = prismaBase.$extends({
+  query: {
+    $allModels: {
+      async $allOperations({ model, operation, args, query }) {
+        if (!MODELOS_SOFT_DELETE.includes(model) || !OPERACOES_FILTRADAS.includes(operation)) {
+          return query(args);
+        }
+        const a = (args ?? {}) as { where?: Record<string, unknown> };
+        a.where = { ...(a.where ?? {}), deleted_at: null };
+        return query(a as typeof args);
+      },
+    },
+  },
+  model: {
+    eleitor: softDeleteModel(),
+    caboEleitoral: softDeleteModel(),
+    usuario: softDeleteModel(),
+    evento: softDeleteModel(),
+  },
 });

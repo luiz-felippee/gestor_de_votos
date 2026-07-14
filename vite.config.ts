@@ -171,12 +171,14 @@ export default defineConfig({
           if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/react-router-dom/')) {
             return 'react-vendor'
           }
-          if (id.includes('node_modules/leaflet/') || id.includes('node_modules/react-leaflet/')) {
-            return 'map-vendor'
-          }
-          if (id.includes('node_modules/recharts/')) {
-            return 'chart-vendor'
-          }
+          // Só o react-vendor tem regra aqui, e é de propósito.
+          //
+          // Antes havia também 'chart-vendor' (recharts) e 'map-vendor' (leaflet). O efeito
+          // era o oposto do pretendido: o chunk manual vira um vendor compartilhado que entra
+          // no modulepreload do index.html, então a TELA DE LOGIN baixava 364 KB de gráficos
+          // (e depois 180 KB de mapa) que ela nunca usa — mesmo com as páginas já sendo lazy.
+          // Sem essas regras, recharts e leaflet ficam dentro dos chunks lazy que os usam e só
+          // descem quando o usuário abre o dashboard ou o mapa.
         },
       },
     },

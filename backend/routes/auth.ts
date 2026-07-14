@@ -2,7 +2,15 @@ import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import { type PerfilAcesso } from '@prisma/client';
 import { prisma } from '../prismaClient';
-import { assinarToken, wrap, loginLimiter, requireAuth } from '../middlewares';
+import {
+  assinarToken,
+  wrap,
+  loginLimiter,
+  loginContaLimiter,
+  esqueciSenhaLimiter,
+  requireAuth,
+  invalidarTokenCache,
+} from '../middlewares';
 
 const authRouter = Router();
 
@@ -25,6 +33,7 @@ interface UsuarioLogin {
 authRouter.post(
   '/login',
   loginLimiter,
+  loginContaLimiter,
   wrap(async (req, res) => {
     const { email, senha } = req.body ?? {};
     if (!email || !senha) return res.status(400).json({ error: 'Informe e-mail e senha.' });
@@ -75,6 +84,7 @@ import { verify as verifyTotp } from 'otplib';
 authRouter.post(
   '/login-2fa',
   loginLimiter,
+  loginContaLimiter,
   wrap(async (req, res) => {
     const { userId, token: mfaToken } = req.body ?? {};
     if (!userId || !mfaToken) return res.status(400).json({ error: 'Dados incompletos para 2FA.' });
@@ -223,6 +233,7 @@ authRouter.get(
       LEFT JOIN campanhas c ON c.id = u.campanha_id
       LEFT JOIN cabos cb ON cb.id = u.cabo_id
       WHERE u.id = ${req.user!.id}
+        AND u.deleted_at IS NULL
       LIMIT 1
     `;
     const u = rows[0];
@@ -254,6 +265,9 @@ authRouter.post(
       where: { id: req.user!.id },
       data: { token_version: { increment: 1 } },
     });
+    // Sem isto o cache seguiria aceitando o token_version antigo — os dispositivos
+    // "deslogados" continuariam usando o app por até 5 min.
+    invalidarTokenCache(req.user!.id);
     res.json({ message: 'Sessão revogada em todos os dispositivos com sucesso.' });
   })
 );
@@ -265,6 +279,7 @@ import { enviarEmail, templateResetSenha } from '../lib/email';
 authRouter.post(
   '/esqueci-senha',
   loginLimiter,
+  esqueciSenhaLimiter, // impede bombardear o e-mail de uma pessoa específica
   wrap(async (req, res) => {
     const { email } = req.body ?? {};
     if (!email) return res.status(400).json({ error: 'Informe seu e-mail.' });
@@ -332,6 +347,8 @@ authRouter.post(
         token_version: { increment: 1 }, // Revoga sessões antigas ao alterar a senha
       },
     });
+    // A revogação acima só vale de fato depois de limpar o cache.
+    invalidarTokenCache(usuario.id);
 
     res.json({ message: 'Senha alterada com sucesso! Faça login com a nova senha.' });
   })
