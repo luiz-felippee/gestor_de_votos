@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
-import { Copy, Link as LinkIcon, CheckCircle2, MessageCircle, UserPlus } from 'lucide-react'
+import { Copy, Link as LinkIcon, CheckCircle2, MessageCircle, UserPlus, Users, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthContext'
 import { api } from '../lib/api'
@@ -25,6 +25,7 @@ interface FormState {
   ano_eleicao: string
   votacao: string
   foto_url: string
+  lider_id: string
 }
 
 const VAZIO: FormState = {
@@ -39,6 +40,7 @@ const VAZIO: FormState = {
   ano_eleicao: '',
   votacao: '',
   foto_url: '',
+  lider_id: '',
 }
 
 export function CabosPage() {
@@ -53,19 +55,47 @@ export function CabosPage() {
   const [ordenacao, setOrdenacao] = useState<'nome' | 'ranking'>('ranking')
   const [isFormOpen, setIsFormOpen] = useState(false)
 
-  const cabosOrdenados = useMemo(() => {
+  // Agrupa em 2 níveis: lideranças de topo, cada uma com seus multiplicadores.
+  // O ranking ordena pela soma (votos da liderança + dos multiplicadores dela).
+  const grupos = useMemo(() => {
     const comRealizado = cabos.map(c => ({
       ...c,
-      realizado: c._count?.eleitores ?? 0
+      realizado: c._count?.eleitores ?? 0,
+      total: c.votos_total ?? c._count?.eleitores ?? 0,
     }))
-    
-    if (ordenacao === 'ranking') {
-      return comRealizado.sort((a, b) => b.realizado - a.realizado)
+
+    const porLider = new Map<string, typeof comRealizado>()
+    for (const c of comRealizado) {
+      if (!c.lider_id) continue
+      const lista = porLider.get(c.lider_id) ?? []
+      lista.push(c)
+      porLider.set(c.lider_id, lista)
     }
-    
-    // ordenação por nome
-    return comRealizado.sort((a, b) => a.nome.localeCompare(b.nome))
+
+    // Multiplicador órfão (líder excluído/fora da lista) aparece como topo para não sumir.
+    const idsTopo = new Set(comRealizado.filter(c => !c.lider_id).map(c => c.id))
+    const topo = comRealizado.filter(c => !c.lider_id || !cabos.some(x => x.id === c.lider_id))
+
+    const criterio = (a: (typeof comRealizado)[number], b: (typeof comRealizado)[number]) =>
+      ordenacao === 'ranking' ? b.total - a.total : a.nome.localeCompare(b.nome)
+
+    return topo.sort(criterio).map(lider => ({
+      lider,
+      multiplicadores: (idsTopo.has(lider.id) ? porLider.get(lider.id) ?? [] : []).sort(criterio),
+    }))
   }, [cabos, ordenacao])
+
+  const totalMultiplicadores = useMemo(() => cabos.filter(c => c.lider_id).length, [cabos])
+  // Só lideranças de topo podem receber multiplicadores (teto de 2 níveis)
+  const liderancasDisponiveis = useMemo(
+    () => cabos.filter(c => !c.lider_id && c.id !== editId).sort((a, b) => a.nome.localeCompare(b.nome)),
+    [cabos, editId],
+  )
+  // Quem já lidera uma equipe não pode virar multiplicador (criaria um 3º nível)
+  const editadoTemEquipe = useMemo(
+    () => Boolean(editId && cabos.some(c => c.lider_id === editId)),
+    [cabos, editId],
+  )
 
   function atualizar<K extends keyof FormState>(c: K, v: FormState[K]) {
     setForm((f) => ({ ...f, [c]: v }))
@@ -85,6 +115,7 @@ export function CabosPage() {
       ano_eleicao: c.ano_eleicao ?? '',
       votacao: c.votacao ? String(c.votacao) : '',
       foto_url: c.foto_url ?? '',
+      lider_id: c.lider_id ?? '',
     })
     setArquivoFoto(null)
     setErro(null)
@@ -133,6 +164,7 @@ export function CabosPage() {
       ano_eleicao: form.foi_candidato ? form.ano_eleicao : undefined,
       votacao: form.foi_candidato && form.votacao ? Number(form.votacao) : undefined,
       foto_url: finalFotoUrl,
+      lider_id: form.lider_id || null,
     }
 
     try {
@@ -152,9 +184,14 @@ export function CabosPage() {
   }
 
   async function excluir(c: CaboEleitoral & { realizado?: number }) {
+    const numMult = cabos.filter((x) => x.lider_id === c.id).length
     const ok = await confirm({
-      title: 'Excluir Liderança?',
-      message: `Tem certeza que deseja excluir a liderança "${c.nome}"?`,
+      title: c.lider_id ? 'Excluir Multiplicador?' : 'Excluir Liderança?',
+      message: `Tem certeza que deseja excluir "${c.nome}"?${
+        numMult > 0
+          ? ` Os ${numMult} multiplicador(es) da equipe serão promovidos a lideranças (os eleitores deles são mantidos).`
+          : ''
+      }`,
       confirmText: 'Excluir',
       cancelText: 'Voltar',
     })
@@ -350,6 +387,32 @@ export function CabosPage() {
               onChange={(e) => atualizar('data_nascimento', e.target.value)}
             />
           </Campo>
+          <Campo label="Multiplicador de (opcional)">
+            {editadoTemEquipe ? (
+              <p className="rounded-lg bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
+                Esta liderança já tem multiplicadores na equipe, então não pode ser
+                multiplicadora de outra pessoa.
+              </p>
+            ) : (
+              <>
+                <select
+                  className={inputClass}
+                  value={form.lider_id}
+                  onChange={(e) => atualizar('lider_id', e.target.value)}
+                >
+                  <option value="">Nenhuma — é liderança principal</option>
+                  {liderancasDisponiveis.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.nome}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-slate-400">
+                  Os votos deste multiplicador somam no total da liderança escolhida.
+                </p>
+              </>
+            )}
+          </Campo>
         </div>
 
         <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
@@ -425,7 +488,12 @@ export function CabosPage() {
       {/* Lista de cabos */}
       <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-          Lideranças Cadastradas ({cabos.length})
+          Lideranças Cadastradas ({cabos.length - totalMultiplicadores})
+          {totalMultiplicadores > 0 && (
+            <span className="ml-2 text-sm font-semibold text-slate-400 dark:text-slate-500">
+              + {totalMultiplicadores} multiplicador{totalMultiplicadores > 1 ? 'es' : ''}
+            </span>
+          )}
         </h2>
         
         {cabos.length > 0 && (
@@ -463,16 +531,33 @@ export function CabosPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {cabosOrdenados.map((c, i) => (
-            <CardCabo
-              key={c.id}
-              cabo={c}
-              realizado={c.realizado}
-              posicaoRanking={ordenacao === 'ranking' ? i + 1 : undefined}
-              onEditar={() => editar(c)}
-              onExcluir={() => excluir(c)}
-            />
+        <div className="grid items-start gap-4 sm:grid-cols-2">
+          {grupos.map(({ lider, multiplicadores }, i) => (
+            <div key={lider.id} className="flex flex-col">
+              <CardCabo
+                cabo={lider}
+                realizado={lider.realizado}
+                totalEquipe={lider.total}
+                numMultiplicadores={multiplicadores.length}
+                posicaoRanking={ordenacao === 'ranking' ? i + 1 : undefined}
+                onEditar={() => editar(lider)}
+                onExcluir={() => excluir(lider)}
+              />
+              {/* Multiplicadores da liderança — linhas compactas, indentadas sob o card */}
+              {multiplicadores.length > 0 && (
+                <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-200 pl-3 pt-1 dark:border-slate-800">
+                  {multiplicadores.map((m) => (
+                    <LinhaMultiplicador
+                      key={m.id}
+                      cabo={m}
+                      votos={m.realizado}
+                      onEditar={() => editar(m)}
+                      onExcluir={() => excluir(m)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
@@ -483,12 +568,16 @@ export function CabosPage() {
 function CardCabo({
   cabo,
   realizado,
+  totalEquipe,
+  numMultiplicadores = 0,
   posicaoRanking,
   onEditar,
   onExcluir,
 }: {
   cabo: CaboEleitoral
   realizado: number
+  totalEquipe?: number
+  numMultiplicadores?: number
   posicaoRanking?: number
   onEditar: () => void
   onExcluir: () => void
@@ -626,6 +715,19 @@ function CardCabo({
               style={{ width: `${pct}%` }}
             />
           </div>
+
+          {/* Total da equipe: votos da liderança + dos multiplicadores dela */}
+          {numMultiplicadores > 0 && (
+            <div className="mt-3 flex items-center justify-between rounded-lg bg-brand-50/70 px-3 py-2 dark:bg-brand-500/10">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 dark:text-brand-300">
+                <Users className="h-3.5 w-3.5" />
+                Equipe ({numMultiplicadores} multiplicador{numMultiplicadores > 1 ? 'es' : ''})
+              </span>
+              <span className="text-sm font-black text-brand-700 dark:text-brand-300">
+                {totalEquipe} votos no total
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -696,6 +798,84 @@ function CardCabo({
             </button>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// Linha compacta de um multiplicador, aninhada sob o card da liderança dele.
+// Tem o próprio link de cadastro (o voto entra no nome do multiplicador e soma
+// no total da liderança), além de editar/excluir.
+function LinhaMultiplicador({
+  cabo,
+  votos,
+  onEditar,
+  onExcluir,
+}: {
+  cabo: CaboEleitoral
+  votos: number
+  onEditar: () => void
+  onExcluir: () => void
+}) {
+  const { usuario } = useAuth()
+  const { alert } = useConfirm()
+  const [copiado, setCopiado] = useState(false)
+
+  const link = `${window.location.origin}/c/${usuario?.campanha_slug || 'gestor'}/${generateSlug(cabo.nome)}`
+
+  async function copiar() {
+    const mensagem = `Faça seu cadastro com *${cabo.nome}* para apoiar *${usuario?.campanha_nome || 'nossa campanha'}*!\n\nAcesse o link:\n${link}`
+    try {
+      await navigator.clipboard.writeText(mensagem)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      alert(link, 'Link de Indicação')
+    }
+  }
+
+  return (
+    <div className="group/mult flex items-center gap-2.5 rounded-xl border border-slate-200/60 bg-white px-3 py-2 shadow-sm dark:border-slate-800/60 dark:bg-slate-900/50">
+      <img
+        src={resolverFotoUrl(cabo.foto_url, `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`)!}
+        alt={cabo.nome}
+        className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+        onError={(e) => {
+          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`
+        }}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{cabo.nome}</p>
+        <p className="text-xs font-medium text-slate-400 dark:text-slate-500">
+          {votos} voto{votos === 1 ? '' : 's'}
+        </p>
+      </div>
+      <div className="flex shrink-0 items-center gap-1">
+        <button
+          onClick={copiar}
+          title="Copiar link de cadastro"
+          className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
+            copiado
+              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+              : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300'
+          }`}
+        >
+          {copiado ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+        </button>
+        <button
+          onClick={onEditar}
+          title="Editar"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-900/30 dark:hover:text-brand-400"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={onExcluir}
+          title="Excluir"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
     </div>
   )

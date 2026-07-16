@@ -7,6 +7,44 @@ import { notificarMudanca } from '../server';
 
 const cabosRouter = Router();
 
+// Valida um lider_id recebido do cliente para o cabo `caboId` (null ao criar).
+// Regras da hierarquia de 2 níveis:
+//  - o líder tem que existir na MESMA campanha;
+//  - o líder tem que ser uma LIDERANÇA (lider_id nulo) — senão criaria um 3º nível;
+//  - um cabo não pode ser líder de si mesmo;
+//  - um cabo que JÁ é líder de alguém não pode virar multiplicador (viraria 3 níveis).
+// Retorna a mensagem de erro, ou null se estiver tudo certo.
+async function validarLider(
+  liderIdBruto: unknown,
+  campanhaId: string | null | undefined,
+  caboId: string | null,
+): Promise<{ erro: string } | { liderId: string | null }> {
+  if (liderIdBruto == null || liderIdBruto === '') return { liderId: null };
+  const liderId = String(liderIdBruto);
+
+  if (caboId && liderId === caboId) {
+    return { erro: 'Uma liderança não pode ser multiplicadora de si mesma.' };
+  }
+  const lider = await prisma.caboEleitoral.findFirst({
+    where: { id: liderId, ...(campanhaId ? { campanha_id: campanhaId } : {}) },
+    select: { id: true, lider_id: true },
+  });
+  if (!lider) return { erro: 'Liderança informada não encontrada nesta campanha.' };
+  if (lider.lider_id) {
+    return { erro: 'Só é possível vincular a uma liderança de topo (multiplicador não tem multiplicador).' };
+  }
+  if (caboId) {
+    const temMultiplicadores = await prisma.caboEleitoral.findFirst({
+      where: { lider_id: caboId },
+      select: { id: true },
+    });
+    if (temMultiplicadores) {
+      return { erro: 'Esta liderança já tem multiplicadores, então não pode virar multiplicadora de outra.' };
+    }
+  }
+  return { liderId };
+}
+
 // --- Cabos (leitura pública p/ o dropdown do formulário; escrita restrita) ---
 cabosRouter.get(
   '/cabos',
@@ -20,15 +58,32 @@ cabosRouter.get(
         id: true, campanha_id: true, nome: true, telefone: true, bairro_atuacao: true,
         cidade: true, meta_eleitores: true, foi_candidato: true, cargo_candidato: true,
         ano_eleicao: true, votacao: true, data_nascimento: true, created_at: true, foto_url: true,
+        lider_id: true,
         _count: { select: { eleitores: true } },
       },
       orderBy: { nome: 'asc' },
     });
+
+    // Votos diretos de cada cabo, e o total da liderança = ela + seus multiplicadores.
+    // Feito em memória numa passada (a lista já está toda carregada, evita N+1).
+    const votosDiretos = new Map(cabos.map((c) => [c.id, c._count.eleitores]));
+    const nomePorId = new Map(cabos.map((c) => [c.id, c.nome]));
+    const somaMultiplicadores = new Map<string, number>();
+    for (const c of cabos) {
+      if (c.lider_id) {
+        somaMultiplicadores.set(c.lider_id, (somaMultiplicadores.get(c.lider_id) ?? 0) + c._count.eleitores);
+      }
+    }
+
     // Só as fotos base64 vão pelo endpoint cacheável (nao manda o base64 na lista).
     // URLs http/legadas seguem como estavam.
     res.json(cabos.map((c) => ({
       ...c,
       foto_url: c.foto_url?.startsWith('data:') ? `/api/cabos/${c.id}/foto` : c.foto_url,
+      lider_nome: c.lider_id ? nomePorId.get(c.lider_id) ?? null : null,
+      votos_diretos: votosDiretos.get(c.id) ?? 0,
+      // Para liderança: diretos + dos multiplicadores. Para multiplicador: só os diretos.
+      votos_total: (votosDiretos.get(c.id) ?? 0) + (c.lider_id ? 0 : (somaMultiplicadores.get(c.id) ?? 0)),
     })));
   }),
 );
@@ -63,9 +118,11 @@ cabosRouter.post(
   requireRole('admin', 'coordenador'),
   requirePlanLimit('cabos'),
   wrap(async (req, res) => {
-    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao, foto_url } = req.body ?? {};
+    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao, foto_url, lider_id } = req.body ?? {};
     if (!nome || !telefone) return res.status(400).json({ error: 'Nome e telefone são obrigatórios.' });
     if (!foto_url) return res.status(400).json({ error: 'A foto da liderança é obrigatória.' });
+    const lider = await validarLider(lider_id, req.user!.campanha_id, null);
+    if ('erro' in lider) return res.status(400).json({ error: lider.erro });
     const cabo = await prisma.caboEleitoral.create({
       data: {
         campanha_id: req.user!.campanha_id,
@@ -80,6 +137,7 @@ cabosRouter.post(
         ano_eleicao: ano_eleicao || null,
         votacao: votacao ? Number(votacao) : null,
         foto_url: foto_url || null,
+        lider_id: lider.liderId,
       },
     });
     registrarLog(req, 'criar', 'cabo', cabo.id, cabo.nome);
@@ -130,7 +188,7 @@ cabosRouter.put(
   requireAuth,
   requireRole('admin', 'coordenador'),
   wrap(async (req, res) => {
-    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao, foto_url } = req.body ?? {};
+    const { nome, telefone, bairro_atuacao, cidade, meta_eleitores, foi_candidato, cargo_candidato, ano_eleicao, votacao, foto_url, lider_id } = req.body ?? {};
     if (!foto_url) return res.status(400).json({ error: 'A foto da liderança é obrigatória.' });
     // Garante que o cabo pertence à campanha do usuário (isolamento)
     const dono = await prisma.caboEleitoral.findFirst({
@@ -138,6 +196,8 @@ cabosRouter.put(
       select: { id: true },
     });
     if (!dono) return res.status(404).json({ error: 'Cabo não encontrado.' });
+    const lider = await validarLider(lider_id, req.user!.campanha_id, String(req.params.id));
+    if ('erro' in lider) return res.status(400).json({ error: lider.erro });
     const cabo = await prisma.caboEleitoral.update({
       where: { id: String(req.params.id) },
       data: {
@@ -152,6 +212,7 @@ cabosRouter.put(
         ano_eleicao: ano_eleicao || null,
         votacao: votacao ? Number(votacao) : null,
         foto_url: foto_url || null,
+        lider_id: lider.liderId,
       },
     });
     cache.invalidateByPrefix(`foto_${String(req.params.id)}`); // foto pode ter mudado
@@ -178,6 +239,14 @@ cabosRouter.delete(
         where: { cabo_id: caboId, ...escopoCampanha(req) },
       });
     }
+
+    // Promove os multiplicadores desta liderança a lideranças (mantendo os eleitores
+    // deles). Feito à mão porque o soft delete é um UPDATE — o onDelete: SetNull do
+    // banco não dispara, e sem isto eles apontariam para uma liderança já invisível.
+    await prisma.caboEleitoral.updateMany({
+      where: { lider_id: caboId },
+      data: { lider_id: null },
+    });
 
     await prisma.caboEleitoral.delete({ where: { id: caboId } });
     registrarLog(

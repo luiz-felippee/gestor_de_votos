@@ -68,7 +68,18 @@ model CaboEleitoral {
   eleitores      Eleitor[]
   usuarios       Usuario[]
 
+  // --- Hierarquia (2 níveis): liderança -> multiplicadores ---
+  // lider_id nulo  => é uma LIDERANÇA (topo).
+  // lider_id preenchido => é um MULTIPLICADOR daquela liderança.
+  // O teto de 2 níveis (multiplicador não tem multiplicador) é garantido na API.
+  // onDelete: SetNull => excluir a liderança promove os multiplicadores a liderança,
+  // sem perder nenhum eleitor deles.
+  lider_id        String?
+  lider           CaboEleitoral?  @relation("Multiplicadores", fields: [lider_id], references: [id], onDelete: SetNull)
+  multiplicadores CaboEleitoral[] @relation("Multiplicadores")
+
   @@index([campanha_id])
+  @@index([lider_id])
   @@map("cabos")
 }
 

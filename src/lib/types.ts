@@ -80,6 +80,13 @@ export interface CaboEleitoral {
   foto_url?: string | null
   created_at?: string
   _count?: { eleitores: number }
+  // --- Hierarquia (2 níveis): liderança -> multiplicadores ---
+  // lider_id nulo = liderança de topo; preenchido = multiplicador daquela liderança.
+  lider_id?: string | null
+  lider_nome?: string | null
+  votos_diretos?: number
+  // Liderança: diretos + dos multiplicadores. Multiplicador: só os diretos.
+  votos_total?: number
 }
 
 /** Eleitor com o nome do cabo já resolvido (join), usado na planilha. */
