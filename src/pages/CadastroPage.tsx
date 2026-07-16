@@ -221,8 +221,7 @@ export function CadastroPage() {
     }
 
     if (!navigator.onLine) {
-      await saveToOfflineQueue(payload)
-      window.dispatchEvent(new Event('gv_queue_updated'))
+      await saveToOfflineQueue(payload) // já dispara gv_queue_updated
       setEnviando(false)
       setSucesso(true)
       return

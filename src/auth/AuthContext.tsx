@@ -123,6 +123,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function signOut() {
     clearToken()
     setUsuario(null)
+    // Apaga os caches do service worker que guardam DADOS (listas de eleitores,
+    // fotos de lideranças). Sem isto, num aparelho compartilhado o próximo usuário
+    // poderia ver offline os dados de quem saiu. Best-effort: se a API de caches
+    // não existir (http, navegador antigo), segue o logout normalmente.
+    if ('caches' in window) {
+      caches.delete('api-cache').catch(() => {})
+      caches.delete('cabo-fotos-cache').catch(() => {})
+    }
   }
 
   return (

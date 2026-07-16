@@ -13,16 +13,21 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' (era 'autoUpdate'): a versão nova só assume quando o usuário aceita
+      // o toast — o reload automático derrubava quem estava no meio de um cadastro.
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon-180.png'],
       manifest: {
+        id: '/',
+        lang: 'pt-BR',
+        dir: 'ltr',
         name: 'Gestor de Votos',
         short_name: 'Gestor Votos',
         description: 'Plataforma Premium de Gestão de Campanhas',
         theme_color: '#4f46e5',
         background_color: '#f8fafc',
         display: 'standalone',
-        orientation: 'portrait',
+        // Sem trava de orientação: a planilha e o mapa ficam bem melhores em paisagem.
         start_url: '/',
         scope: '/',
         categories: ['business', 'productivity'],
@@ -37,16 +42,39 @@ export default defineConfig({
             sizes: '512x512',
             type: 'image/png',
           },
+          // 'maskable' separado do 'any': juntos ('any maskable'), o Android usa a
+          // mesma imagem para os dois fins e recorta o ícone sem margem de segurança.
           {
             src: '/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'maskable',
+          },
+        ],
+        // Atalhos do ícone (toque longo no Android / botão direito no desktop)
+        shortcuts: [
+          {
+            name: 'Painel',
+            url: '/',
+            icons: [{ src: '/icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Eleitores',
+            url: '/planilha',
+            icons: [{ src: '/icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Lideranças',
+            url: '/cabos',
+            icons: [{ src: '/icon-192.png', sizes: '192x192' }],
           },
         ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // A Logo pede /icon-192.png?v=3 (cache-busting). O precache guarda /icon-192.png
+        // sem query — sem esta regra o ?v= vira cache miss e a logo quebra offline.
+        ignoreURLParametersMatching: [/^v$/, /^utm_/, /^fbclid$/],
         // Limita o tamanho máximo do precache para não travar em dados móveis
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
         runtimeCaching: [
@@ -66,8 +94,12 @@ export default defineConfig({
             },
           },
           // ---- API calls → NetworkFirst com fallback cache ----
+          // /api/auth fica FORA do cache de propósito: são dados de sessão (login, /me).
+          // Cachear isso significa que, num aparelho compartilhado, o usuário seguinte
+          // poderia receber offline a sessão/identidade do anterior.
           {
-            urlPattern: /\/api\/.*/i,
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/auth/'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
