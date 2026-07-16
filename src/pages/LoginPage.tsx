@@ -148,12 +148,13 @@ export function LoginPage() {
   ]
 
   return (
-    <main className="min-h-[100dvh] bg-white font-sans dark:bg-slate-950 lg:bg-slate-950">
-      {/* Mobile: página plana e sóbria · Desktop: duas colunas em tela cheia */}
-      <div className="relative flex min-h-[100dvh] flex-col max-lg:justify-center lg:grid lg:grid-cols-[1.05fr_1fr]">
+    // Mobile: tela FIXA — altura exata da viewport (svh ignora a barra do navegador),
+    // overflow-hidden mata o scroll e o conjunto fica centralizado. Desktop intacto.
+    <main className="bg-white font-sans max-lg:h-[100svh] max-lg:overflow-hidden lg:min-h-[100dvh] dark:bg-slate-950 lg:bg-slate-950">
+      <div className="relative flex flex-col max-lg:h-full max-lg:justify-center lg:grid lg:min-h-[100dvh] lg:grid-cols-[1.05fr_1fr]">
 
         {/* ===================== Painel da marca ===================== */}
-        <div className="relative isolate flex shrink-0 flex-col overflow-hidden px-6 pb-8 pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:px-10 lg:px-14 lg:py-14 xl:px-20">
+        <div className="relative isolate flex shrink-0 flex-col overflow-hidden px-6 pb-6 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:px-10 lg:px-14 lg:py-14 xl:px-20">
           {/* Fundo com gradiente + orbes — apenas desktop (no mobile usamos o full-screen acima) */}
           <div className="pointer-events-none absolute inset-0 -z-10 hidden lg:block">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950" />
@@ -349,7 +350,7 @@ export function LoginPage() {
           </div>
 
           {/* Rodapé de segurança (mobile) */}
-          <p className="mt-8 flex items-center justify-center gap-1.5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] text-xs font-medium text-slate-500 lg:hidden dark:text-slate-500">
+          <p className="mt-5 flex items-center justify-center gap-1.5 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] text-xs font-medium text-slate-500 lg:hidden dark:text-slate-500">
             <ShieldCheck className="h-3.5 w-3.5" />
             Conexão segura e dados criptografados
           </p>
