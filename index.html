@@ -52,38 +52,39 @@
     </script>
     <div id="root">
       <style>
-        body, html { margin: 0; padding: 0; background-color: #f8fafc; height: 100vh; width: 100vw; }
-        @media (prefers-color-scheme: dark) { body, html { background-color: #020617; } }
+        /* Fundo na COR DO APP já no primeiro paint: o splash nativo do Android
+           (background_color do manifest) também é #4f46e5, então a sequência
+           splash nativo -> este loader -> login não tem nenhum "pulo" de cor.
+           Tudo aqui vive dentro de #root e é descartado quando o React monta. */
+        body, html { margin: 0; padding: 0; background-color: #4f46e5; height: 100vh; width: 100vw; }
         #initial-loader {
           position: fixed; top: 0; left: 0; width: 100%; height: 100%;
           display: flex; flex-direction: column; align-items: center; justify-content: center;
           z-index: 99999;
           font-family: system-ui, -apple-system, sans-serif;
-          background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+          background: #4f46e5;
         }
         .loader-logo-container {
-          width: 96px; height: 96px; border-radius: 20px;
-          background-color: #4f46e5;
-          display: flex; align-items: center; justify-content: center;
+          width: 96px; height: 96px; border-radius: 22px;
           overflow: hidden;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
           animation: logo-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
           margin-bottom: 32px;
         }
-        .loader-logo { width: 110%; height: 110%; object-fit: cover; transform: scale(1.1); }
+        .loader-logo { width: 100%; height: 100%; display: block; }
         .spinner {
-          width: 40px; height: 40px; border-radius: 50%;
-          border: 4px solid rgba(255, 255, 255, 0.1);
+          width: 36px; height: 36px; border-radius: 50%;
+          border: 4px solid rgba(255, 255, 255, 0.25);
           border-top-color: #ffffff;
-          animation: spin 1s linear infinite;
+          animation: spin 0.9s linear infinite;
         }
         .loader-text {
-          margin-top: 16px; color: rgba(255, 255, 255, 0.8);
+          margin-top: 16px; color: rgba(255, 255, 255, 0.85);
           font-size: 15px; font-weight: 500; letter-spacing: 0.5px;
           animation: pulse-text 2s ease-in-out infinite;
         }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        @keyframes logo-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .8; transform: scale(0.95); } }
+        @keyframes logo-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .85; transform: scale(0.96); } }
         @keyframes pulse-text { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
       </style>
       <div id="initial-loader">

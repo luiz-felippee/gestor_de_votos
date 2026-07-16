@@ -25,27 +25,34 @@ export default defineConfig({
         short_name: 'Gestor Votos',
         description: 'Plataforma Premium de Gestão de Campanhas',
         theme_color: '#4f46e5',
-        background_color: '#f8fafc',
+        // Cor da marca: é o fundo do SPLASH nativo (Android monta a tela de abertura
+        // do app instalado com background_color + ícone). Antes era cinza claro e a
+        // abertura não parecia o app.
+        background_color: '#4f46e5',
         display: 'standalone',
         // Sem trava de orientação: a planilha e o mapa ficam bem melhores em paisagem.
         start_url: '/',
         scope: '/',
         categories: ['business', 'productivity'],
+        // Escada completa de tamanhos: cada dispositivo/densidade de tela escolhe o
+        // mais próximo pelo atributo sizes (launcher Android, atalhos, install prompt,
+        // splash). Gerados a partir do icon-512 (scripts em PowerShell/System.Drawing).
         icons: [
+          ...[64, 96, 128, 144, 192, 256, 384, 512].map((s) => ({
+            src: `/icon-${s}.png`,
+            sizes: `${s}x${s}`,
+            type: 'image/png',
+          })),
+          // 'maskable' separado do 'any' e com arquivo próprio: fundo cheio na cor da
+          // marca + ícone a 80% (zona segura) — o recorte redondo do Android não corta nada.
           {
-            src: '/icon-192.png',
+            src: '/maskable-192.png',
             sizes: '192x192',
             type: 'image/png',
+            purpose: 'maskable',
           },
           {
-            src: '/icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-          },
-          // 'maskable' separado do 'any': juntos ('any maskable'), o Android usa a
-          // mesma imagem para os dois fins e recorta o ícone sem margem de segurança.
-          {
-            src: '/icon-512.png',
+            src: '/maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
