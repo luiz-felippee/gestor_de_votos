@@ -148,19 +148,12 @@ export function LoginPage() {
   ]
 
   return (
-    <main className="min-h-[100dvh] bg-slate-950 font-sans dark:bg-slate-950">
-      {/* Mobile: conjunto centralizado sobre o azul · Desktop: duas colunas em tela cheia */}
+    <main className="min-h-[100dvh] bg-white font-sans dark:bg-slate-950 lg:bg-slate-950">
+      {/* Mobile: página plana e sóbria · Desktop: duas colunas em tela cheia */}
       <div className="relative flex min-h-[100dvh] flex-col max-lg:justify-center lg:grid lg:grid-cols-[1.05fr_1fr]">
 
-        {/* Fundo cobrindo a tela toda — apenas mobile (halo azul no topo e na base) */}
-        <div className="pointer-events-none absolute inset-0 overflow-hidden lg:hidden">
-          <div className="absolute inset-0 bg-gradient-to-b from-[#1a2352] via-[#28347a] to-[#161d47]" />
-          <div className="absolute inset-0 [background:radial-gradient(120%_55%_at_50%_2%,rgba(129,140,248,0.38),transparent_60%)]" />
-          <div className="absolute inset-0 opacity-[0.06] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:26px_26px]" />
-        </div>
-
         {/* ===================== Painel da marca ===================== */}
-        <div className="relative isolate flex shrink-0 flex-col overflow-hidden px-6 pb-7 pt-[calc(env(safe-area-inset-top)+1rem)] sm:px-10 sm:pb-8 lg:px-14 lg:py-14 xl:px-20">
+        <div className="relative isolate flex shrink-0 flex-col overflow-hidden px-6 pb-8 pt-[calc(env(safe-area-inset-top)+1.25rem)] sm:px-10 lg:px-14 lg:py-14 xl:px-20">
           {/* Fundo com gradiente + orbes — apenas desktop (no mobile usamos o full-screen acima) */}
           <div className="pointer-events-none absolute inset-0 -z-10 hidden lg:block">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950" />
@@ -169,23 +162,12 @@ export function LoginPage() {
             <div className="absolute inset-0 opacity-[0.04] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:28px_28px]" />
           </div>
 
-          {/* Logo */}
+          {/* Logo — no mobile fica discreto sobre o fundo claro; no desktop, sobre o painel escuro */}
           <div className="relative flex shrink-0 items-center justify-center gap-2.5 lg:justify-start">
-            <Logo iconClassName="h-9 w-9 lg:h-10 lg:w-10" />
-            <span className="text-lg font-bold tracking-tight text-white">Gestor de Votos</span>
-          </div>
-
-          {/* Hero — mobile (compacto) */}
-          <div className="mt-6 flex flex-col items-center text-center lg:hidden">
-            <h1 className="text-[21px] font-extrabold leading-[1.2] tracking-tight text-white">
-              A inteligência de{' '}
-              <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
-                campanhas vitoriosas
-              </span>
-            </h1>
-            <p className="mt-2 max-w-xs text-[13px] leading-relaxed text-slate-400">
-              Lideranças, eleitores e metas — tudo em uma só plataforma.
-            </p>
+            <Logo iconClassName="h-8 w-8 lg:h-10 lg:w-10" />
+            <span className="text-[17px] font-bold tracking-tight text-slate-900 dark:text-white lg:text-lg lg:text-white">
+              Gestor de Votos
+            </span>
           </div>
 
           {/* Hero — desktop */}
@@ -226,9 +208,9 @@ export function LoginPage() {
         </div>
 
         {/* ===================== Painel do formulário ===================== */}
-        <div className="relative z-20 flex flex-col px-4 pt-3 lg:flex-1 lg:justify-center lg:bg-white lg:px-12 lg:pt-0 dark:lg:bg-slate-900">
-          {/* Mobile: card flutuante sobre o azul · Desktop: coluna direita em tela cheia */}
-          <div className="mx-auto w-full max-w-[25rem] rounded-3xl bg-white p-6 shadow-2xl shadow-black/40 ring-1 ring-black/5 sm:p-7 lg:rounded-none lg:bg-transparent lg:p-0 lg:shadow-none lg:ring-0 dark:bg-slate-900 dark:ring-white/5 lg:dark:bg-transparent lg:dark:ring-0">
+        <div className="relative z-20 flex flex-col px-6 pt-2 lg:flex-1 lg:justify-center lg:bg-white lg:px-12 lg:pt-0 dark:lg:bg-slate-900">
+          {/* Mobile: formulário direto na página, sem card · Desktop: coluna direita em tela cheia */}
+          <div className="mx-auto w-full max-w-[25rem] lg:p-0">
 
             {/* Cabeçalho */}
             <div className="mb-6">
@@ -299,9 +281,10 @@ export function LoginPage() {
                     'Entrando...'
                   ) : (
                     <>
-                      <LogIn className="h-5 w-5" />
-                      Entrar na plataforma
-                      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                      <LogIn className="hidden h-5 w-5 lg:block" />
+                      <span className="lg:hidden">Entrar</span>
+                      <span className="hidden lg:inline">Entrar na plataforma</span>
+                      <ArrowRight className="hidden h-4 w-4 transition-transform group-hover:translate-x-0.5 lg:block" />
                     </>
                   )}
                 </button>
@@ -365,8 +348,8 @@ export function LoginPage() {
             )}
           </div>
 
-          {/* Rodapé de segurança (mobile) — sobre o azul, abaixo do card */}
-          <p className="mt-6 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-400 lg:hidden">
+          {/* Rodapé de segurança (mobile) */}
+          <p className="mt-8 flex items-center justify-center gap-1.5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] text-xs font-medium text-slate-500 lg:hidden dark:text-slate-500">
             <ShieldCheck className="h-3.5 w-3.5" />
             Conexão segura e dados criptografados
           </p>
@@ -402,8 +385,10 @@ const labelClass =
 const inputBase =
   'w-full h-12 rounded-xl border border-slate-200 bg-slate-50/70 text-[15px] font-medium text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 dark:border-slate-700/60 dark:bg-slate-900/60 dark:text-white dark:focus:border-brand-500 dark:focus:bg-slate-900'
 
+// Mobile: sólido e sem sombra colorida (bg-none desliga o degradê e deixa o bg-brand-600
+// aparecer). Desktop (lg:) mantém o visual aprovado com degradê e brilho.
 const btnPrimaryClass =
-  'group flex w-full h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 px-4 text-[15px] font-bold text-white shadow-lg shadow-brand-600/25 transition hover:shadow-xl hover:shadow-brand-600/30 hover:brightness-[1.07] focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-[0.99] disabled:opacity-60 dark:focus:ring-offset-slate-950'
+  'group flex w-full h-12 items-center justify-center gap-2 rounded-xl bg-brand-600 bg-none px-4 text-[15px] font-bold text-white transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 active:scale-[0.99] disabled:opacity-60 dark:focus:ring-offset-slate-950 lg:bg-gradient-to-r lg:from-brand-600 lg:to-indigo-600 lg:shadow-lg lg:shadow-brand-600/25 lg:hover:bg-brand-600 lg:hover:shadow-xl lg:hover:shadow-brand-600/30 lg:hover:brightness-[1.07]'
 
 const btnSecondaryClass =
   'flex w-full h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-[15px] font-bold text-slate-700 transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/60'
