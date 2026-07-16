@@ -189,7 +189,7 @@ export function CabosPage() {
     <div className="mx-auto max-w-5xl px-4 py-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="mb-1 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="mb-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Gestão de Liderança
           </h1>
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -608,25 +608,20 @@ function CardCabo({
           <span className="truncate">{[cabo.bairro_atuacao, cabo.cidade].filter(Boolean).join(' · ') || 'Sem região definida'}</span>
         </div>
 
-        {/* Meta vs realizado */}
-        <div className="mt-6 rounded-xl bg-slate-50 p-3 dark:bg-slate-800/40">
+        {/* Meta vs realizado — seção achatada (sem caixa dentro de caixa) */}
+        <div className="mt-5">
           <div className="mb-2 flex items-end justify-between">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Progresso</span>
-              <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                {realizado} <span className="text-xs font-semibold text-slate-400">/ {meta || '—'} eleitores</span>
-              </span>
-            </div>
-            <span className={`text-sm font-bold ${pct >= 100 ? 'text-green-500' : 'text-brand-500'}`}>
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+              {realizado} <span className="text-xs font-semibold text-slate-400">/ {meta || '—'} eleitores</span>
+            </span>
+            <span className={`text-sm font-bold ${pct >= 100 ? 'text-emerald-600 dark:text-emerald-500' : 'text-brand-600 dark:text-brand-400'}`}>
               {meta > 0 ? `${pct}%` : 'sem meta'}
             </span>
           </div>
-          <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-200/60 dark:bg-slate-700/50">
+          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
             <div
-              className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 ease-out ${
-                pct >= 100 
-                  ? 'bg-gradient-to-r from-green-400 to-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]' 
-                  : 'bg-gradient-to-r from-brand-400 to-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]'
+              className={`absolute left-0 top-0 h-full rounded-full transition-all duration-700 ease-out ${
+                pct >= 100 ? 'bg-emerald-500' : 'bg-brand-500'
               }`}
               style={{ width: `${pct}%` }}
             />

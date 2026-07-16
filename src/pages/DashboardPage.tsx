@@ -527,17 +527,13 @@ function Kpi({
   colorClass: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400">{titulo}</p>
-          <p className="mt-1 sm:mt-2 text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white">{valor}</p>
-        </div>
-        <div className={`flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-opacity-10 dark:bg-opacity-20 transition-transform group-hover:scale-110 ${colorClass}`}>
-          <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-        </div>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
+      {/* Ícone discreto no topo; o número lidera; o rótulo vem abaixo, sem competir por largura. */}
+      <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-lg ${colorClass}`}>
+        <Icon className="h-5 w-5" />
       </div>
-      <div className={`absolute -bottom-2 -right-2 h-16 w-16 rounded-full blur-2xl opacity-0 transition-opacity group-hover:opacity-40 ${colorClass.replace('text-', 'bg-').split(' ')[0]}`} />
+      <p className="text-3xl font-black leading-none tracking-tight text-slate-900 dark:text-white">{valor}</p>
+      <p className="mt-1.5 text-[13px] font-medium leading-snug text-slate-500 dark:text-slate-400">{titulo}</p>
     </div>
   )
 }

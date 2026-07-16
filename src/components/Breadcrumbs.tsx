@@ -29,7 +29,7 @@ export function Breadcrumbs() {
   }
 
   return (
-    <nav className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8 flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
+    <nav className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8 hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
       <Link
         to="/"
         className="flex items-center gap-1 hover:text-brand-600 dark:hover:text-brand-400 transition-colors"

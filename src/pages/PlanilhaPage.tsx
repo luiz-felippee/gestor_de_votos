@@ -248,7 +248,7 @@ export function PlanilhaPage() {
   }
 
   const exportBtn =
-    'flex-1 sm:flex-none flex justify-center items-center gap-2 rounded-xl border border-slate-200/50 bg-white/50 backdrop-blur-sm px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-brand-500/50 hover:bg-white hover:text-brand-600 hover:shadow active:scale-95 disabled:opacity-60 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-brand-400/50 dark:hover:bg-slate-800 dark:hover:text-brand-400'
+    'shrink-0 flex justify-center items-center gap-2 whitespace-nowrap rounded-xl border border-slate-200/50 bg-white/50 backdrop-blur-sm px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:border-brand-500/50 hover:bg-white hover:text-brand-600 hover:shadow active:scale-95 disabled:opacity-60 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:border-brand-400/50 dark:hover:bg-slate-800 dark:hover:text-brand-400'
   const filtroSelectClass =
     'w-full sm:w-auto rounded-xl border border-slate-200/50 bg-white/50 backdrop-blur-sm px-4 py-2.5 text-base sm:text-sm font-medium text-slate-700 outline-none transition-all hover:bg-white hover:shadow-sm focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-300 dark:hover:bg-slate-800 dark:focus:bg-slate-900'
 
@@ -256,7 +256,7 @@ export function PlanilhaPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 animate-fade-in flex flex-col h-full">
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Planilha de Votação
           </h1>
           <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
@@ -267,14 +267,16 @@ export function PlanilhaPage() {
             </span>
           </p>
         </div>
-        <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full sm:w-auto">
+        {/* No celular vira uma faixa que rola na horizontal (sem quebrar em 2 linhas);
+            a borda sangra até as margens pra sinalizar que há mais itens ao lado. */}
+        <div className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0 lg:flex-nowrap">
           <button onClick={() => setShowImport(true)} className={exportBtn}>
             <Upload className="h-4 w-4" />
             <span>Importar</span>
           </button>
           <button onClick={() => window.print()} className={exportBtn}>
             <Printer className="h-4 w-4" />
-            <span>Imprimir / PDF</span>
+            <span>PDF</span>
           </button>
           <button onClick={() => exportar('xlsx')} disabled={exportando} className={exportBtn}>
             {exportando ? 'Exportando...' : 'Exportar Excel'}
