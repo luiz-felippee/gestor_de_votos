@@ -42,6 +42,9 @@ campanhasRouter.get(
     if (!campanha) {
       return res.status(404).json({ error: 'Campanha não encontrada.' });
     }
+    // Landing pública do link de cadastro (WhatsApp, dados móveis): nome/foto/trajetória
+    // mudam raramente. 5 min de cache evita baixar de novo a cada navegação/refresh.
+    res.set('Cache-Control', 'public, max-age=300');
     res.json(campanha);
   }),
 );

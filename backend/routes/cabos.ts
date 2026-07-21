@@ -62,6 +62,10 @@ cabosRouter.get(
         _count: { select: { eleitores: true } },
       },
       orderBy: { nome: 'asc' },
+      // Sem paginação de propósito: a tela de Lideranças agrupa liderança + seus
+      // multiplicadores no cliente e precisa do conjunto inteiro para somar os votos.
+      // Este take é só uma trava de segurança contra payload sem limite.
+      take: 1000,
     });
 
     // Votos diretos de cada cabo, e o total da liderança = ela + seus multiplicadores.
@@ -74,6 +78,13 @@ cabosRouter.get(
         somaMultiplicadores.set(c.lider_id, (somaMultiplicadores.get(c.lider_id) ?? 0) + c._count.eleitores);
       }
     }
+
+    // Acesso público (link de cadastro compartilhado no WhatsApp, aberto em dados
+    // móveis): o dropdown "quem te indicou" muda pouco, então cacheia por 60s no
+    // aparelho de quem abriu o link — evita rebaixar essa lista a cada navegação
+    // dentro do formulário. Autenticado NÃO cacheia (dado sensível por campanha,
+    // e o hook já cacheia 5 min no cliente).
+    if (!req.user) res.set('Cache-Control', 'public, max-age=60');
 
     // Só as fotos base64 vão pelo endpoint cacheável (nao manda o base64 na lista).
     // URLs http/legadas seguem como estavam.

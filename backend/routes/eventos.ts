@@ -39,6 +39,7 @@ router.get(
     const eventos = await prisma.evento.findMany({
       where: escopoCampanha(req),
       orderBy: { data_hora: 'asc' },
+      take: 1000, // trava de segurança contra payload sem limite (agenda cresce com o tempo)
     });
     res.json(eventos);
   })

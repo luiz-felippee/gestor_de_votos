@@ -26,6 +26,7 @@ usuariosRouter.get(
       where: escopoCampanha(req),
       select: USUARIO_PUBLICO,
       orderBy: { nome: 'asc' },
+      take: 1000, // trava de segurança; a tela lista todos os usuários da campanha
     });
     res.json(usuarios);
   }),
