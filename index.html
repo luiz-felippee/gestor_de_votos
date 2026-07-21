@@ -29,11 +29,26 @@
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#4f46e5" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1e1b4b" />
     
-    <!-- Preload fonte principal para eliminar FOIT -->
+    <!-- Fonte principal, carregada SEM bloquear o primeiro paint.
+         Antes era um <link rel="stylesheet"> síncrono: o Chrome não pinta NADA
+         (nem o loader inline abaixo, que não depende de fonte nenhuma) enquanto uma
+         folha de estilo em <head> não termina de carregar — em 4G isso significa
+         esperar DNS+TLS+request para um domínio de terceiros só para mostrar a tela
+         de abertura. O truque abaixo (media="print" até o onload trocar para "all")
+         faz o navegador buscar o CSS em paralelo sem travar a renderização; a
+         <noscript> mantém o carregamento normal caso o JS esteja desligado. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap"
+      media="print"
+      onload="this.media='all'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" />
+    </noscript>
+
     <title>Gestor de Votos</title>
   </head>
   <body>
