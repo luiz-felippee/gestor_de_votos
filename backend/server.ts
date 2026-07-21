@@ -86,7 +86,11 @@ app.use((req, res, next) => {
 // --- Webhooks (Stripe precisa do body cru) ---
 app.use('/api/webhook', express.raw({ type: 'application/json' }), require('./routes/webhook').default);
 
-app.use(express.json());
+// Limite explícito (era o default do Express, 100kb): baixo demais para o corpo de
+// uma importação de planilha caso o front não fragmente em lotes. O front já envia
+// em lotes de ~300 linhas (ver ImportModal.tsx), então isto é defesa em profundidade,
+// não a proteção principal — 2mb ainda é um teto, não "sem limite".
+app.use(express.json({ limit: '2mb' }));
 app.use(compression());
 
 import { cache } from './lib/cache';

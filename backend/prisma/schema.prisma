@@ -1,10 +1,14 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  // pg_trgm: habilita índice GIN de trigrama para os campos de busca livre
+  // (contains) de eleitores.ts — sem isso, todo filtro "contains" é table scan.
+  extensions = [pg_trgm]
 }
 
 enum PerfilAcesso {
@@ -127,6 +131,14 @@ model Eleitor {
   @@index([status])
   @@index([nome_busca])
   @@index([telefone])
+  // Trigram (GIN): acelera os filtros "contains" da busca livre da planilha
+  // (nome, telefone, bairro, cidade, local de votação). Um índice B-tree comum
+  // não ajuda em LIKE '%texto%' — sem isto, cada busca livre é table scan.
+  @@index([nome_busca(ops: raw("gin_trgm_ops"))], type: Gin, map: "eleitores_nome_busca_trgm_idx")
+  @@index([telefone(ops: raw("gin_trgm_ops"))], type: Gin, map: "eleitores_telefone_trgm_idx")
+  @@index([bairro(ops: raw("gin_trgm_ops"))], type: Gin, map: "eleitores_bairro_trgm_idx")
+  @@index([cidade(ops: raw("gin_trgm_ops"))], type: Gin, map: "eleitores_cidade_trgm_idx")
+  @@index([local_votacao(ops: raw("gin_trgm_ops"))], type: Gin, map: "eleitores_local_votacao_trgm_idx")
   @@map("eleitores")
 }
 

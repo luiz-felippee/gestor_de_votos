@@ -460,7 +460,7 @@ eleitoresRouter.post(
   wrap(async (req, res) => {
     const lote = await prisma.eleitor.findMany({
       where: { lat: null, ...escopoCampanha(req) },
-      take: 200, // A maioria é resolvida na hora pelo TSE (sem rede)
+      take: 200, // teto de linhas candidatas; quem manda de verdade é o tempo (abaixo)
       select: { id: true, local_votacao: true, cidade: true, zona: true, secao: true },
     });
 
@@ -468,7 +468,19 @@ eleitoresRouter.post(
     const cacheLocal = new Map<string, { lat: number; lng: number } | null>();
     let geocodificados = 0;
 
+    // Trava por TEMPO, não só por contagem: a maioria dos 200 resolve na hora pelo
+    // TSE (sem rede), mas quando muitos precisam do fallback Nominatim (~1,1s de
+    // espera cada), o laço podia passar de 400s — bem acima do timeout de qualquer
+    // requisição HTTP. Aqui ele para com folga antes disso e devolve o que já fez;
+    // quem chama (mutirão manual) simplesmente chama de novo para continuar de onde
+    // parou (mesmo contrato de resposta de sempre: processados/geocodificados/restantes).
+    const inicio = Date.now();
+    const TEMPO_MAX_MS = 20_000;
+    let processados = 0;
+
     for (const e of lote) {
+      if (Date.now() - inicio > TEMPO_MAX_MS) break;
+      processados++;
       // 1) TSE por zona/seção — exato e sem rede
       let coord: { lat: number; lng: number } | null | undefined = coordPorSecao(e.zona, e.secao);
 
@@ -499,7 +511,7 @@ eleitoresRouter.post(
       where: { lat: null, ...escopoCampanha(req) },
     });
     if (geocodificados > 0) notificarMudanca(req.user?.campanha_id);
-    res.json({ processados: lote.length, geocodificados, restantes });
+    res.json({ processados, geocodificados, restantes });
   }),
 );
 

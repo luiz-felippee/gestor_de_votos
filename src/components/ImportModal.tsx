@@ -10,12 +10,34 @@ interface ImportModalProps {
   onSuccess: () => void
 }
 
+// Envia em lotes: uma planilha grande inteira numa só requisição já esbarrou no
+// limite de tamanho do corpo da requisição (era o default de 100kb do Express) e,
+// mesmo sem isso, uma request gigante deixa o navegador sem feedback de progresso
+// por minutos. 300 linhas por lote fica bem abaixo do limite (2mb) mesmo com campos
+// grandes (observações, endereço) e dá um progresso visível a cada poucos segundos.
+const TAMANHO_LOTE = 300
+
+interface EleitorImportado {
+  nome?: string
+  telefone?: string
+  bairro?: string
+  cidade?: string
+  local_votacao?: string
+  zona?: string
+  secao?: string
+  cpf?: string
+  titulo_eleitor?: string
+  data_nascimento?: string
+  observacoes?: string
+}
+
 export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [progresso, setProgresso] = useState<{ atual: number; total: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,10 +73,10 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false })
 
       // Mapeamento super flexível de colunas
-      const eleitoresParaEnviar = jsonData.map((row: any) => {
+      const eleitoresParaEnviar: EleitorImportado[] = jsonData.map((row: any) => {
         // Encontra chaves ignorando case e espaços
         const findKey = (keywords: string[]) => {
-          const key = Object.keys(row).find(k => 
+          const key = Object.keys(row).find(k =>
             keywords.some(kw => k.toLowerCase().trim().includes(kw))
           )
           return key ? row[key] : undefined
@@ -75,15 +97,48 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
         }
       })
 
-      const response = await api.importarEleitores(eleitoresParaEnviar)
-      setSuccessMsg(`${response.inserted} eleitores importados de um total de ${response.totalSent} encontrados na planilha (duplicados ignorados).`)
-      setTimeout(() => {
-        onSuccess()
-      }, 3000)
+      // Envia em lotes (ver TAMANHO_LOTE) em vez de tudo numa requisição só: planilhas
+      // grandes já batiam no limite de tamanho do corpo da requisição, e uma request
+      // gigante travava a tela sem feedback nenhum de progresso.
+      const totalLotes = Math.ceil(eleitoresParaEnviar.length / TAMANHO_LOTE)
+      let totalInserido = 0
+      let lotesComErro = 0
+      let primeiroErro: string | null = null
+
+      for (let i = 0; i < totalLotes; i++) {
+        const lote = eleitoresParaEnviar.slice(i * TAMANHO_LOTE, (i + 1) * TAMANHO_LOTE)
+        setProgresso({ atual: i + 1, total: totalLotes })
+        try {
+          const resposta = await api.importarEleitores(lote)
+          totalInserido += resposta.inserted
+        } catch (err: any) {
+          // Um lote com problema não derruba os demais: segue tentando o resto e
+          // reporta o total de falhas ao final, para não perder o que já deu certo.
+          lotesComErro++
+          if (!primeiroErro) primeiroErro = err.message || 'Erro desconhecido'
+        }
+      }
+
+      setProgresso(null)
+      if (lotesComErro > 0) {
+        setError(
+          `${totalInserido} eleitores importados, mas ${lotesComErro} lote(s) falharam ` +
+          `(de ${totalLotes} no total). Primeiro erro: ${primeiroErro}`,
+        )
+      } else {
+        setSuccessMsg(
+          `${totalInserido} eleitores importados de um total de ${eleitoresParaEnviar.length} ` +
+          `encontrados na planilha (duplicados ignorados).`,
+        )
+        setTimeout(() => {
+          onSuccess()
+        }, 3000)
+      }
     } catch (err: any) {
       setError(err.message || 'Erro na importação.')
     } finally {
       setLoading(false)
+      setProgresso(null)
     }
   }
 
@@ -208,7 +263,7 @@ export function ImportModal({ onClose, onSuccess }: ImportModalProps) {
                 {loading ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                    Processando...
+                    {progresso ? `Lote ${progresso.atual} de ${progresso.total}...` : 'Processando...'}
                   </>
                 ) : (
                   <>Importar Eleitores</>
