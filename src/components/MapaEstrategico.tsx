@@ -382,7 +382,18 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
           }}
           onEachFeature={(feature: any, layer: any) => {
             const c = countPorCidadeNorm.get(normalizar(feature.properties.nome)) || 0
-            layer.bindTooltip(`<strong>${feature.properties.nome}</strong><br/>${c} eleitor${c !== 1 ? 'es' : ''}`, { sticky: true })
+            if (c > 0) {
+              // Rótulo fixo (sempre visível, sem precisar de hover) só nas cidades
+              // com eleitores — evita poluir o mapa com ~180 municípios vazios.
+              layer.bindTooltip(feature.properties.nome, {
+                permanent: true,
+                direction: 'center',
+                className: 'rotulo-cidade',
+                opacity: 0.95,
+              })
+            } else {
+              layer.bindTooltip(`<strong>${feature.properties.nome}</strong><br/>${c} eleitor${c !== 1 ? 'es' : ''}`, { sticky: true })
+            }
             layer.on({
               click: () => onCidadeSelect(cidadeSelecionada === feature.properties.nome ? null : feature.properties.nome)
             })
