@@ -10,6 +10,7 @@ import { maskTelefone, isTelefoneValido, generateSlug } from '../lib/format'
 import { LocalVotacaoAutocomplete } from '../components/LocalVotacaoAutocomplete'
 import { saveToOfflineQueue } from '../lib/offline'
 import { updateFavicon } from '../lib/favicon'
+import { cssVarsDaCor } from '../lib/colorRamp'
 import type { Campanha } from '../lib/types'
 
 interface FormState {
@@ -71,6 +72,9 @@ export function CadastroPage() {
     }
     return () => updateFavicon(null)
   }, [campanha])
+
+  // Cor da campanha: sobrescreve --brand-* só dentro desta página (ver colorRamp.ts).
+  const corVars = useMemo(() => cssVarsDaCor(campanha?.cor), [campanha?.cor])
 
   // Encontra o cabo se vier pelo query param antigo, OU pelo novo slug
   const caboEncontrado = useMemo(() => {
@@ -246,7 +250,7 @@ export function CadastroPage() {
   }
 
   return (
-    <div className="flex min-h-[100dvh] min-h-safe items-start justify-center bg-slate-50 py-6 pb-safe pt-safe sm:py-12 sm:px-4">
+    <div className="flex min-h-[100dvh] min-h-safe items-start justify-center bg-slate-50 py-6 pb-safe pt-safe sm:py-12 sm:px-4" style={corVars}>
       <div className="w-full max-w-lg overflow-hidden sm:rounded-2xl bg-white shadow-2xl dark:bg-slate-900 border-x border-y sm:border border-slate-200 dark:border-slate-800">
         
         {/* Cover Image & Avatar */}

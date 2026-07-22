@@ -31,6 +31,10 @@ model Campanha {
   slug                 String?  @unique
   ativa                Boolean  @default(true)
   foto_url             String?
+  // Cor da marca da campanha (hex, ex: "#4f46e5"). Usada só na página pública
+  // de cadastro (/c/:slug) — o painel interno continua com a cor padrão pra
+  // todo mundo, então mudar isso não afeta o resto do app.
+  cor                  String   @default("#4f46e5")
   cargo_ultima_eleicao String?
   ano_ultima_eleicao   String?
   votos_ultima_eleicao Int?

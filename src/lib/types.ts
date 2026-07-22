@@ -24,6 +24,7 @@ export interface Campanha {
   ativa: boolean
   foto_url?: string | null
   trajetoria?: string | null
+  cor?: string | null
   cargo_ultima_eleicao?: string | null
   ano_ultima_eleicao?: string | null
   votos_ultima_eleicao?: number | null

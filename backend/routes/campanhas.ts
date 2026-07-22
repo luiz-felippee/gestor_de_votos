@@ -5,6 +5,10 @@ import { requireAuth, requireSuperAdmin, wrap, gerarSlug, limparTokenCache } fro
 
 const campanhasRouter = Router();
 
+// Valida "#rgb" ou "#rrggbb": o valor vai direto para uma CSS custom property
+// no front (ver cssVarsDaCor), então precisa ser garantidamente uma cor hex.
+const HEX_COR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
 // --- Campanhas (provisionamento — somente super-admin) ---
 campanhasRouter.get(
   '/campanhas',
@@ -37,6 +41,7 @@ campanhasRouter.get(
         slug: true,
         foto_url: true,
         trajetoria: true,
+        cor: true,
       },
     });
     if (!campanha) {
@@ -55,7 +60,7 @@ campanhasRouter.post(
   requireAuth,
   requireSuperAdmin,
   wrap(async (req, res) => {
-    const { nome, admin_nome, admin_email, admin_senha, foto_url, trajetoria, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
+    const { nome, admin_nome, admin_email, admin_senha, foto_url, trajetoria, cor, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
     if (!nome || !admin_email || !admin_senha) {
       return res
         .status(400)
@@ -66,13 +71,17 @@ campanhasRouter.post(
         .status(400)
         .json({ error: 'A foto do candidato e toda sua trajetória são obrigatórias.' });
     }
+    if (cor !== undefined && cor !== null && !HEX_COR.test(String(cor))) {
+      return res.status(400).json({ error: 'Cor inválida (use um hex, ex: #4f46e5).' });
+    }
     try {
       const campanha = await prisma.campanha.create({
-        data: { 
-          nome: String(nome).trim(), 
+        data: {
+          nome: String(nome).trim(),
           slug: gerarSlug(String(nome)),
           foto_url: String(foto_url),
           trajetoria: String(trajetoria).trim(),
+          ...(cor ? { cor: String(cor) } : {}),
           cargo_ultima_eleicao: cargo_ultima_eleicao ? String(cargo_ultima_eleicao).trim() : null,
           ano_ultima_eleicao: ano_ultima_eleicao ? String(ano_ultima_eleicao).trim() : null,
           votos_ultima_eleicao: votos_ultima_eleicao ? parseInt(votos_ultima_eleicao, 10) : null
@@ -105,18 +114,26 @@ campanhasRouter.put(
   requireAuth,
   requireSuperAdmin,
   wrap(async (req, res) => {
-    const { nome, slug, foto_url, trajetoria, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
+    const { nome, slug, foto_url, trajetoria, cor, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
+    if (cor !== undefined && cor !== null && !HEX_COR.test(String(cor))) {
+      return res.status(400).json({ error: 'Cor inválida (use um hex, ex: #4f46e5).' });
+    }
     try {
       const campanha = await prisma.campanha.update({
         where: { id: String(req.params.id) },
         data: {
+          // Padrão em todos os campos opcionais abaixo: campo AUSENTE do corpo (undefined)
+          // não mexe no valor atual; campo presente mas vazio/null LIMPA o valor. Antes,
+          // foto_url/cargo/ano/votos usavam só "valor ? ... : null" — um PUT parcial que
+          // não reenviasse esses campos (ex: só trocar a cor) apagava todos eles.
           nome: nome ? String(nome).trim() : undefined,
           slug: slug ? gerarSlug(String(slug)) : undefined,
-          foto_url: foto_url ? String(foto_url) : null,
+          foto_url: foto_url !== undefined ? (foto_url ? String(foto_url) : null) : undefined,
           trajetoria: trajetoria !== undefined ? (trajetoria ? String(trajetoria).trim() : null) : undefined,
-          cargo_ultima_eleicao: cargo_ultima_eleicao ? String(cargo_ultima_eleicao).trim() : null,
-          ano_ultima_eleicao: ano_ultima_eleicao ? String(ano_ultima_eleicao).trim() : null,
-          votos_ultima_eleicao: votos_ultima_eleicao ? parseInt(votos_ultima_eleicao, 10) : null
+          cor: cor ? String(cor) : undefined,
+          cargo_ultima_eleicao: cargo_ultima_eleicao !== undefined ? (cargo_ultima_eleicao ? String(cargo_ultima_eleicao).trim() : null) : undefined,
+          ano_ultima_eleicao: ano_ultima_eleicao !== undefined ? (ano_ultima_eleicao ? String(ano_ultima_eleicao).trim() : null) : undefined,
+          votos_ultima_eleicao: votos_ultima_eleicao !== undefined ? (votos_ultima_eleicao ? parseInt(votos_ultima_eleicao, 10) : null) : undefined
         },
       });
       res.json(campanha);

@@ -6,9 +6,11 @@ export interface PlanLimits {
   maxCabos: number;
 }
 
+// Limites de plano desativados: todo mundo tem acesso ilimitado, independente
+// do plano contratado. Mantido em Record para não quebrar quem lê PLAN_LIMITS.
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
-  gratis: { maxEleitores: 500, maxCabos: 3 },
-  basico: { maxEleitores: 5000, maxCabos: 10 },
+  gratis: { maxEleitores: 9999999, maxCabos: 9999999 },
+  basico: { maxEleitores: 9999999, maxCabos: 9999999 },
   pro: { maxEleitores: 9999999, maxCabos: 9999999 },
 };
 

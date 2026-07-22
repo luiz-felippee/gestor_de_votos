@@ -14,12 +14,27 @@ interface FormState {
   admin_senha: string
   foto_url: string
   trajetoria: string
+  cor: string
   cargo_ultima_eleicao: string
   ano_ultima_eleicao: string
   votos_ultima_eleicao: string
 }
 
-const VAZIO: FormState = { nome: '', admin_nome: '', admin_email: '', admin_senha: '', foto_url: '', trajetoria: '', cargo_ultima_eleicao: '', ano_ultima_eleicao: '', votos_ultima_eleicao: '' }
+// Só os campos editáveis depois que a campanha já existe — sem credenciais de
+// admin, que só são definidas na criação (a rota PUT nem aceita isso).
+interface EditFormState {
+  nome: string
+  foto_url: string
+  trajetoria: string
+  cor: string
+  cargo_ultima_eleicao: string
+  ano_ultima_eleicao: string
+  votos_ultima_eleicao: string
+}
+
+const COR_PADRAO = '#4f46e5'
+const VAZIO: FormState = { nome: '', admin_nome: '', admin_email: '', admin_senha: '', foto_url: '', trajetoria: '', cor: COR_PADRAO, cargo_ultima_eleicao: '', ano_ultima_eleicao: '', votos_ultima_eleicao: '' }
+const EDIT_VAZIO: EditFormState = { nome: '', foto_url: '', trajetoria: '', cor: COR_PADRAO, cargo_ultima_eleicao: '', ano_ultima_eleicao: '', votos_ultima_eleicao: '' }
 
 export function CampanhasPage() {
   const { usuario } = useAuth()
@@ -31,6 +46,13 @@ export function CampanhasPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [sucesso, setSucesso] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
+
+  // Edição de campanha existente
+  const [editando, setEditando] = useState<Campanha | null>(null)
+  const [editForm, setEditForm] = useState<EditFormState>(EDIT_VAZIO)
+  const [arquivoFotoEdit, setArquivoFotoEdit] = useState<File | null>(null)
+  const [erroEdit, setErroEdit] = useState<string | null>(null)
+  const [salvandoEdit, setSalvandoEdit] = useState(false)
 
   async function recarregar() {
     try {
@@ -48,6 +70,59 @@ export function CampanhasPage() {
 
   function set<K extends keyof FormState>(c: K, v: FormState[K]) {
     setForm((f) => ({ ...f, [c]: v }))
+  }
+
+  function setEdit<K extends keyof EditFormState>(c: K, v: EditFormState[K]) {
+    setEditForm((f) => ({ ...f, [c]: v }))
+  }
+
+  function abrirEdicao(c: Campanha) {
+    setEditando(c)
+    setErroEdit(null)
+    setArquivoFotoEdit(null)
+    setEditForm({
+      nome: c.nome,
+      foto_url: c.foto_url ?? '',
+      trajetoria: c.trajetoria ?? '',
+      cor: c.cor || COR_PADRAO,
+      cargo_ultima_eleicao: c.cargo_ultima_eleicao ?? '',
+      ano_ultima_eleicao: c.ano_ultima_eleicao ?? '',
+      votos_ultima_eleicao: c.votos_ultima_eleicao != null ? String(c.votos_ultima_eleicao) : '',
+    })
+  }
+
+  async function salvarEdicao(e: FormEvent) {
+    e.preventDefault()
+    if (!editando) return
+    setErroEdit(null)
+    if (!editForm.nome.trim()) return setErroEdit('Informe o nome da campanha.')
+    if (!editForm.trajetoria.trim()) return setErroEdit('Informe a trajetória completa do candidato.')
+
+    setSalvandoEdit(true)
+    try {
+      let fotoUrl = editForm.foto_url.trim() || undefined
+      if (arquivoFotoEdit) {
+        const compressed = await compressImage(arquivoFotoEdit)
+        const { url } = await api.uploadArquivo(compressed)
+        fotoUrl = url
+      }
+
+      await api.updateCampanha(editando.id, {
+        nome: editForm.nome.trim(),
+        foto_url: fotoUrl,
+        trajetoria: editForm.trajetoria.trim(),
+        cor: editForm.cor,
+        cargo_ultima_eleicao: editForm.cargo_ultima_eleicao.trim() || undefined,
+        ano_ultima_eleicao: editForm.ano_ultima_eleicao.trim() || undefined,
+        votos_ultima_eleicao: editForm.votos_ultima_eleicao ? Number(editForm.votos_ultima_eleicao) : undefined,
+      })
+      setEditando(null)
+      await recarregar()
+    } catch (err) {
+      setErroEdit((err as Error).message)
+    } finally {
+      setSalvandoEdit(false)
+    }
   }
 
   async function excluir(c: Campanha) {
@@ -94,6 +169,7 @@ export function CampanhasPage() {
         admin_senha: form.admin_senha,
         foto_url: fotoUrl,
         trajetoria: form.trajetoria.trim(),
+        cor: form.cor || undefined,
         cargo_ultima_eleicao: form.cargo_ultima_eleicao.trim() || undefined,
         ano_ultima_eleicao: form.ano_ultima_eleicao.trim() || undefined,
         votos_ultima_eleicao: form.votos_ultima_eleicao ? Number(form.votos_ultima_eleicao) : undefined,
@@ -195,6 +271,22 @@ export function CampanhasPage() {
           </Campo>
         </div>
 
+        <div className="mt-4">
+          <Campo label="Cor da campanha">
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={form.cor}
+                onChange={(e) => set('cor', e.target.value)}
+                className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
+              />
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Usada só na página pública de cadastro do candidato (/c/{'{slug}'}).
+              </span>
+            </div>
+          </Campo>
+        </div>
+
         <h3 className="mt-6 mb-3 text-sm font-bold text-slate-800 dark:text-slate-200 border-b pb-2 dark:border-slate-800">
           Dados de Acesso (Administrador)
         </h3>
@@ -247,14 +339,22 @@ export function CampanhasPage() {
                     <span className="ml-2 text-[10px] font-semibold uppercase text-brand-500">a sua</span>
                   )}
                 </p>
-                {c.id !== usuario?.campanha_id && (
+                <div className="flex shrink-0 gap-2">
                   <button
-                    onClick={() => excluir(c)}
-                    className="shrink-0 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition active:scale-95 dark:bg-red-900/20 dark:text-red-400"
+                    onClick={() => abrirEdicao(c)}
+                    className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 transition active:scale-95 dark:bg-slate-800 dark:text-slate-300"
                   >
-                    Excluir
+                    Editar
                   </button>
-                )}
+                  {c.id !== usuario?.campanha_id && (
+                    <button
+                      onClick={() => excluir(c)}
+                      className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition active:scale-95 dark:bg-red-900/20 dark:text-red-400"
+                    >
+                      Excluir
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="mt-3 flex gap-4 text-sm">
                 <span className="text-slate-500 dark:text-slate-400">
@@ -302,14 +402,22 @@ export function CampanhasPage() {
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{c.total_usuarios ?? 0}</td>
                   <td className="px-4 py-3 text-slate-500">{formatDataHora(c.created_at)}</td>
                   <td className="px-4 py-3 text-right">
-                    {c.id !== usuario?.campanha_id && (
+                    <div className="flex justify-end gap-4">
                       <button
-                        onClick={() => excluir(c)}
-                        className="font-medium text-red-600 hover:underline"
+                        onClick={() => abrirEdicao(c)}
+                        className="font-medium text-slate-600 hover:underline dark:text-slate-300"
                       >
-                        Excluir
+                        Editar
                       </button>
-                    )}
+                      {c.id !== usuario?.campanha_id && (
+                        <button
+                          onClick={() => excluir(c)}
+                          className="font-medium text-red-600 hover:underline"
+                        >
+                          Excluir
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -317,6 +425,109 @@ export function CampanhasPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal de edição */}
+      {editando && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden dark:bg-slate-900 max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <h3 className="font-bold text-lg dark:text-white">Editar campanha</h3>
+              <button
+                onClick={() => setEditando(null)}
+                className="text-slate-400 hover:text-slate-600 text-xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+            <form onSubmit={salvarEdicao} className="p-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+                  {arquivoFotoEdit ? (
+                    <img src={URL.createObjectURL(arquivoFotoEdit)} alt="Preview" className="h-full w-full object-cover" />
+                  ) : editForm.foto_url ? (
+                    <img src={resolverFotoUrl(editForm.foto_url)!} alt="Preview" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-slate-300 dark:text-slate-600">
+                      <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <Campo label="Foto do Candidato">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setArquivoFotoEdit(e.target.files?.[0] || null)}
+                      className="w-full text-sm text-slate-500 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:text-slate-400 dark:file:bg-brand-900/30 dark:file:text-brand-400"
+                    />
+                  </Campo>
+                </div>
+              </div>
+
+              <Campo label="Nome da campanha / candidato *">
+                <input className={inputClass} value={editForm.nome} onChange={(e) => setEdit('nome', e.target.value)} />
+              </Campo>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Campo label="Cargo na Última Eleição">
+                  <input className={inputClass} value={editForm.cargo_ultima_eleicao} onChange={(e) => setEdit('cargo_ultima_eleicao', e.target.value)} placeholder="Ex: Vereador, Deputado..." />
+                </Campo>
+                <Campo label="Ano da Última Eleição">
+                  <input className={inputClass} value={editForm.ano_ultima_eleicao} onChange={(e) => setEdit('ano_ultima_eleicao', e.target.value)} placeholder="Ex: 2020" />
+                </Campo>
+              </div>
+              <Campo label="Quantidade de Votos na Última">
+                <input type="number" className={inputClass} value={editForm.votos_ultima_eleicao} onChange={(e) => setEdit('votos_ultima_eleicao', e.target.value)} />
+              </Campo>
+
+              <Campo label="Trajetória do Candidato *">
+                <textarea
+                  className={`${inputClass} min-h-[100px] resize-y`}
+                  value={editForm.trajetoria}
+                  onChange={(e) => setEdit('trajetoria', e.target.value)}
+                />
+              </Campo>
+
+              <Campo label="Cor da campanha">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={editForm.cor}
+                    onChange={(e) => setEdit('cor', e.target.value)}
+                    className="h-10 w-14 shrink-0 cursor-pointer rounded-lg border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-900"
+                  />
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
+                    Usada só na página pública de cadastro do candidato.
+                  </span>
+                </div>
+              </Campo>
+
+              {erroEdit && (
+                <div className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-400">
+                  {erroEdit}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setEditando(null)}
+                  className="flex-1 rounded-lg border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={salvandoEdit}
+                  className="flex-1 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-700 disabled:opacity-60"
+                >
+                  {salvandoEdit ? 'Salvando...' : 'Salvar alterações'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
