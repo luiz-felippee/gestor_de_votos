@@ -120,6 +120,11 @@ html.is-android body {
 .leaflet-tile-pane {
   image-rendering: auto;
 }
+/* Dark: inverte os tiles Voyager p/ ficarem escuros mantendo ruas e bairros legíveis
+   (o Voyager só existe numa versão clara — não há um "voyager dark" no CARTO). */
+.dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(1.15) saturate(0.35);
+}
 
 /* Mapa: pulso no marcador da cidade líder */
 @keyframes pulseLider {

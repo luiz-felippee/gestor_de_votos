@@ -16,14 +16,18 @@ import 'leaflet.heat'
 import { useTheme } from './ThemeProvider'
 import cidadesPE from '../data/pe-cidades.json'
 
+// Basemap CARTO Voyager (dados do OpenStreetMap) — mostra ruas e nomes de bairro,
+// diferente do light_all/dark_all (minimalistas, sem esse detalhe). No dark, o CSS
+// inverte a camada de tiles (.dark .leaflet-tile-pane em index.css) pra ficar escuro
+// mantendo ruas e rótulos legíveis, já que o Voyager só existe numa versão clara.
 const TILES = {
   light: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
     boundary: '#94a3b8',
     fill: '#1e293b',
   },
   dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
     boundary: '#475569',
     fill: '#cbd5e1',
   },
