@@ -623,10 +623,11 @@ function CardCabo({
           <div className="flex items-center gap-3.5">
             {/* Avatar & Ranking */}
             <div className="relative">
-              <img 
+              <img
                 src={resolverFotoUrl(cabo.foto_url, `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`)!}
-                alt={cabo.nome} 
-                className="h-11 w-11 shrink-0 rounded-full object-cover shadow-inner ring-2 ring-white dark:ring-slate-800" 
+                alt={cabo.nome}
+                loading="lazy"
+                className="h-11 w-11 shrink-0 rounded-full object-cover shadow-inner ring-2 ring-white dark:ring-slate-800"
                 onError={(e) => {
                   e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`;
                 }}
@@ -839,6 +840,7 @@ function LinhaMultiplicador({
       <img
         src={resolverFotoUrl(cabo.foto_url, `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`)!}
         alt={cabo.nome}
+        loading="lazy"
         className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700"
         onError={(e) => {
           e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(cabo.nome)}&background=random`

@@ -39,6 +39,9 @@
          <noscript> mantém o carregamento normal caso o JS esteja desligado. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Preconecta com a API (Render): adianta DNS+TLS+TCP para o primeiro
+         request (login/health), que é justo quando o cold start já pesa. -->
+    <link rel="preconnect" href="%VITE_API_URL%" crossorigin>
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap"
