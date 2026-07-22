@@ -4,12 +4,6 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  // maplibre-gl usa um Web Worker próprio; o pre-bundle do Vite (dev) quebra a URL
-  // do worker (maplibre-gl-worker.mjs → ERR_FAILED) e o mapa não renderiza no dev.
-  // Excluir do optimizeDeps faz o worker carregar do ESM original. Não afeta o build.
-  optimizeDeps: {
-    exclude: ['maplibre-gl'],
-  },
   test: {
     globals: true,
     environment: 'jsdom',
