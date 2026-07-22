@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { AlertCircle, Eye, EyeOff, CheckCircle2, ShieldCheck, Mail, Lock, LogIn, ArrowRight, Sparkles } from 'lucide-react'
 import { Logo } from '../components/Logo'
-import { prewarmBackend } from '../lib/api'
+import { useKeepAlive } from '../hooks/useKeepAlive'
 
 export function LoginPage() {
   const { signIn, signInWithGoogle, signIn2FA, signUp } = useAuth()
@@ -26,10 +26,11 @@ export function LoginPage() {
   const [pendingUserId, setPendingUserId] = useState<string | null>(null)
   const [token2fa, setToken2fa] = useState('')
 
-  // Pre-aquece o backend
-  useEffect(() => {
-    prewarmBackend()
-  }, [])
+  // Pré-aquece o backend e mantém aquecido enquanto a pessoa está na tela de login.
+  // Antes era um prewarm único no mount: se a pessoa demorasse >15min pra digitar a
+  // senha (gerenciador de senha, distração), o Render voltava a dormir e o clique em
+  // "Entrar" pagava o cold start inteiro. Reusa o mesmo hook do pós-login.
+  useKeepAlive(true)
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
@@ -214,7 +215,7 @@ export function LoginPage() {
           <div className="mx-auto w-full max-w-[25rem] lg:p-0">
 
             {/* Cabeçalho */}
-            <div className="mb-6">
+            <div className="mb-6 text-center lg:text-left">
               <h2 className="text-[24px] font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-[26px]">
                 {step === 'login' ? 'Bem-vindo de volta' : 'Verificação de segurança'}
               </h2>
