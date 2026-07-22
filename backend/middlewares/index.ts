@@ -246,6 +246,35 @@ export const esqueciSenhaLimiter = rateLimit({
   keyGenerator: chaveDaConta,
 });
 
+// Chaveia pelo usuário autenticado (token válido) em vez do IP: sem isso, todo mundo
+// atrás do mesmo NAT (ex.: a sede da campanha) dividia uma única cota de 300 req/min,
+// e uso normal de um punhado de pessoas já derrubava a API para o escritório inteiro.
+// Cai para o IP só quando não há token válido (tráfego anônimo, ex.: cadastro público).
+function chaveDoUsuarioOuIp(req: Request): string {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (token) {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
+      return `user:${payload.id}`;
+    } catch {
+      /* token inválido/expirado → cai pro IP */
+    }
+  }
+  return `ip:${req.ip}`;
+}
+
+// Proteção geral (DDoS/scrape) para toda a API: 300 requisições por minuto,
+// por usuário autenticado (ou por IP quando anônimo).
+export const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: chaveDoUsuarioOuIp,
+  message: { error: 'Muitas requisições, por favor tente novamente em 1 minuto.' },
+});
+
 // --- Helpers de escopo multi-campanha ---
 
 // Isolamento multi-campanha: super-admin enxerga tudo; os demais, só a sua campanha.

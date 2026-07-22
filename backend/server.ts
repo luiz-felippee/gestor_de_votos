@@ -25,7 +25,7 @@ import { logger } from './lib/logger';
 export { prisma };
 export {
   requireAuth, requireRole, requireSuperAdmin, optionalAuth,
-  cadastroLimiter, loginLimiter,
+  cadastroLimiter, loginLimiter, apiLimiter,
   escopoCampanha, eleitorNaCampanha,
   wrap, gerarSlug, registrarLog, assinarToken, completarToken,
   requirePlanLimit,
@@ -33,7 +33,7 @@ export {
 } from './middlewares';
 
 // Importa para uso local neste arquivo
-import { verificarTokenSocket } from './middlewares';
+import { verificarTokenSocket, apiLimiter } from './middlewares';
 
 // --- App Express ---
 const app = express();
@@ -114,17 +114,6 @@ io.on('connection', (socket) => {
   if (!token) return;
   const payload = verificarTokenSocket(token);
   if (payload) socket.join(payload.campanha_id ?? 'global');
-});
-
-import { rateLimit } from 'express-rate-limit';
-
-// Proteção DDoS e Scrape Global para a API
-const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minuto
-  max: 300, // Limite de 300 requisições por IP por minuto
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Muitas requisições deste IP, por favor tente novamente em 1 minuto.' }
 });
 
 // --- Routers ---
