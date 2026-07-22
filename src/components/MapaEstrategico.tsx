@@ -3,6 +3,7 @@ import {
   MapContainer,
   TileLayer,
   Marker,
+  CircleMarker,
   Popup,
   Tooltip,
   GeoJSON,
@@ -16,18 +17,17 @@ import 'leaflet.heat'
 import { useTheme } from './ThemeProvider'
 import cidadesPE from '../data/pe-cidades.json'
 
-// Basemap CARTO Voyager (dados do OpenStreetMap) — mostra ruas e nomes de bairro,
-// diferente do light_all/dark_all (minimalistas, sem esse detalhe). No dark, o CSS
-// inverte a camada de tiles (.dark .leaflet-tile-pane em index.css) pra ficar escuro
-// mantendo ruas e rótulos legíveis, já que o Voyager só existe numa versão clara.
+// Basemap CARTO nativo (mesmo do deploy Netlify, commit 44c83de): light_all no
+// claro, dark_all no escuro. Ambos já mostram rua e nome de bairro ao dar zoom
+// numa cidade — não precisa de nenhum truque de inversão de CSS.
 const TILES = {
   light: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
     boundary: '#94a3b8',
     fill: '#1e293b',
   },
   dark: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     boundary: '#475569',
     fill: '#cbd5e1',
   },
@@ -265,6 +265,12 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
 
   const maxCount = Math.max(1, ...pontos.map((p) => p.count))
 
+  // Cidade líder e top 5 por eleitores: rótulo fixo (nome sempre visível, sem
+  // precisar de hover) igual ao mapa de referência do Netlify — evita poluir o
+  // mapa com rótulo nos 185 municípios.
+  const cidadeLider = pontos.reduce<string | null>((lider, p) => p.count === maxCount && maxCount > 0 ? p.cidade : lider, null)
+  const cidadesComRotulo = new Set([...pontos].sort((a, b) => b.count - a.count).slice(0, 5).map((p) => p.cidade))
+
   // Para os locais de votação: top locais com rótulo
   const maxLocalCount = Math.max(1, ...locaisVotacao.map(l => l.count))
   const localLider = locaisVotacao.reduce<string | null>((lider, l) => l.count === maxLocalCount && maxLocalCount > 0 ? l.local : lider, null)
@@ -386,18 +392,7 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
           }}
           onEachFeature={(feature: any, layer: any) => {
             const c = countPorCidadeNorm.get(normalizar(feature.properties.nome)) || 0
-            if (c > 0) {
-              // Rótulo fixo (sempre visível, sem precisar de hover) só nas cidades
-              // com eleitores — evita poluir o mapa com ~180 municípios vazios.
-              layer.bindTooltip(feature.properties.nome, {
-                permanent: true,
-                direction: 'center',
-                className: 'rotulo-cidade',
-                opacity: 0.95,
-              })
-            } else {
-              layer.bindTooltip(`<strong>${feature.properties.nome}</strong><br/>${c} eleitor${c !== 1 ? 'es' : ''}`, { sticky: true })
-            }
+            layer.bindTooltip(`<strong>${feature.properties.nome}</strong><br/>${c} eleitor${c !== 1 ? 'es' : ''}`, { sticky: true })
             layer.on({
               click: () => onCidadeSelect(cidadeSelecionada === feature.properties.nome ? null : feature.properties.nome)
             })
@@ -407,7 +402,30 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
         {modoVisualizacao === 'calor' && (
           <>
             <CamadaCalor pontos={pontosCalor} />
-            <MarkerClusterGroup 
+            {pontos.filter((p) => cidadesComRotulo.has(p.cidade)).map((p) => {
+              const ehLider = p.cidade === cidadeLider
+              return (
+                <CircleMarker
+                  key={p.cidade}
+                  center={[p.lat, p.lng]}
+                  radius={ehLider ? 5 : 3}
+                  pathOptions={{
+                    color: '#ffffff',
+                    weight: 2,
+                    fillColor: ehLider ? '#dc2626' : '#0f172a',
+                    fillOpacity: 1,
+                  }}
+                  eventHandlers={{
+                    click: () => onCidadeSelect(cidadeSelecionada === p.cidade ? null : p.cidade),
+                  }}
+                >
+                  <Tooltip permanent direction="top" offset={[0, -8]} className="!bg-transparent !border-0 !shadow-none !text-slate-800 dark:!text-white !font-bold !text-xs">
+                    {ehLider ? '👑 ' : ''}{p.cidade} · {p.count}
+                  </Tooltip>
+                </CircleMarker>
+              )
+            })}
+            <MarkerClusterGroup
               chunkedLoading 
               maxClusterRadius={isMobile ? 35 : 50}
               showCoverageOnHover={false}
