@@ -13,9 +13,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // 'prompt' (era 'autoUpdate'): a versão nova só assume quando o usuário aceita
-      // o toast — o reload automático derrubava quem estava no meio de um cadastro.
-      registerType: 'prompt',
+      // 'autoUpdate': a versão nova é baixada e assume sozinha (skipWaiting +
+      // clientsClaim), sem depender de o usuário aceitar um toast. Voltamos do 'prompt'
+      // porque quase ninguém clicava em "Atualizar" e ficava preso numa versão antiga
+      // em cache (mapa/tela travados). Contrapartida aceita: a página pode recarregar
+      // sozinha quando sai uma versão nova — raro, só logo após um deploy.
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon-180.png'],
       manifest: {
         id: '/',
