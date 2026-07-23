@@ -37,6 +37,24 @@ export class ApiError extends Error {
   }
 }
 
+// Aborta requisições que travam (ex.: backend do Render acordando de cold start).
+// Sem timeout, um fetch pendurado deixa a tela "carregando" pra sempre, sem erro.
+const TIMEOUT_PADRAO_MS = 20_000
+
+export async function fetchComTimeout(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs = TIMEOUT_PADRAO_MS,
+): Promise<Response> {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal })
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 async function request<T>(
   path: string,
   opts: { method?: string; body?: unknown } = {},
@@ -48,14 +66,17 @@ async function request<T>(
 
   let res: Response
   try {
-    res = await fetch(`${API_BASE}/api${path}`, {
+    res = await fetchComTimeout(`${API_BASE}/api${path}`, {
       method: opts.method ?? 'GET',
       headers,
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     })
-  } catch {
+  } catch (e) {
+    const foiTimeout = e instanceof DOMException && e.name === 'AbortError'
     throw new ApiError(
-      'Não foi possível conectar ao servidor. Verifique se a API está rodando.',
+      foiTimeout
+        ? 'O servidor está demorando a responder (pode estar reiniciando). Tente de novo em alguns segundos.'
+        : 'Não foi possível conectar ao servidor. Verifique sua conexão.',
       0,
     )
   }
@@ -156,7 +177,7 @@ export const api = {
   deleteCabo: (id: string, excluirEleitores?: boolean) =>
     request<void>(`/cabos/${id}${excluirEleitores ? '?excluirEleitores=true' : ''}`, { method: 'DELETE' }),
   createCaboPublic: async (dados: Partial<CaboEleitoral> & { website?: string; campanha_slug?: string }) => {
-    const res = await fetch(`${API_BASE}/api/cabos-public`, {
+    const res = await fetchComTimeout(`${API_BASE}/api/cabos-public`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dados),
@@ -171,11 +192,11 @@ export const api = {
     const token = getToken()
     const headers: Record<string, string> = {}
     if (token) headers['Authorization'] = `Bearer ${token}`
-    const res = await fetch(`${API_BASE}/api/upload`, {
+    const res = await fetchComTimeout(`${API_BASE}/api/upload`, {
       method: 'POST',
       headers,
       body: formData,
-    })
+    }, 60_000) // upload de imagem: teto maior
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || 'Erro ao fazer upload da imagem.')
     return data as { url: string }
@@ -191,7 +212,7 @@ export const api = {
   // ---- Campanhas (super-admin) ----
   getCampanhas: () => request<Campanha[]>('/campanhas'),
   getCampanhaPublic: async (slug: string) => {
-    const res = await fetch(`${API_BASE}/api/campanhas-public/${slug}`)
+    const res = await fetchComTimeout(`${API_BASE}/api/campanhas-public/${slug}`)
     if (!res.ok) throw new Error('Campanha não encontrada')
     return res.json() as Promise<Partial<Campanha>>
   },

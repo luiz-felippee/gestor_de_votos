@@ -10,8 +10,10 @@ import jwt from 'jsonwebtoken';
 import { rateLimit } from 'express-rate-limit';
 import { type PerfilAcesso } from '@prisma/client';
 import { prisma } from '../prismaClient';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+// Segredo já validado no boot (config.ts derruba o servidor se faltar). Importar daqui
+// elimina o antigo fallback `process.env.JWT_SECRET || 'dev-secret'`, que permitiria
+// forjar tokens de admin caso a env sumisse.
+import { JWT_SECRET } from '../config';
 
 // --- Tipos e autenticação ---
 export interface TokenPayload {
