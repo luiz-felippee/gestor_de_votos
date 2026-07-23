@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { AlertCircle, Eye, EyeOff, CheckCircle2, ShieldCheck, Mail, Lock, LogIn, ArrowRight, Sparkles } from 'lucide-react'
-import { Logo } from '../components/Logo'
+import { AlertCircle, Eye, EyeOff, CheckCircle2, Mail, Lock, LogIn, ArrowRight } from 'lucide-react'
+import { AuthLayout } from '../components/layout/AuthLayout'
 import { useKeepAlive } from '../hooks/useKeepAlive'
 
 export function LoginPage() {
-  const { signIn, signInWithGoogle, signIn2FA, signUp } = useAuth()
+  const { signIn, signInWithGoogle, signIn2FA } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const destino =
@@ -73,24 +73,6 @@ export function LoginPage() {
     navigate(destino, { replace: true })
   }
 
-  async function handleSignup() {
-    if (!email || !senha) {
-      setErro("Preencha e-mail e senha para criar a conta.")
-      return
-    }
-    setErro(null)
-    setMsgSucesso(null)
-    setLoading(true)
-
-    const { error, message } = await signUp(email, senha)
-    if (error) {
-      setErro(error)
-    } else {
-      setMsgSucesso(message || "Conta criada com sucesso!")
-    }
-    setLoading(false)
-  }
-
   useEffect(() => {
     if (!googleClientId) return
     let cancelado = false
@@ -142,222 +124,142 @@ export function LoginPage() {
     }
   }, [googleClientId])
 
-  const FEATURES: [string, string][] = [
-    ['Gestão descentralizada', 'Distribua metas e acompanhe cada liderança.'],
-    ['Mapas inteligentes', 'Visualize a distribuição dos votos no território.'],
-    ['Dados em tempo real', 'Decisões rápidas com o painel sempre atualizado.'],
-  ]
-
   return (
-    // Mobile: tela FIXA — altura exata da viewport (svh ignora a barra do navegador),
-    // overflow-hidden mata o scroll e o conjunto fica centralizado. Desktop intacto.
-    <main className="bg-white font-sans max-lg:h-[100svh] max-lg:overflow-hidden lg:min-h-[100dvh] dark:bg-slate-950 lg:bg-slate-950">
-      <div className="relative flex flex-col max-lg:h-full max-lg:justify-center lg:grid lg:min-h-[100dvh] lg:grid-cols-[1.05fr_1fr]">
-
-        {/* ===================== Painel da marca ===================== */}
-        <div className="relative isolate flex shrink-0 flex-col overflow-hidden px-6 pb-6 pt-[calc(env(safe-area-inset-top)+0.75rem)] sm:px-10 lg:px-14 lg:py-14 xl:px-20">
-          {/* Fundo com gradiente + orbes — apenas desktop (no mobile usamos o full-screen acima) */}
-          <div className="pointer-events-none absolute inset-0 -z-10 hidden lg:block">
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950" />
-            <div className="absolute -top-40 -left-24 h-[32rem] w-[32rem] rounded-full bg-brand-600/30 blur-[110px]" />
-            <div className="absolute -bottom-40 -right-24 h-[30rem] w-[30rem] rounded-full bg-indigo-500/20 blur-[110px]" />
-            <div className="absolute inset-0 opacity-[0.04] [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:28px_28px]" />
-          </div>
-
-          {/* Logo — no mobile fica discreto sobre o fundo claro; no desktop, sobre o painel escuro */}
-          <div className="relative flex shrink-0 items-center justify-center gap-2.5 lg:justify-start">
-            <Logo iconClassName="h-8 w-8 lg:h-10 lg:w-10" />
-            <span className="text-[17px] font-bold tracking-tight text-slate-900 dark:text-white lg:text-lg lg:text-white">
-              Gestor de Votos
-            </span>
-          </div>
-
-          {/* Hero — desktop */}
-          <div className="hidden max-w-lg flex-1 flex-col justify-center lg:flex">
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-brand-300">
-              <Sparkles className="h-3.5 w-3.5" /> Plataforma de gestão de campanha
-            </span>
-            <h1 className="mt-6 text-[2.75rem] font-extrabold leading-[1.08] tracking-tight text-white xl:text-5xl">
-              A inteligência por trás de{' '}
-              <span className="bg-gradient-to-r from-brand-400 to-indigo-400 bg-clip-text text-transparent">
-                campanhas vitoriosas
-              </span>.
-            </h1>
-            <p className="mt-5 max-w-md text-base leading-relaxed text-slate-400">
-              Mapeie lideranças, engaje eleitores e acompanhe metas em tempo real — tudo em uma única plataforma.
-            </p>
-
-            <ul className="mt-10 space-y-5">
-              {FEATURES.map(([titulo, desc]) => (
-                <li key={titulo} className="flex items-start gap-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-brand-300">
-                    <CheckCircle2 className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <p className="font-semibold text-white">{titulo}</p>
-                    <p className="mt-0.5 text-sm text-slate-400">{desc}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Rodapé — desktop */}
-          <p className="relative hidden shrink-0 items-center gap-1.5 text-xs text-slate-500 lg:flex">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            © {new Date().getFullYear()} Gestor de Votos · Conexão segura e dados criptografados
-          </p>
-        </div>
-
-        {/* ===================== Painel do formulário ===================== */}
-        <div className="relative z-20 flex flex-col px-6 pt-2 lg:flex-1 lg:justify-center lg:bg-white lg:px-12 lg:pt-0 dark:lg:bg-slate-900">
-          {/* Mobile: formulário direto na página, sem card · Desktop: coluna direita em tela cheia */}
-          <div className="mx-auto w-full max-w-[25rem] lg:p-0">
-
-            {/* Cabeçalho */}
-            <div className="mb-6 text-center lg:text-left">
-              <h2 className="text-[24px] font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-[26px]">
-                {step === 'login' ? 'Bem-vindo de volta' : 'Verificação de segurança'}
-              </h2>
-              <p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                {step === 'login'
-                  ? 'Entre com suas credenciais para continuar.'
-                  : 'Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.'}
-              </p>
-            </div>
-
-            {step === 'login' ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-
-                {/* E-mail */}
-                <div>
-                  <label className={labelClass}>E-mail</label>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className={`${inputBase} pl-11 pr-4`}
-                      autoComplete="email"
-                      placeholder="voce@exemplo.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Senha */}
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <label className={labelClass + ' mb-0'}>Senha</label>
-                    <Link to="/esqueci-senha" className="text-[13px] font-semibold text-brand-600 transition-colors hover:text-brand-500 dark:text-brand-400">
-                      Esqueci a senha
-                    </Link>
-                  </div>
-                  <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type={mostrarSenha ? 'text' : 'password'}
-                      value={senha}
-                      onChange={(e) => setSenha(e.target.value)}
-                      className={`${inputBase} pl-11 pr-12`}
-                      autoComplete="current-password"
-                      placeholder="••••••••"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setMostrarSenha(!mostrarSenha)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-300"
-                      tabIndex={-1}
-                      aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
-                    >
-                      {mostrarSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                {erro && <MensagemErro texto={erro} />}
-                {msgSucesso && <MensagemSucesso texto={msgSucesso} />}
-
-                <button type="submit" disabled={loading} className={btnPrimaryClass}>
-                  {loading ? (
-                    'Entrando...'
-                  ) : (
-                    <>
-                      <LogIn className="hidden h-5 w-5 lg:block" />
-                      <span className="lg:hidden">Entrar</span>
-                      <span className="hidden lg:inline">Entrar na plataforma</span>
-                      <ArrowRight className="hidden h-4 w-4 transition-transform group-hover:translate-x-0.5 lg:block" />
-                    </>
-                  )}
-                </button>
-
-                {googleClientId && (
-                  <>
-                    <div className="flex items-center gap-4 py-1">
-                      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">ou</span>
-                      <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                    </div>
-                    <div ref={googleBtnRef} className="flex w-full justify-center [&>div]:w-full" />
-                  </>
-                )}
-
-                <p className="pt-1 text-center text-sm text-slate-500 dark:text-slate-400">
-                  Ainda não tem conta?{' '}
-                  <button type="button" onClick={handleSignup} disabled={loading} className="font-bold text-brand-600 transition-colors hover:text-brand-500 disabled:opacity-60 dark:text-brand-400">
-                    Criar agora
-                  </button>
-                </p>
-              </form>
-            ) : (
-              <form onSubmit={handle2FASubmit} className="space-y-4">
-                <div>
-                  <label className={labelClass}>Código de autenticação (6 dígitos)</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={6}
-                    value={token2fa}
-                    onChange={(e) => setToken2fa(e.target.value.replace(/\D/g, ''))}
-                    className={`${inputBase} px-4 py-4 text-center font-mono text-3xl tracking-[0.4em]`}
-                    autoComplete="one-time-code"
-                    placeholder="000000"
-                    autoFocus
-                  />
-                </div>
-
-                {erro && <MensagemErro texto={erro} />}
-
-                <div className="flex flex-col gap-3 pt-1">
-                  <button type="submit" disabled={loading || token2fa.length < 6} className={btnPrimaryClass}>
-                    {loading ? 'Verificando...' : 'Verificar e entrar'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep('login')
-                      setPendingUserId(null)
-                      setToken2fa('')
-                      setErro(null)
-                    }}
-                    className={btnSecondaryClass}
-                  >
-                    Voltar
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-
-          {/* Rodapé de segurança (mobile) */}
-          <p className="mt-5 flex items-center justify-center gap-1.5 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] text-xs font-medium text-slate-500 lg:hidden dark:text-slate-500">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            Conexão segura e dados criptografados
-          </p>
-        </div>
+    <AuthLayout>
+      {/* Cabeçalho */}
+      <div className="mb-6 text-center lg:text-left">
+        <h2 className="text-[24px] font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-[26px]">
+          {step === 'login' ? 'Bem-vindo de volta' : 'Verificação de segurança'}
+        </h2>
+        <p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+          {step === 'login'
+            ? 'Entre com suas credenciais para continuar.'
+            : 'Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.'}
+        </p>
       </div>
-    </main>
+
+      {step === 'login' ? (
+        <form onSubmit={handleLogin} className="space-y-4">
+
+          {/* E-mail */}
+          <div>
+            <label className={labelClass}>E-mail</label>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`${inputBase} pl-11 pr-4`}
+                autoComplete="email"
+                placeholder="voce@exemplo.com"
+              />
+            </div>
+          </div>
+
+          {/* Senha */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <label className={labelClass + ' mb-0'}>Senha</label>
+              <Link to="/esqueci-senha" className="text-[13px] font-semibold text-brand-600 transition-colors hover:text-brand-500 dark:text-brand-400">
+                Esqueci a senha
+              </Link>
+            </div>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <input
+                type={mostrarSenha ? 'text' : 'password'}
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                className={`${inputBase} pl-11 pr-12`}
+                autoComplete="current-password"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setMostrarSenha(!mostrarSenha)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-300"
+                tabIndex={-1}
+                aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+              >
+                {mostrarSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+          </div>
+
+          {erro && <MensagemErro texto={erro} />}
+          {msgSucesso && <MensagemSucesso texto={msgSucesso} />}
+
+          <button type="submit" disabled={loading} className={btnPrimaryClass}>
+            {loading ? (
+              'Entrando...'
+            ) : (
+              <>
+                <LogIn className="hidden h-5 w-5 lg:block" />
+                <span className="lg:hidden">Entrar</span>
+                <span className="hidden lg:inline">Entrar na plataforma</span>
+                <ArrowRight className="hidden h-4 w-4 transition-transform group-hover:translate-x-0.5 lg:block" />
+              </>
+            )}
+          </button>
+
+          {googleClientId && (
+            <>
+              <div className="flex items-center gap-4 py-1">
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">ou</span>
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+              </div>
+              <div ref={googleBtnRef} className="flex w-full justify-center [&>div]:w-full" />
+            </>
+          )}
+
+          {/* Cadastro é feito pelo administrador da campanha (auto-cadastro desativado),
+              então não convidamos a "criar conta" — isso levava a um erro. */}
+          <p className="pt-1 text-center text-sm text-slate-500 dark:text-slate-400">
+            Não tem acesso? Fale com o administrador da sua campanha.
+          </p>
+        </form>
+      ) : (
+        <form onSubmit={handle2FASubmit} className="space-y-4">
+          <div>
+            <label className={labelClass}>Código de autenticação (6 dígitos)</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              value={token2fa}
+              onChange={(e) => setToken2fa(e.target.value.replace(/\D/g, ''))}
+              className={`${inputBase} px-4 py-4 text-center font-mono text-3xl tracking-[0.4em]`}
+              autoComplete="one-time-code"
+              placeholder="000000"
+              autoFocus
+            />
+          </div>
+
+          {erro && <MensagemErro texto={erro} />}
+
+          <div className="flex flex-col gap-3 pt-1">
+            <button type="submit" disabled={loading || token2fa.length < 6} className={btnPrimaryClass}>
+              {loading ? 'Verificando...' : 'Verificar e entrar'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStep('login')
+                setPendingUserId(null)
+                setToken2fa('')
+                setErro(null)
+              }}
+              className={btnSecondaryClass}
+            >
+              Voltar
+            </button>
+          </div>
+        </form>
+      )}
+    </AuthLayout>
   )
 }
 
