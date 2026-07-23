@@ -112,6 +112,13 @@ html.is-android body {
    transparente já mata as linhas subpixel sem mexer no tamanho. */
 .leaflet-tile {
   outline: 1px solid transparent;
+  /* Fecha as fendas subpixel entre tiles (linhas cinzas/claras que apareciam no
+     mapa) escalando cada tile ~0,4%, o que faz vizinhos se sobreporem ~0,5px.
+     Usa a propriedade `scale` (não `transform`): ela COMPÕE com o translate3d
+     inline que o Leaflet usa pra posicionar (verificado: posição preservada),
+     é relativa — funciona em retina, onde o tile vira 128px — e não depende da
+     largura do container, então NÃO reintroduz o bug do tile 0px. */
+  scale: 1.004;
 }
 /* Camufla os gaps subpixel igualando o fundo do container à cor do tile CartoDB Dark Matter */
 .dark .leaflet-container {
