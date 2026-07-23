@@ -1,5 +1,4 @@
 import { defineConfig, devices } from '@playwright/test';
-import path from 'path';
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -26,8 +25,9 @@ export default defineConfig({
   use: {
     /* Maximum time each action such as `click()` can take. Defaults to 0 (no limit). */
     actionTimeout: 0,
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5173',
+    /* Base URL: local por padrão; aponte pra produção/staging com
+       E2E_BASE_URL=https://gestor-de-votos.vercel.app npx playwright test */
+    baseURL: process.env.E2E_BASE_URL || 'http://localhost:5173',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -43,11 +43,14 @@ export default defineConfig({
     // Pode habilitar futuramente se precisar testar multi-navegador.
   ],
 
-  /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'npm run dev:all',
-    port: 5173,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000, // 2 minutos para o servidor Node/Vite ligarem juntos
-  },
+  /* Sobe o dev local antes dos testes — mas NÃO quando aponta pra uma URL remota
+     (E2E_BASE_URL), pra permitir smoke test direto contra produção/staging. */
+  webServer: process.env.E2E_BASE_URL
+    ? undefined
+    : {
+        command: 'npm run dev:all',
+        port: 5173,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120 * 1000, // 2 minutos para o servidor Node/Vite ligarem juntos
+      },
 });
