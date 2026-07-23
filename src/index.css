@@ -103,15 +103,15 @@ html.is-android body {
   }
 }
 
-/* Fix: remove linhas/gaps entre tiles do Leaflet ao dar zoom ou no desktop */
+/* Fix: remove linhas/gaps entre tiles do Leaflet ao dar zoom ou no desktop.
+   NÃO sobrescrever width/height dos tiles com porcentagem: o Leaflet dimensiona
+   cada tile com pixels inline (256px); um "width: 100.5% !important" vira 0px
+   quando o mapa monta com o container ainda em 0 de largura (LazyMount/modal),
+   e o !important impede o Leaflet de recalcular — resultado: tiles carregam mas
+   ficam INVISÍVEIS (mapa preto/branco, só o contorno GeoJSON aparece). O outline
+   transparente já mata as linhas subpixel sem mexer no tamanho. */
 .leaflet-tile {
-  /* Evita artefatos de borda subpixel */
   outline: 1px solid transparent;
-}
-.leaflet-tile-container img {
-  width: 100.5% !important;
-  height: 100.5% !important;
-  margin: -0.5px;
 }
 /* Camufla os gaps subpixel igualando o fundo do container à cor do tile CartoDB Dark Matter */
 .dark .leaflet-container {
