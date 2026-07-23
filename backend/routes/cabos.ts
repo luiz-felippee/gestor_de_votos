@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import crypto from 'crypto';
 import { prisma } from '../prismaClient';
 import { requireAuth, requireRole, optionalAuth, wrap, escopoCampanha, registrarLog, cadastroLimiter, requirePlanLimit } from '../middlewares';
@@ -6,6 +7,23 @@ import { cache } from '../lib/cache';
 import { notificarMudanca } from '../server';
 
 const cabosRouter = Router();
+
+// Validação do auto-cadastro público de liderança (endpoint SEM login). Exige os
+// campos e impõe teto de tamanho. foto_url pode ser URL curta OU base64 grande —
+// o teto de 2MB do corpo (express.json) já limita; aqui só garantimos que veio.
+const caboPublicoSchema = z.object({
+  nome: z.string().trim().min(1, 'Informe o nome.').max(150, 'Nome longo demais.'),
+  telefone: z.string().trim().min(8, 'Telefone inválido.').max(20, 'Telefone inválido.'),
+  foto_url: z.string().min(1, 'A foto da liderança é obrigatória.'),
+  bairro_atuacao: z.string().trim().max(150).nullish(),
+  cidade: z.string().trim().max(150).nullish(),
+  data_nascimento: z.string().trim().max(20).nullish(),
+  cargo_candidato: z.string().trim().max(150).nullish(),
+  ano_eleicao: z.string().trim().max(10).nullish(),
+  campanha_slug: z.string().trim().max(120).nullish(),
+  votacao: z.coerce.number().int().min(0).max(100_000_000).nullish(),
+  foi_candidato: z.coerce.boolean().optional(),
+}); // honeypot 'website' tratado antes; chaves extras são ignoradas
 
 // Valida um lider_id recebido do cliente para o cabo `caboId` (null ao criar).
 // Regras da hierarquia de 2 níveis:
@@ -164,11 +182,10 @@ cabosRouter.post(
   wrap(async (req, res) => {
     const b = req.body ?? {};
     if (b.website) return res.status(201).json({ ok: true }); // honeypot
-    if (!b.nome || !b.telefone) {
-      return res.status(400).json({ error: 'Nome e telefone são obrigatórios.' });
-    }
-    if (!b.foto_url) {
-      return res.status(400).json({ error: 'A foto da liderança é obrigatória.' });
+
+    const parsed = caboPublicoSchema.safeParse(b);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Dados inválidos.' });
     }
     // A liderança entra na campanha do link (slug) ou, na falta, na campanha principal
     const campanha = b.campanha_slug

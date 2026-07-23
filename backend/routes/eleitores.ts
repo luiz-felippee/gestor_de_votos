@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from '../prismaClient';
@@ -8,6 +9,27 @@ import { StatusEleitor } from '@prisma/client';
 import { cache } from '../lib/cache';
 
 const eleitoresRouter = Router();
+
+// Validação do cadastro público de eleitor (endpoint SEM login, aberto na internet).
+// Além de exigir os campos, impõe TETO DE TAMANHO em tudo — sem isso um robô pode
+// mandar um "nome" de 10MB. zona/secao aceitam número ou string ("12" → 12).
+const eleitorPublicoSchema = z.object({
+  nome: z.string().trim().min(1, 'Informe o nome.').max(150, 'Nome longo demais.'),
+  telefone: z.string().trim().min(8, 'Telefone inválido.').max(20, 'Telefone inválido.'),
+  local_votacao: z.string().trim().min(1, 'Informe o local de votação.').max(200),
+  zona: z.coerce.number('Zona inválida.').int().min(1).max(9999),
+  secao: z.coerce.number('Seção inválida.').int().min(1).max(99999),
+  bairro: z.string().trim().min(1, 'Informe o bairro.').max(150),
+  cidade: z.string().trim().min(1, 'Informe a cidade.').max(150),
+  endereco: z.string().trim().max(300).nullish(),
+  cabo_id: z.string().trim().max(60).nullish(),
+  campanha_slug: z.string().trim().max(120).nullish(),
+  data_nascimento: z.string().trim().max(20).nullish(),
+  cpf: z.string().trim().max(20).nullish(),
+  titulo_eleitor: z.string().trim().max(20).nullish(),
+  status: z.enum(['ativo', 'inativo', 'pendente']).optional(),
+  observacoes: z.string().trim().max(1000).nullish(),
+}); // o honeypot 'website' é tratado antes; chaves extras são ignoradas
 
 // Coordenadas oficiais dos locais de votação de PE (TSE), por "zona-seção".
 // Carregado uma vez, em memória. Fonte: eleitorado_local_votacao (dadosabertos TSE).
@@ -83,9 +105,13 @@ eleitoresRouter.post(
     const b = req.body ?? {};
     // Honeypot: campo invisível que só robôs preenchem. Finge sucesso e ignora.
     if (b.website) return res.status(201).json({ ok: true });
-    if (!b.nome || !b.telefone || !b.local_votacao || !b.zona || !b.secao || !b.bairro || !b.cidade) {
-      return res.status(400).json({ error: 'Preencha todos os campos obrigatórios.' });
+
+    // Valida + limita tamanho (zod). Retorna a 1ª mensagem clara em caso de erro.
+    const parsed = eleitorPublicoSchema.safeParse(b);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Dados inválidos.' });
     }
+
     const bairroStr = String(b.bairro).trim();
     const cidadeStr = String(b.cidade).trim();
 
