@@ -14,13 +14,13 @@ const eleitoresRouter = Router();
 // Além de exigir os campos, impõe TETO DE TAMANHO em tudo — sem isso um robô pode
 // mandar um "nome" de 10MB. zona/secao aceitam número ou string ("12" → 12).
 const eleitorPublicoSchema = z.object({
-  nome: z.string().trim().min(1, 'Informe o nome.').max(150, 'Nome longo demais.'),
-  telefone: z.string().trim().min(8, 'Telefone inválido.').max(20, 'Telefone inválido.'),
-  local_votacao: z.string().trim().min(1, 'Informe o local de votação.').max(200),
+  nome: z.string({ error: 'Informe o nome.' }).trim().min(1, 'Informe o nome.').max(150, 'Nome longo demais.'),
+  telefone: z.string({ error: 'Telefone inválido.' }).trim().min(8, 'Telefone inválido.').max(20, 'Telefone inválido.'),
+  local_votacao: z.string({ error: 'Informe o local de votação.' }).trim().min(1, 'Informe o local de votação.').max(200),
   zona: z.coerce.number('Zona inválida.').int().min(1).max(9999),
   secao: z.coerce.number('Seção inválida.').int().min(1).max(99999),
-  bairro: z.string().trim().min(1, 'Informe o bairro.').max(150),
-  cidade: z.string().trim().min(1, 'Informe a cidade.').max(150),
+  bairro: z.string({ error: 'Informe o bairro.' }).trim().min(1, 'Informe o bairro.').max(150),
+  cidade: z.string({ error: 'Informe a cidade.' }).trim().min(1, 'Informe a cidade.').max(150),
   endereco: z.string().trim().max(300).nullish(),
   cabo_id: z.string().trim().max(60).nullish(),
   campanha_slug: z.string().trim().max(120).nullish(),

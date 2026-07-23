@@ -12,9 +12,9 @@ const cabosRouter = Router();
 // campos e impõe teto de tamanho. foto_url pode ser URL curta OU base64 grande —
 // o teto de 2MB do corpo (express.json) já limita; aqui só garantimos que veio.
 const caboPublicoSchema = z.object({
-  nome: z.string().trim().min(1, 'Informe o nome.').max(150, 'Nome longo demais.'),
-  telefone: z.string().trim().min(8, 'Telefone inválido.').max(20, 'Telefone inválido.'),
-  foto_url: z.string().min(1, 'A foto da liderança é obrigatória.'),
+  nome: z.string({ error: 'Informe o nome.' }).trim().min(1, 'Informe o nome.').max(150, 'Nome longo demais.'),
+  telefone: z.string({ error: 'Telefone inválido.' }).trim().min(8, 'Telefone inválido.').max(20, 'Telefone inválido.'),
+  foto_url: z.string({ error: 'A foto da liderança é obrigatória.' }).min(1, 'A foto da liderança é obrigatória.'),
   bairro_atuacao: z.string().trim().max(150).nullish(),
   cidade: z.string().trim().max(150).nullish(),
   data_nascimento: z.string().trim().max(20).nullish(),
