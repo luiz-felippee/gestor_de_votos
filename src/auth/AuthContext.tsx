@@ -22,9 +22,9 @@ interface AuthState {
   usuario: Usuario | null
   loading: boolean
   role: PerfilAcesso | null
-  signIn: (email: string, senha: string) => Promise<{ error: string | null; require2FA?: boolean; userId?: string }>
-  signInWithGoogle: (credential: string) => Promise<{ error: string | null; require2FA?: boolean; userId?: string }>
-  signIn2FA: (userId: string, token: string) => Promise<{ error: string | null }>
+  signIn: (email: string, senha: string) => Promise<{ error: string | null; require2FA?: boolean; userId?: string; usuario?: Usuario }>
+  signInWithGoogle: (credential: string) => Promise<{ error: string | null; require2FA?: boolean; userId?: string; usuario?: Usuario }>
+  signIn2FA: (userId: string, token: string) => Promise<{ error: string | null; usuario?: Usuario }>
   signUp: (
     email: string,
     senha: string,
@@ -80,7 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setToken(res.token)
       setUsuario(res.usuario)
-      return { error: null }
+      // Devolve o usuário no retorno (não só via estado) porque quem chama
+      // (LoginPage) precisa decidir o destino do redirect NA HORA — o setState
+      // acima só reflete no próximo render, tarde demais pra essa decisão.
+      return { error: null, usuario: res.usuario }
     } catch (err) {
       return { error: (err as Error).message }
     }
@@ -94,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setToken(res.token)
       setUsuario(res.usuario)
-      return { error: null }
+      return { error: null, usuario: res.usuario }
     } catch (err) {
       return { error: (err as Error).message }
     }
@@ -105,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { token, usuario } = await api.login2FA(userId, mfaToken)
       setToken(token)
       setUsuario(usuario)
-      return { error: null }
+      return { error: null, usuario }
     } catch (err) {
       return { error: (err as Error).message }
     }

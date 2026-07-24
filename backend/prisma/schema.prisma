@@ -35,6 +35,9 @@ model Campanha {
   // de cadastro (/c/:slug) — o painel interno continua com a cor padrão pra
   // todo mundo, então mudar isso não afeta o resto do app.
   cor                  String   @default("#4f46e5")
+  // Número de urna do candidato (ex: "12345"). String (não Int) porque pode
+  // começar com zero e ninguém faz conta com ele — é só exibição/identificação.
+  numero_urna          String?
   cargo_ultima_eleicao String?
   ano_ultima_eleicao   String?
   votos_ultima_eleicao Int?

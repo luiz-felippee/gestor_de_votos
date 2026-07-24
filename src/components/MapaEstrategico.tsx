@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { X, Maximize2 } from 'lucide-react'
 import {
   MapContainer,
   TileLayer,
@@ -147,6 +148,17 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
   const [bounds, setBounds] = useState<LatLngBoundsExpression | null>(null)
   const [telaCheia, setTelaCheia] = useState(false)
   
+  // Efeito para fechar tela cheia ao pressionar a tecla ESC
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && telaCheia) {
+        setTelaCheia(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [telaCheia])
+
   // Controle de interação no mobile para evitar scroll trap
   const [mapaAtivo, setMapaAtivo] = useState(!isMobile)
 
@@ -316,12 +328,25 @@ export function MapaEstrategico({ pontosGeo, statsPorCidade, cidadeSelecionada, 
         </button>
       )}
 
-      <button
-        onClick={() => setTelaCheia((v) => !v)}
-        className="absolute right-3 top-3 z-[1000] flex items-center gap-1.5 rounded-lg border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-lg backdrop-blur transition hover:bg-white active:scale-95 dark:border-slate-700/70 dark:bg-slate-900/85 dark:text-slate-200"
-      >
-        {telaCheia ? '✕ Sair' : '⛶ Tela cheia'}
-      </button>
+      {telaCheia ? (
+        <button
+          onClick={() => setTelaCheia(false)}
+          title="Sair da tela cheia (ESC)"
+          aria-label="Sair da tela cheia"
+          className="absolute right-4 top-4 z-[3000] flex items-center justify-center gap-1.5 rounded-full bg-slate-900/90 text-white hover:bg-slate-900 border border-white/20 px-3 py-2 shadow-2xl backdrop-blur transition-all active:scale-95 group"
+        >
+          <X className="h-5 w-5 text-red-400 group-hover:rotate-90 transition-transform duration-200" />
+          <span className="text-xs font-bold pr-1">Sair</span>
+        </button>
+      ) : (
+        <button
+          onClick={() => setTelaCheia(true)}
+          className="absolute right-3 top-3 z-[1000] flex items-center gap-1.5 rounded-lg border border-slate-200/70 bg-white/90 px-3 py-1.5 text-xs font-bold text-slate-700 shadow-lg backdrop-blur transition hover:bg-white active:scale-95 dark:border-slate-700/70 dark:bg-slate-900/85 dark:text-slate-200"
+        >
+          <Maximize2 className="h-3.5 w-3.5" />
+          <span>Tela cheia</span>
+        </button>
+      )}
       {cidadeSelecionada && (
         <button
           onClick={() => onCidadeSelect(null)}

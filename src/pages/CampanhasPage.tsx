@@ -15,6 +15,7 @@ interface FormState {
   foto_url: string
   trajetoria: string
   cor: string
+  numero_urna: string
   cargo_ultima_eleicao: string
   ano_ultima_eleicao: string
   votos_ultima_eleicao: string
@@ -27,14 +28,15 @@ interface EditFormState {
   foto_url: string
   trajetoria: string
   cor: string
+  numero_urna: string
   cargo_ultima_eleicao: string
   ano_ultima_eleicao: string
   votos_ultima_eleicao: string
 }
 
 const COR_PADRAO = '#4f46e5'
-const VAZIO: FormState = { nome: '', admin_nome: '', admin_email: '', admin_senha: '', foto_url: '', trajetoria: '', cor: COR_PADRAO, cargo_ultima_eleicao: '', ano_ultima_eleicao: '', votos_ultima_eleicao: '' }
-const EDIT_VAZIO: EditFormState = { nome: '', foto_url: '', trajetoria: '', cor: COR_PADRAO, cargo_ultima_eleicao: '', ano_ultima_eleicao: '', votos_ultima_eleicao: '' }
+const VAZIO: FormState = { nome: '', admin_nome: '', admin_email: '', admin_senha: '', foto_url: '', trajetoria: '', cor: COR_PADRAO, numero_urna: '', cargo_ultima_eleicao: '', ano_ultima_eleicao: '', votos_ultima_eleicao: '' }
+const EDIT_VAZIO: EditFormState = { nome: '', foto_url: '', trajetoria: '', cor: COR_PADRAO, numero_urna: '', cargo_ultima_eleicao: '', ano_ultima_eleicao: '', votos_ultima_eleicao: '' }
 
 export function CampanhasPage() {
   const { usuario } = useAuth()
@@ -85,6 +87,7 @@ export function CampanhasPage() {
       foto_url: c.foto_url ?? '',
       trajetoria: c.trajetoria ?? '',
       cor: c.cor || COR_PADRAO,
+      numero_urna: c.numero_urna ?? '',
       cargo_ultima_eleicao: c.cargo_ultima_eleicao ?? '',
       ano_ultima_eleicao: c.ano_ultima_eleicao ?? '',
       votos_ultima_eleicao: c.votos_ultima_eleicao != null ? String(c.votos_ultima_eleicao) : '',
@@ -112,6 +115,7 @@ export function CampanhasPage() {
         foto_url: fotoUrl,
         trajetoria: editForm.trajetoria.trim(),
         cor: editForm.cor,
+        numero_urna: editForm.numero_urna.trim() || undefined,
         cargo_ultima_eleicao: editForm.cargo_ultima_eleicao.trim() || undefined,
         ano_ultima_eleicao: editForm.ano_ultima_eleicao.trim() || undefined,
         votos_ultima_eleicao: editForm.votos_ultima_eleicao ? Number(editForm.votos_ultima_eleicao) : undefined,
@@ -170,6 +174,7 @@ export function CampanhasPage() {
         foto_url: fotoUrl,
         trajetoria: form.trajetoria.trim(),
         cor: form.cor || undefined,
+        numero_urna: form.numero_urna.trim() || undefined,
         cargo_ultima_eleicao: form.cargo_ultima_eleicao.trim() || undefined,
         ano_ultima_eleicao: form.ano_ultima_eleicao.trim() || undefined,
         votos_ultima_eleicao: form.votos_ultima_eleicao ? Number(form.votos_ultima_eleicao) : undefined,
@@ -248,6 +253,9 @@ export function CampanhasPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo label="Nome da campanha / candidato *">
             <input className={inputClass} value={form.nome} onChange={(e) => set('nome', e.target.value)} />
+          </Campo>
+          <Campo label="Número de urna">
+            <input className={inputClass} value={form.numero_urna} onChange={(e) => set('numero_urna', e.target.value.replace(/\D/g, ''))} placeholder="Ex: 12345" inputMode="numeric" />
           </Campo>
           <Campo label="Cargo na Última Eleição">
             <input className={inputClass} value={form.cargo_ultima_eleicao} onChange={(e) => set('cargo_ultima_eleicao', e.target.value)} placeholder="Ex: Vereador, Deputado..." />
@@ -466,6 +474,10 @@ export function CampanhasPage() {
 
               <Campo label="Nome da campanha / candidato *">
                 <input className={inputClass} value={editForm.nome} onChange={(e) => setEdit('nome', e.target.value)} />
+              </Campo>
+
+              <Campo label="Número de urna">
+                <input className={inputClass} value={editForm.numero_urna} onChange={(e) => setEdit('numero_urna', e.target.value.replace(/\D/g, ''))} placeholder="Ex: 12345" inputMode="numeric" />
               </Campo>
 
               <div className="grid gap-4 sm:grid-cols-2">

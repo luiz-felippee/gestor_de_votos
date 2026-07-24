@@ -8,7 +8,8 @@ import { vibrar } from '../../lib/haptics'
 import {
   WifiOff, Loader2, Home, Users, CalendarDays,
   Network, FileText, Building2, User,
-  LogOut, Sun, Moon, Menu, X, ChevronRight, MessageCircle, Settings as SettingsIcon
+  LogOut, Sun, Moon, Menu, X, ChevronRight, MessageCircle, Settings as SettingsIcon,
+  Trophy,
 } from 'lucide-react'
 
 export function Header() {
@@ -89,23 +90,31 @@ export function Header() {
               >
                 {(usuario?.nome ?? 'U').charAt(0).toUpperCase()}
               </NavLink>
-              {/* Desktop Nav */}
+              {/* Desktop Nav — liderança (cabo) só vê o próprio painel, o resto da
+                  campanha (Eleitores, WhatsApp, Administração) fica fora do menu.
+                  Se ela tentar entrar direto pela URL, a rota bloqueia mesmo assim
+                  (ProtectedRoute) — isto aqui é só não oferecer o link. */}
               <nav className="hidden gap-0.5 lg:flex">
-                <Item to="/">Painel</Item>
-                <Item to="/planilha">Eleitores</Item>
-                {(role === 'admin' || role === 'coordenador') && (
-                  <Item to="/cabos">Lideranças</Item>
-                )}
-                <Item to="/whatsapp">WhatsApp & CRM</Item>
-                {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
-                  <Dropdown title="Administração">
-                    <DropdownItem to="/eventos">Agenda</DropdownItem>
-                    {usuario?.super_admin && <DropdownItem to="/campanhas">Campanhas</DropdownItem>}
-                    {role === 'admin' && <DropdownItem to="/usuarios">Usuários</DropdownItem>}
-                    {role === 'admin' && <DropdownItem to="/auditoria">Auditoria</DropdownItem>}
-                    {role === 'admin' && <DropdownItem to="/configuracoes">Configurações</DropdownItem>}
-
-                  </Dropdown>
+                {role === 'cabo' ? (
+                  <Item to="/minha-campanha">Minha Campanha</Item>
+                ) : (
+                  <>
+                    <Item to="/">Painel</Item>
+                    <Item to="/planilha">Eleitores</Item>
+                    {(role === 'admin' || role === 'coordenador') && (
+                      <Item to="/cabos">Lideranças</Item>
+                    )}
+                    <Item to="/whatsapp">WhatsApp & CRM</Item>
+                    {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
+                      <Dropdown title="Administração">
+                        <DropdownItem to="/eventos">Agenda</DropdownItem>
+                        {usuario?.super_admin && <DropdownItem to="/campanhas">Campanhas</DropdownItem>}
+                        {role === 'admin' && <DropdownItem to="/usuarios">Usuários</DropdownItem>}
+                        {role === 'admin' && <DropdownItem to="/auditoria">Auditoria</DropdownItem>}
+                        {role === 'admin' && <DropdownItem to="/configuracoes">Configurações</DropdownItem>}
+                      </Dropdown>
+                    )}
+                  </>
                 )}
               </nav>
               <div className="flex items-center gap-3 border-l border-slate-200 pl-5 dark:border-slate-700">
@@ -196,12 +205,18 @@ export function Header() {
             <nav className="flex-1 overflow-y-auto px-4 mt-4 space-y-1">
               {/* Seção Principal */}
               <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Navegação</p>
-              <MobileDrawerItem to="/" icon={<Home className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Painel Geral</MobileDrawerItem>
-              <MobileDrawerItem to="/planilha" icon={<Users className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Eleitores</MobileDrawerItem>
-              {(role === 'admin' || role === 'coordenador') && (
-                <MobileDrawerItem to="/cabos" icon={<Network className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Lideranças</MobileDrawerItem>
+              {role === 'cabo' ? (
+                <MobileDrawerItem to="/minha-campanha" icon={<Trophy className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Minha Campanha</MobileDrawerItem>
+              ) : (
+                <>
+                  <MobileDrawerItem to="/" icon={<Home className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Painel Geral</MobileDrawerItem>
+                  <MobileDrawerItem to="/planilha" icon={<Users className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Eleitores</MobileDrawerItem>
+                  {(role === 'admin' || role === 'coordenador') && (
+                    <MobileDrawerItem to="/cabos" icon={<Network className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>Lideranças</MobileDrawerItem>
+                  )}
+                  <MobileDrawerItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>WhatsApp & CRM</MobileDrawerItem>
+                </>
               )}
-              <MobileDrawerItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5" />} onClick={() => setMenuOpen(false)}>WhatsApp & CRM</MobileDrawerItem>
 
               {/* Seção Admin */}
               {(role === 'admin' || role === 'coordenador' || usuario?.super_admin) && (
@@ -250,9 +265,15 @@ export function Header() {
       {/* ========== MOBILE BOTTOM NAV ========== */}
       {usuario && (
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between border-t border-slate-200 bg-white/90 pb-safe pt-1 px-2 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
-          <BottomNavItem to="/" icon={<Home className="h-5 w-5 sm:h-6 sm:w-6" />} label="Início" />
-          <BottomNavItem to="/planilha" icon={<Users className="h-5 w-5 sm:h-6 sm:w-6" />} label="Eleitores" />
-          <BottomNavItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />} label="WhatsApp" />
+          {role === 'cabo' ? (
+            <BottomNavItem to="/minha-campanha" icon={<Trophy className="h-5 w-5 sm:h-6 sm:w-6" />} label="Minha Campanha" />
+          ) : (
+            <>
+              <BottomNavItem to="/" icon={<Home className="h-5 w-5 sm:h-6 sm:w-6" />} label="Início" />
+              <BottomNavItem to="/planilha" icon={<Users className="h-5 w-5 sm:h-6 sm:w-6" />} label="Eleitores" />
+              <BottomNavItem to="/whatsapp" icon={<MessageCircle className="h-5 w-5 sm:h-6 sm:w-6" />} label="WhatsApp" />
+            </>
+          )}
           <button
             onClick={() => { vibrar(); setMenuOpen(true) }}
             className="flex flex-1 flex-col items-center justify-center gap-1 p-2 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors"

@@ -25,6 +25,7 @@ export interface Campanha {
   foto_url?: string | null
   trajetoria?: string | null
   cor?: string | null
+  numero_urna?: string | null
   cargo_ultima_eleicao?: string | null
   ano_ultima_eleicao?: string | null
   votos_ultima_eleicao?: number | null
@@ -126,6 +127,36 @@ export interface FunilTemplate {
   dias_espera: number
   texto: string
   created_at: string
+}
+
+/** Painel pessoal da liderança logada (/liderancas/meu-painel). */
+export interface MeuPainelLideranca {
+  nome: string
+  foto_url: string | null
+  cidade: string | null
+  meta_eleitores: number
+  candidato_nome: string | null
+  numero_urna: string | null
+  eh_lider: boolean
+  tamanho_equipe: number
+  total_direto: number
+  total_equipe: number
+  cadastros_hoje: number
+  cadastros_semana: number
+  evolucao: { data: string; total: number }[]
+}
+
+/** Um item do ranking geral de lideranças, com tendência (/liderancas/ranking). */
+export interface RankingLiderancaItem {
+  id: string
+  nome: string
+  foto_url: string | null
+  cidade: string | null
+  total: number
+  posicao: number
+  tendencia: 'subiu' | 'desceu' | 'manteve'
+  delta: number
+  voce: boolean
 }
 
 export interface TarefaFunil {

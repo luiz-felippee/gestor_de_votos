@@ -44,6 +44,7 @@ const CampanhasPage = lazyPage(() => import('./pages/CampanhasPage'), 'Campanhas
 const WhatsAppPage = lazyPage(() => import('./pages/WhatsAppPage'), 'WhatsAppPage')
 
 const PerfilPage = lazyPage(() => import('./pages/PerfilPage').then(m => ({ PerfilPage: m.PerfilPage })), 'PerfilPage')
+const LiderancaPage = lazyPage(() => import('./pages/LiderancaPage').then(m => ({ LiderancaPage: m.LiderancaPage })), 'LiderancaPage')
 
 
 const ConfiguracoesPage = lazyPage(() => import('./pages/ConfiguracoesPage').then(m => ({ ConfiguracoesPage: m.ConfiguracoesPage })), 'ConfiguracoesPage')
@@ -51,6 +52,16 @@ const ConfiguracoesPage = lazyPage(() => import('./pages/ConfiguracoesPage').the
 // Layout Elements (Pesados, carregados sob demanda)
 const Header = lazy(() => import('./components/layout/Header').then(m => ({ default: m.Header })))
 const Breadcrumbs = lazy(() => import('./components/Breadcrumbs').then(m => ({ default: m.Breadcrumbs })))
+
+// Liderança (role 'cabo') não usa o Dashboard geral da campanha — sempre que
+// cair em "/" (bookmark, ícone do PWA, botão voltar), manda direto pro próprio
+// painel. É um redirect silencioso, não a tela "acesso restrito" do ProtectedRoute,
+// porque "/" é o destino natural de pouso pós-login pra todo mundo.
+function DashboardOuPainelDaLideranca() {
+  const { role } = useAuth()
+  if (role === 'cabo') return <Navigate to="/minha-campanha" replace />
+  return <DashboardPage />
+}
 
 function CarregandoPagina() {
   return (
@@ -120,14 +131,26 @@ function AppContent() {
                 path="/"
                 element={
                   <ProtectedRoute>
-                    <DashboardPage />
+                    <DashboardOuPainelDaLideranca />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="/planilha"
+                path="/minha-campanha"
                 element={
                   <ProtectedRoute>
+                    <LiderancaPage />
+                  </ProtectedRoute>
+                }
+              />
+              {/* Eleitores/WhatsApp são dados da campanha inteira — liderança (cabo)
+                  não acessa: vê só o próprio painel em /minha-campanha. Se tentar entrar
+                  direto pela URL, o ProtectedRoute mostra "acesso restrito" (não esconde
+                  a rota, bloqueia com aviso). */}
+              <Route
+                path="/planilha"
+                element={
+                  <ProtectedRoute roles={['admin', 'coordenador', 'visualizador']}>
                     <PlanilhaPage />
                   </ProtectedRoute>
                 }
@@ -135,7 +158,7 @@ function AppContent() {
               <Route
                 path="/whatsapp"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute roles={['admin', 'coordenador', 'visualizador']}>
                     <WhatsAppPage />
                   </ProtectedRoute>
                 }
@@ -153,7 +176,7 @@ function AppContent() {
               <Route
                 path="/eventos"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute roles={['admin', 'coordenador', 'visualizador']}>
                     <EventosPage />
                   </ProtectedRoute>
                 }

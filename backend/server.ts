@@ -132,6 +132,7 @@ app.use('/api/auth', require('./routes/2fa').default);
 app.use('/api/funil', require('./routes/funil').default);
 app.use('/api/whatsapp', require('./routes/whatsapp').default);
 app.use('/api', require('./routes/config').default);
+app.use('/api', require('./routes/liderancas').default);
 // --- Error Boundary Universal (Evita vazar Stack Trace) ---
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error('❌ Unhandled Exception in Express:', { 

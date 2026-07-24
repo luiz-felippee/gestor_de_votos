@@ -10,6 +10,8 @@ import type {
   Campanha,
   FunilTemplate,
   TarefaFunil,
+  MeuPainelLideranca,
+  RankingLiderancaItem,
 } from './types'
 import { saveToOfflineQueue } from './offline'
 
@@ -276,6 +278,14 @@ export const api = {
   },
   getDashboardStats: (query: string = '') => request<any>(`/dashboard/stats${query}`),
   getMapaPontos: (query: string = '') => request<any>(`/dashboard/mapa-pontos${query}`),
+
+  // ---- Painel da Liderança ----
+  getMeuPainel: () => request<MeuPainelLideranca>('/liderancas/meu-painel'),
+  getRankingLiderancas: (escopo: 'municipio' | 'regiao' | 'pe', valor?: string | null) => {
+    const q = new URLSearchParams({ escopo })
+    if (valor) q.set('valor', valor)
+    return request<{ ranking: RankingLiderancaItem[]; regioes: string[] }>(`/liderancas/ranking?${q.toString()}`)
+  },
   validarSecao: (zona: number | string, secao: number | string) =>
     request<{ valido: boolean; cidade: string | null }>(
       `/locais/validar?zona=${encodeURIComponent(zona)}&secao=${encodeURIComponent(secao)}`

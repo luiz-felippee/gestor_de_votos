@@ -60,7 +60,7 @@ campanhasRouter.post(
   requireAuth,
   requireSuperAdmin,
   wrap(async (req, res) => {
-    const { nome, admin_nome, admin_email, admin_senha, foto_url, trajetoria, cor, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
+    const { nome, admin_nome, admin_email, admin_senha, foto_url, trajetoria, cor, numero_urna, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
     if (!nome || !admin_email || !admin_senha) {
       return res
         .status(400)
@@ -82,6 +82,7 @@ campanhasRouter.post(
           foto_url: String(foto_url),
           trajetoria: String(trajetoria).trim(),
           ...(cor ? { cor: String(cor) } : {}),
+          numero_urna: numero_urna ? String(numero_urna).trim() : null,
           cargo_ultima_eleicao: cargo_ultima_eleicao ? String(cargo_ultima_eleicao).trim() : null,
           ano_ultima_eleicao: ano_ultima_eleicao ? String(ano_ultima_eleicao).trim() : null,
           votos_ultima_eleicao: votos_ultima_eleicao ? parseInt(votos_ultima_eleicao, 10) : null
@@ -114,7 +115,7 @@ campanhasRouter.put(
   requireAuth,
   requireSuperAdmin,
   wrap(async (req, res) => {
-    const { nome, slug, foto_url, trajetoria, cor, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
+    const { nome, slug, foto_url, trajetoria, cor, numero_urna, cargo_ultima_eleicao, ano_ultima_eleicao, votos_ultima_eleicao } = req.body ?? {};
     if (cor !== undefined && cor !== null && !HEX_COR.test(String(cor))) {
       return res.status(400).json({ error: 'Cor inválida (use um hex, ex: #4f46e5).' });
     }
@@ -131,6 +132,7 @@ campanhasRouter.put(
           foto_url: foto_url !== undefined ? (foto_url ? String(foto_url) : null) : undefined,
           trajetoria: trajetoria !== undefined ? (trajetoria ? String(trajetoria).trim() : null) : undefined,
           cor: cor ? String(cor) : undefined,
+          numero_urna: numero_urna !== undefined ? (numero_urna ? String(numero_urna).trim() : null) : undefined,
           cargo_ultima_eleicao: cargo_ultima_eleicao !== undefined ? (cargo_ultima_eleicao ? String(cargo_ultima_eleicao).trim() : null) : undefined,
           ano_ultima_eleicao: ano_ultima_eleicao !== undefined ? (ano_ultima_eleicao ? String(ano_ultima_eleicao).trim() : null) : undefined,
           votos_ultima_eleicao: votos_ultima_eleicao !== undefined ? (votos_ultima_eleicao ? parseInt(votos_ultima_eleicao, 10) : null) : undefined

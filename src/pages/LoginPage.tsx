@@ -32,6 +32,12 @@ export function LoginPage() {
   // "Entrar" pagava o cold start inteiro. Reusa o mesmo hook do pós-login.
   useKeepAlive(true)
 
+  // Liderança (role 'cabo') sempre cai no próprio painel — nunca no Dashboard
+  // geral da campanha —, independente de pra onde ela tentou ir antes do login.
+  function destinoPara(u?: { role?: string } | null) {
+    return u?.role === 'cabo' ? '/minha-campanha' : destino
+  }
+
   async function handleLogin(e: FormEvent) {
     e.preventDefault()
     setErro(null)
@@ -52,7 +58,7 @@ export function LoginPage() {
     }
 
     sessionStorage.setItem('justLoggedIn', 'true')
-    navigate(destino, { replace: true })
+    navigate(destinoPara(res.usuario), { replace: true })
   }
 
   async function handle2FASubmit(e: FormEvent) {
@@ -61,16 +67,16 @@ export function LoginPage() {
 
     setErro(null)
     setLoading(true)
-    const { error } = await signIn2FA(pendingUserId, token2fa)
+    const res = await signIn2FA(pendingUserId, token2fa)
     setLoading(false)
 
-    if (error) {
-      setErro(error)
+    if (res.error) {
+      setErro(res.error)
       return
     }
 
     sessionStorage.setItem('justLoggedIn', 'true')
-    navigate(destino, { replace: true })
+    navigate(destinoPara(res.usuario), { replace: true })
   }
 
   useEffect(() => {
@@ -105,7 +111,7 @@ export function LoginPage() {
             setStep('2fa')
           } else {
             sessionStorage.setItem('justLoggedIn', 'true')
-            navigate(destino, { replace: true })
+            navigate(destinoPara(res.usuario), { replace: true })
           }
         },
       })
